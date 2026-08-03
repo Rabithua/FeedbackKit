@@ -173,51 +173,6 @@ struct MyFeedbackView: View {
     }
 }
 
-struct FeedbackRoadmapView: View {
-    let items: [FeedbackRoadmapItem]
-    let style: FeedbackStyle
-
-    var body: some View {
-        ScrollView {
-            LazyVStack(spacing: 18) {
-                ForEach(RoadmapStage.allCases) { stage in
-                    HStack(alignment: .top, spacing: 14) {
-                        Text(FK.stage(stage))
-                            .font(stage == .undecided ? .system(size: 18, weight: .black) : .system(size: 30, weight: .black))
-                            .foregroundStyle(.white)
-                            .multilineTextAlignment(.center)
-                            .frame(width: 82, height: 82)
-                            .background(stage.feedbackColor)
-                        VStack(alignment: .leading, spacing: 12) {
-                            let staged = items.filter { $0.roadmapStage == stage && $0.archivedAt == nil }
-                            if staged.isEmpty { Text(FK.text("feedbackkit.roadmap.empty.stage")).foregroundStyle(.secondary) }
-                            else {
-                                ForEach(staged) { item in
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(item.title)
-                                            .font(.headline)
-                                        if item.body.isEmpty == false {
-                                            Text(item.body)
-                                                .font(.subheadline)
-                                                .foregroundStyle(.secondary)
-                                        }
-                                    }
-                                    .fixedSize(horizontal: false, vertical: true)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                }
-                            }
-                        }
-                        .padding(.vertical, 8)
-                    }
-                }
-            }.padding(style.pagePadding)
-        }
-        .background(FeedbackSystemBackground())
-        .navigationTitle(FK.text("feedbackkit.roadmap.title"))
-        .feedbackInlineNavigationTitle()
-    }
-}
-
 @MainActor @Observable
 private final class ReleaseModel {
     var releases: [FeedbackRelease]
@@ -299,16 +254,6 @@ struct FeedbackReleaseView: View {
     }
 
     private var normalizedCurrent: String { currentVersion.lowercased().hasPrefix("v") ? String(currentVersion.dropFirst()) : currentVersion }
-}
-
-private extension RoadmapStage {
-    var feedbackColor: Color {
-        switch self {
-        case .urgent: .red
-        case .later: .accentColor
-        case .undecided: .gray
-        }
-    }
 }
 
 private struct FeedbackReleaseRail: View {
