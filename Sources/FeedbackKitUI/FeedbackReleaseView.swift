@@ -24,22 +24,21 @@ struct FeedbackReleaseView: View {
                 ContentUnavailableView(FK.text("feedbackkit.releases.empty"), systemImage: "clock.arrow.trianglehead.counterclockwise.rotate.90")
             } else {
                 ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 30) {
-                        ForEach(model.releases) { release in
-                            FeedbackReleaseTimelineRow(
-                                release: release,
-                                isCurrent: release.normalizedVersion == normalizedCurrent
-                            )
-                            .id(release)
-                            .accessibilityIdentifier("developerCommunity.release.\(release.normalizedVersion)")
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.leading, 36)
-                    .overlay(alignment: .leading) {
+                    HStack(alignment: .top, spacing: 8) {
                         FeedbackReleaseRail()
                             .frame(width: 28)
                             .accessibilityHidden(true)
+
+                        LazyVStack(alignment: .leading, spacing: 30) {
+                            ForEach(model.releases) { release in
+                                FeedbackReleaseTimelineRow(
+                                    release: release,
+                                    isCurrent: release.normalizedVersion == normalizedCurrent
+                                )
+                                .accessibilityIdentifier("developerCommunity.release.\(release.normalizedVersion)")
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(style.pagePadding)
