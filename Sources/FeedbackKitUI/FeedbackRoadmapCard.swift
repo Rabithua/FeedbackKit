@@ -23,7 +23,7 @@ struct FeedbackRoadmapCard: View {
                 if item.body.isEmpty == false {
                     Text(item.body)
                         .font(.body)
-                        .lineLimit(2)
+                        .lineLimit(1)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -35,6 +35,7 @@ struct FeedbackRoadmapCard: View {
             LinearGradient(
                 stops: [
                     .init(color: item.roadmapStage.feedbackColor, location: 0),
+                    .init(color: item.roadmapStage.feedbackColor, location: 0.16),
                     .init(color: item.roadmapStage.feedbackColor.opacity(0.58), location: 0.48),
                     .init(color: .clear, location: 1)
                 ],
@@ -57,7 +58,7 @@ private extension RoadmapStage {
         switch self {
         case .urgent: .red
         case .later: .accentColor
-        case .undecided: .gray
+        case .undecided: Color(white: 0.8)
         }
     }
 }

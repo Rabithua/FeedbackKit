@@ -32,7 +32,9 @@ struct FeedbackRoadmapView: View {
                             }
                         }
                     }
-                    .padding(style.pagePadding)
+                    .padding(.horizontal, horizontalPadding)
+                    .padding(.top, topPadding)
+                    .padding(.bottom, style.pagePadding)
                 }
             }
         }
@@ -59,19 +61,30 @@ struct FeedbackRoadmapView: View {
     }
 
     private func cardLength(for item: FeedbackRoadmapItem) -> CGFloat {
-        let base: CGFloat = item.roadmapStage == .undecided ? 276 : 340
+        let titleLength = min(item.title.count, 24)
+        let bodyLength = min(item.body.count, 48)
+        let contentLength = titleLength + bodyLength
+        let base = min(350, max(224, 205 + CGFloat(contentLength) * 3.2))
         return dynamicTypeSize.isAccessibilitySize ? base + 100 : base
     }
 
     private var cardThickness: CGFloat {
-        dynamicTypeSize.isAccessibilitySize ? 112 : 78
+        dynamicTypeSize.isAccessibilitySize ? 104 : 68
     }
 
     private var columnSpacing: CGFloat {
-        dynamicTypeSize.isAccessibilitySize ? 30 : 24
+        dynamicTypeSize.isAccessibilitySize ? 28 : 23
     }
 
     private var itemSpacing: CGFloat {
-        dynamicTypeSize.isAccessibilitySize ? 42 : 34
+        dynamicTypeSize.isAccessibilitySize ? 36 : 26
+    }
+
+    private var horizontalPadding: CGFloat {
+        dynamicTypeSize.isAccessibilitySize ? style.pagePadding : 20
+    }
+
+    private var topPadding: CGFloat {
+        dynamicTypeSize.isAccessibilitySize ? style.pagePadding : 28
     }
 }
