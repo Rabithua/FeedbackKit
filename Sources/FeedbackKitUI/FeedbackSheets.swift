@@ -382,7 +382,7 @@ private struct FeedbackDetailSheet: View {
             .padding(.horizontal, style.pagePadding).padding(.top, 14).padding(.bottom, 8)
             Group {
                 if let detail = model.detail { content(detail) }
-                else if model.isLoading { ProgressView(FK.text("feedbackkit.loading")) }
+                else if model.isLoading { FeedbackSkeletonView(layout: .detail, style: style) }
                 else if let error = model.error { FeedbackErrorView(error: error) { Task { await model.load() } } }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -469,7 +469,7 @@ private struct FeedbackDeveloperPostSheet: View {
                         }
                         if let published = post.publishedAt { Text(published.feedbackRelativeText).font(.caption).foregroundStyle(.tertiary).frame(maxWidth: .infinity, alignment: .trailing) }
                     }.padding(.horizontal, style.pagePadding).padding(.bottom, 24) }
-                } else if model.isLoading { ProgressView(FK.text("feedbackkit.loading")) }
+                } else if model.isLoading { FeedbackSkeletonView(layout: .detail, style: style) }
                 else if let error = model.error { FeedbackErrorView(error: error) { Task { await model.load(locale: locale) } } }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)

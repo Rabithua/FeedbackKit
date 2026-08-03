@@ -34,7 +34,7 @@ struct FeedbackDiagnosticsView: View {
 
     var body: some View {
         Group {
-            if model.events.isEmpty, model.isLoading { ProgressView(FK.text("feedbackkit.loading")) }
+            if model.events.isEmpty, model.isLoading { FeedbackSkeletonView(layout: .list, style: style) }
             else if model.events.isEmpty, let error = model.error { FeedbackErrorView(error: error) { Task { await model.load() } } }
             else if model.events.isEmpty { ContentUnavailableView(FK.text("feedbackkit.diagnostics.empty"), systemImage: "doc.text.magnifyingglass") }
             else {

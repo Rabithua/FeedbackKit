@@ -40,7 +40,7 @@ public struct FeedbackCenterView: View {
                         activatePost: activatePost
                     )
                 } else if model.isLoading {
-                    ProgressView(FK.text("feedbackkit.loading"))
+                    FeedbackSkeletonView(layout: .hub, style: style)
                 } else if let error = model.error {
                     FeedbackErrorView(error: error) { Task { await model.load(locale: locale, force: true) } }
                 }
