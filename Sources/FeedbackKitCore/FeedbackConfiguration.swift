@@ -80,7 +80,7 @@ public struct DefaultFeedbackAppMetadataProvider: FeedbackAppMetadataProvider {
             buildNumber: build,
             osVersion: osVersion,
             deviceCategory: category,
-            locale: locale.identifier(.bcp47)
+            locale: locale.feedbackContentIdentifier
         )
     }
 }

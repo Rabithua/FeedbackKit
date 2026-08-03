@@ -33,14 +33,14 @@ public actor FeedbackClient {
             path: "bootstrap",
             query: [
                 URLQueryItem(name: "after", value: String(after)),
-                URLQueryItem(name: "locale", value: locale.identifier(.bcp47)),
+                URLQueryItem(name: "locale", value: locale.feedbackContentIdentifier),
             ]
         )
     }
 
     public func activity(locale: Locale, cursor: String? = nil) async throws -> FeedbackActivityPage {
         var query = [
-            URLQueryItem(name: "locale", value: locale.identifier(.bcp47)),
+            URLQueryItem(name: "locale", value: locale.feedbackContentIdentifier),
             URLQueryItem(name: "limit", value: "25"),
         ]
         if let cursor { query.append(URLQueryItem(name: "cursor", value: cursor)) }
@@ -71,7 +71,7 @@ public actor FeedbackClient {
         try await get(
             FeedbackDeveloperPost.self,
             path: "developer-posts/\(id)",
-            query: [URLQueryItem(name: "locale", value: locale.identifier(.bcp47))]
+            query: [URLQueryItem(name: "locale", value: locale.feedbackContentIdentifier)]
         )
     }
 
@@ -80,7 +80,7 @@ public actor FeedbackClient {
             [FeedbackRelease].self,
             scope: .public,
             path: "releases",
-            query: [URLQueryItem(name: "locale", value: locale.identifier(.bcp47))]
+            query: [URLQueryItem(name: "locale", value: locale.feedbackContentIdentifier)]
         )
     }
 
