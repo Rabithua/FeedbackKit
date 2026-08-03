@@ -6,6 +6,7 @@ public struct FeedbackCenterView: View {
     @State private var model: FeedbackCenterModel
     private let routeHandler: any FeedbackRouteHandler
     private let style: FeedbackStyle
+    private let haptics: FeedbackHaptics
     private let initialRoute: String?
     @State private var didOpenInitialRoute = false
 
@@ -17,11 +18,13 @@ public struct FeedbackCenterView: View {
         client: FeedbackClient,
         routeHandler: any FeedbackRouteHandler = IgnoreFeedbackRouteHandler(),
         style: FeedbackStyle = .default,
+        haptics: FeedbackHaptics = .none,
         initialRoute: String? = nil
     ) {
         _model = State(initialValue: FeedbackCenterModel(client: client))
         self.routeHandler = routeHandler
         self.style = style
+        self.haptics = haptics
         self.initialRoute = initialRoute
     }
 
@@ -32,9 +35,22 @@ public struct FeedbackCenterView: View {
                     FeedbackHubView(
                         bootstrap: bootstrap,
                         style: style,
-                        openPage: { model.path.append($0) },
-                        openSheet: { model.sheet = $0 },
-                        vote: { id, target in Task { await model.updateVote(feedbackID: id, target: target) } },
+                        openPage: {
+                            haptics.trigger(.navigation)
+                            model.path.append($0)
+                        },
+                        openSheet: {
+                            haptics.trigger(.navigation)
+                            model.sheet = $0
+                        },
+                        vote: { id, target in
+                            haptics.trigger(.selection)
+                            Task {
+                                if await model.updateVote(feedbackID: id, target: target) == false {
+                                    haptics.trigger(.error)
+                                }
+                            }
+                        },
                         refresh: { await model.load(locale: locale, force: true) },
                         dismiss: { dismiss() },
                         activatePost: activatePost
@@ -65,6 +81,7 @@ public struct FeedbackCenterView: View {
                 style: style
             )
         }
+        .environment(\.feedbackHaptics, haptics)
         .tint(.accentColor)
     }
 
@@ -75,11 +92,17 @@ public struct FeedbackCenterView: View {
             FeedbackActivityListView(
                 client: model.client,
                 style: style,
-                open: { model.sheet = $0 },
+                open: {
+                    haptics.trigger(.navigation)
+                    model.sheet = $0
+                },
                 activatePost: activatePost
             )
         case .mine:
-            MyFeedbackView(client: model.client, style: style) { model.sheet = .feedback($0) }
+            MyFeedbackView(client: model.client, style: style) {
+                haptics.trigger(.navigation)
+                model.sheet = .feedback($0)
+            }
         case .roadmap:
             FeedbackRoadmapView(items: model.bootstrap?.roadmap ?? [], style: style)
         case .releases:
@@ -104,10 +127,18 @@ public struct FeedbackCenterView: View {
     private func activatePost(_ action: FeedbackDeveloperPostAction) {
         switch action.type {
         case .externalURL:
-            guard let url = URL(string: action.target), url.scheme?.lowercased() == "https" else { return }
+            guard let url = URL(string: action.target), url.scheme?.lowercased() == "https" else {
+                haptics.trigger(.error)
+                return
+            }
+            haptics.trigger(.action)
             openURL(url)
         case .appRoute:
-            _ = model.openPackageRoute(action.target) || routeHandler.openFeedbackAppRoute(action.target)
+            if model.openPackageRoute(action.target) || routeHandler.openFeedbackAppRoute(action.target) {
+                haptics.trigger(.navigation)
+            } else {
+                haptics.trigger(.error)
+            }
         }
     }
 
@@ -118,11 +149,18 @@ public struct FeedbackCenterView: View {
 
 public struct FeedbackCenterToolbarButton: View {
     private let action: () -> Void
+    private let haptics: FeedbackHaptics
 
-    public init(action: @escaping () -> Void) { self.action = action }
+    public init(haptics: FeedbackHaptics = .none, action: @escaping () -> Void) {
+        self.haptics = haptics
+        self.action = action
+    }
 
     public var body: some View {
-        Button(action: action) {
+        Button {
+            haptics.trigger(.navigation)
+            action()
+        } label: {
             Image(systemName: "bubble.left.and.bubble.right")
                 .frame(minWidth: 44, minHeight: 44)
         }

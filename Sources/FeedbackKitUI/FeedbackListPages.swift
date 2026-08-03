@@ -34,11 +34,16 @@ private final class ActivityListModel {
         } catch { self.error = error }
     }
 
-    func optimisticVote(id: String, target: Bool) async {
-        guard let index = entries.firstIndex(where: { $0.id == id }), let vote = entries[index].vote else { return }
+    func optimisticVote(id: String, target: Bool) async -> Bool {
+        guard let index = entries.firstIndex(where: { $0.id == id }), let vote = entries[index].vote else { return false }
         entries[index] = entries[index].updatingVote(.init(feedbackId: id, hasVoted: target, voteCount: max(0, vote.count + (target ? 1 : -1))))
-        do { entries[index] = entries[index].updatingVote(try await client.setVote(feedbackID: id, voted: target)) }
-        catch { entries[index] = entries[index].updatingVote(.init(feedbackId: id, hasVoted: !target, voteCount: vote.count)) }
+        do {
+            entries[index] = entries[index].updatingVote(try await client.setVote(feedbackID: id, voted: target))
+            return true
+        } catch {
+            entries[index] = entries[index].updatingVote(.init(feedbackId: id, hasVoted: !target, voteCount: vote.count))
+            return false
+        }
     }
 }
 
@@ -49,6 +54,7 @@ struct FeedbackActivityListView: View {
     let activatePost: (FeedbackDeveloperPostAction) -> Void
     @Environment(\.locale) private var locale
     @Environment(\.openURL) private var openURL
+    @Environment(\.feedbackHaptics) private var haptics
 
     init(client: FeedbackClient, style: FeedbackStyle, open: @escaping (FeedbackCenterSheet) -> Void, activatePost: @escaping (FeedbackDeveloperPostAction) -> Void) {
         _model = State(initialValue: ActivityListModel(client: client)); self.style = style; self.open = open; self.activatePost = activatePost
@@ -67,7 +73,14 @@ struct FeedbackActivityListView: View {
                                 entry: entry,
                                 style: style,
                                 open: { open(entry.sheet) },
-                                vote: { id, target in Task { await model.optimisticVote(id: id, target: target) } },
+                                vote: { id, target in
+                                    haptics.trigger(.selection)
+                                    Task {
+                                        if await model.optimisticVote(id: id, target: target) == false {
+                                            haptics.trigger(.error)
+                                        }
+                                    }
+                                },
                                 activatePost: activatePost
                             )
                             .onAppear { if entry.id == model.entries.last?.id { Task { await model.more(locale: locale) } } }

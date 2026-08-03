@@ -32,6 +32,41 @@ public struct FeedbackStyle: Sendable {
     public static let `default` = FeedbackStyle()
 }
 
+public enum FeedbackHapticEvent: Sendable {
+    case navigation
+    case selection
+    case action
+    case success
+    case warning
+    case error
+}
+
+public struct FeedbackHaptics: Sendable {
+    private let handler: @MainActor @Sendable (FeedbackHapticEvent) -> Void
+
+    public init(_ handler: @escaping @MainActor @Sendable (FeedbackHapticEvent) -> Void) {
+        self.handler = handler
+    }
+
+    @MainActor
+    public func trigger(_ event: FeedbackHapticEvent) {
+        handler(event)
+    }
+
+    public static let none = FeedbackHaptics { _ in }
+}
+
+private struct FeedbackHapticsKey: EnvironmentKey {
+    static let defaultValue = FeedbackHaptics.none
+}
+
+extension EnvironmentValues {
+    var feedbackHaptics: FeedbackHaptics {
+        get { self[FeedbackHapticsKey.self] }
+        set { self[FeedbackHapticsKey.self] = newValue }
+    }
+}
+
 enum FeedbackCenterPage: Hashable {
     case activity
     case mine
@@ -126,9 +161,13 @@ extension View {
 
 struct FeedbackCloseButton: View {
     let action: () -> Void
+    @Environment(\.feedbackHaptics) private var haptics
 
     var body: some View {
-        Button(action: action) {
+        Button {
+            haptics.trigger(.navigation)
+            action()
+        } label: {
             Image(systemName: "xmark")
                 .font(.system(size: 18, weight: .bold))
                 .frame(width: 36, height: 36)
@@ -143,6 +182,7 @@ struct FeedbackCloseButton: View {
 struct FeedbackErrorView: View {
     let error: Error
     let retry: () -> Void
+    @Environment(\.feedbackHaptics) private var haptics
 
     var body: some View {
         ContentUnavailableView {
@@ -150,7 +190,10 @@ struct FeedbackErrorView: View {
         } description: {
             Text(error.localizedDescription)
         } actions: {
-            Button(FK.text("feedbackkit.retry"), action: retry)
+            Button(FK.text("feedbackkit.retry")) {
+                haptics.trigger(.action)
+                retry()
+            }
         }
     }
 }

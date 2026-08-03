@@ -22,7 +22,16 @@ private final class FeedbackDiagnosticsModel {
         }
     }
     func load() async { isLoading = true; defer { isLoading = false }; do { events = try await diagnostics.events().sorted { $0.timestamp > $1.timestamp }; exportText = try await diagnostics.exportText(); error = nil } catch { self.error = error } }
-    func clear() async { do { try await diagnostics.clear(); await load() } catch { self.error = error } }
+    func clear() async -> Bool {
+        do {
+            try await diagnostics.clear()
+            await load()
+            return true
+        } catch {
+            self.error = error
+            return false
+        }
+    }
 }
 
 struct FeedbackDiagnosticsView: View {
@@ -30,6 +39,7 @@ struct FeedbackDiagnosticsView: View {
     @State private var confirmClear = false
     @State private var finalClear = false
     let style: FeedbackStyle
+    @Environment(\.feedbackHaptics) private var haptics
     init(diagnostics: FeedbackDiagnostics, style: FeedbackStyle) { _model = State(initialValue: FeedbackDiagnosticsModel(diagnostics: diagnostics)); self.style = style }
 
     var body: some View {
@@ -40,7 +50,7 @@ struct FeedbackDiagnosticsView: View {
             else {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 10) {
-                        Picker(FK.text("feedbackkit.diagnostics.filter"), selection: $model.filter) {
+                        Picker(FK.text("feedbackkit.diagnostics.filter"), selection: filterBinding) {
                             ForEach(FeedbackDiagnosticsModel.Filter.allCases) { filter in Text(label(filter)).tag(filter) }
                         }.pickerStyle(.segmented)
                         ForEach(model.filtered) { event in
@@ -58,18 +68,46 @@ struct FeedbackDiagnosticsView: View {
         .feedbackInlineNavigationTitle()
         .toolbar {
             ToolbarItemGroup(placement: .automatic) {
-                Button { copy(model.exportText) } label: { Image(systemName: "doc.on.doc") }.accessibilityLabel(FK.text("feedbackkit.copy"))
-                ShareLink(item: model.exportText) { Image(systemName: "square.and.arrow.up") }.accessibilityLabel(FK.text("feedbackkit.export"))
-                Button(role: .destructive) { confirmClear = true } label: { Image(systemName: "trash") }.accessibilityLabel(FK.text("feedbackkit.clear"))
+                Button {
+                    copy(model.exportText)
+                    haptics.trigger(.success)
+                } label: { Image(systemName: "doc.on.doc") }
+                .accessibilityLabel(FK.text("feedbackkit.copy"))
+                ShareLink(item: model.exportText) { Image(systemName: "square.and.arrow.up") }
+                    .accessibilityLabel(FK.text("feedbackkit.export"))
+                    .simultaneousGesture(TapGesture().onEnded { haptics.trigger(.action) })
+                Button(role: .destructive) {
+                    haptics.trigger(.warning)
+                    confirmClear = true
+                } label: { Image(systemName: "trash") }
+                .accessibilityLabel(FK.text("feedbackkit.clear"))
             }
         }
         .task { await model.load() }
         .alert(FK.text("feedbackkit.diagnostics.clear.title"), isPresented: $confirmClear) { Button(FK.text("feedbackkit.continue"), role: .destructive) { finalClear = true }; Button(FK.text("feedbackkit.cancel"), role: .cancel) {} }
-        .alert(FK.text("feedbackkit.diagnostics.clear.final"), isPresented: $finalClear) { Button(FK.text("feedbackkit.clear"), role: .destructive) { Task { await model.clear() } }; Button(FK.text("feedbackkit.cancel"), role: .cancel) {} }
+        .alert(FK.text("feedbackkit.diagnostics.clear.final"), isPresented: $finalClear) {
+            Button(FK.text("feedbackkit.clear"), role: .destructive) {
+                Task {
+                    let didClear = await model.clear()
+                    haptics.trigger(didClear ? .success : .error)
+                }
+            }
+            Button(FK.text("feedbackkit.cancel"), role: .cancel) {}
+        }
     }
 
     private func label(_ filter: FeedbackDiagnosticsModel.Filter) -> String {
         switch filter { case .all: FK.text("feedbackkit.filter.all"); case .warning: FK.text("feedbackkit.filter.warning"); case .error: FK.text("feedbackkit.filter.error"); case .critical: FK.text("feedbackkit.filter.critical") }
+    }
+
+    private var filterBinding: Binding<FeedbackDiagnosticsModel.Filter> {
+        Binding(
+            get: { model.filter },
+            set: {
+                model.filter = $0
+                haptics.trigger(.selection)
+            }
+        )
     }
     private func copy(_ value: String) {
         #if os(iOS)

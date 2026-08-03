@@ -10,6 +10,7 @@ struct FeedbackSheetHost: View {
     let routeHandler: any FeedbackRouteHandler
     let style: FeedbackStyle
     @Environment(\.openURL) private var openURL
+    @Environment(\.feedbackHaptics) private var haptics
 
     var body: some View {
         Group {
@@ -43,10 +44,18 @@ struct FeedbackSheetHost: View {
     private func activatePost(_ action: FeedbackDeveloperPostAction) {
         switch action.type {
         case .externalURL:
-            guard let url = URL(string: action.target), url.scheme?.lowercased() == "https" else { return }
+            guard let url = URL(string: action.target), url.scheme?.lowercased() == "https" else {
+                haptics.trigger(.error)
+                return
+            }
+            haptics.trigger(.action)
             openURL(url)
         case .appRoute:
-            _ = model.openPackageRoute(action.target) || routeHandler.openFeedbackAppRoute(action.target)
+            if model.openPackageRoute(action.target) || routeHandler.openFeedbackAppRoute(action.target) {
+                haptics.trigger(.navigation)
+            } else {
+                haptics.trigger(.error)
+            }
         }
     }
 }
@@ -56,6 +65,7 @@ private struct FeedbackKindPicker: View {
     let select: (FeedbackKind) -> Void
     let close: () -> Void
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.feedbackHaptics) private var haptics
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -63,7 +73,10 @@ private struct FeedbackKindPicker: View {
             let columns = dynamicTypeSize.isAccessibilitySize ? [GridItem(.flexible())] : [GridItem(.flexible()), GridItem(.flexible())]
             LazyVGrid(columns: columns, spacing: 12) {
                 ForEach(FeedbackKind.allCases) { kind in
-                    Button { select(kind) } label: {
+                    Button {
+                        haptics.trigger(.selection)
+                        select(kind)
+                    } label: {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(FK.kind(kind)).font(.headline)
                             Text(kindDescription(kind)).font(.subheadline).foregroundStyle(.secondary)
@@ -160,9 +173,10 @@ private final class FeedbackComposerModel {
         else { try? await draftStore.save(draft) }
     }
 
-    func importItems(_ items: [PhotosPickerItem]) async {
-        guard items.isEmpty == false, isImporting == false else { return }
+    func importItems(_ items: [PhotosPickerItem]) async -> Bool {
+        guard items.isEmpty == false, isImporting == false else { return false }
         isImporting = true; defer { isImporting = false }
+        var imported = false
         for item in items.prefix(max(0, product.attachmentLimits.count - attachments.count)) {
             do {
                 guard let data = try await item.loadTransferable(type: Data.self),
@@ -173,9 +187,11 @@ private final class FeedbackComposerModel {
                 guard data.count <= limit else { errorMessage = FK.text("feedbackkit.attachment.too.large"); continue }
                 let filename = "attachment-\(UUID().uuidString).\(type.preferredFilenameExtension ?? "data")"
                 attachments.append(.init(filename: filename, contentType: mime, data: data))
-            } catch is CancellationError { return }
+                imported = true
+            } catch is CancellationError { return imported }
             catch { errorMessage = FK.text("feedbackkit.attachment.failed") }
         }
+        return imported
     }
 
     func submit(locale: Locale, diagnosticsOverride: Bool? = nil) async -> Bool {
@@ -228,6 +244,7 @@ private struct FeedbackComposer: View {
     let submitted: () -> Void
     let close: () -> Void
     @Environment(\.locale) private var locale
+    @Environment(\.feedbackHaptics) private var haptics
 
     private enum Field { case title; case body }
 
@@ -252,7 +269,7 @@ private struct FeedbackComposer: View {
                     }.feedbackBorder(style)
                     attachmentStrip
                     if model.diagnosticsAvailable {
-                        Toggle(isOn: $model.includesDiagnostics) {
+                        Toggle(isOn: diagnosticsBinding) {
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(FK.text("feedbackkit.diagnostics.include")).font(.headline)
                                 Text(FK.text("feedbackkit.diagnostics.disclosure")).font(.caption).foregroundStyle(.secondary)
@@ -261,7 +278,7 @@ private struct FeedbackComposer: View {
                     }
                     if let message = model.errorMessage { Text(message).font(.footnote).foregroundStyle(.red).accessibilityLabel(message) }
                     Button(model.disclosedVisibility == .public ? FK.text("feedbackkit.send.public") : FK.text("feedbackkit.send")) {
-                        Task { if await model.submit(locale: locale) { submitted() } }
+                        submit()
                     }
                     .font(.headline).foregroundStyle(.primary).frame(maxWidth: .infinity, minHeight: 54).feedbackBorder(style).buttonStyle(.plain).disabled(model.canSubmit == false)
                 }.padding(.horizontal, style.pagePadding).padding(.bottom, 20)
@@ -269,15 +286,25 @@ private struct FeedbackComposer: View {
         }
         .presentationDetents([.large])
         .task { await model.restore() }
-        .onChange(of: selections) { _, items in Task { await model.importItems(items); selections.removeAll() } }
+        .onChange(of: selections) { _, items in
+            guard items.isEmpty == false else { return }
+            Task {
+                let imported = await model.importItems(items)
+                selections.removeAll()
+                haptics.trigger(imported ? .success : .error)
+            }
+        }
         .onDisappear { Task { await model.saveDraft() } }
         .confirmationDialog(FK.text("feedbackkit.attachment.discard.title"), isPresented: $confirmClose) {
-            Button(FK.text("feedbackkit.attachment.discard"), role: .destructive, action: close)
+            Button(FK.text("feedbackkit.attachment.discard"), role: .destructive) {
+                haptics.trigger(.warning)
+                close()
+            }
             Button(FK.text("feedbackkit.cancel"), role: .cancel) {}
         } message: { Text(FK.text("feedbackkit.attachment.discard.message")) }
         .alert(FK.text("feedbackkit.diagnostics.upload.failed"), isPresented: $model.diagnosticFailure) {
-            Button(FK.text("feedbackkit.diagnostics.retry")) { Task { if await model.submit(locale: locale, diagnosticsOverride: true) { submitted() } } }
-            Button(FK.text("feedbackkit.diagnostics.send.without")) { Task { if await model.submit(locale: locale, diagnosticsOverride: false) { submitted() } } }
+            Button(FK.text("feedbackkit.diagnostics.retry")) { submit(diagnosticsOverride: true) }
+            Button(FK.text("feedbackkit.diagnostics.send.without")) { submit(diagnosticsOverride: false) }
             Button(FK.text("feedbackkit.cancel"), role: .cancel) {}
         }
     }
@@ -294,7 +321,10 @@ private struct FeedbackComposer: View {
                 ForEach(model.attachments) { attachment in
                     ZStack(alignment: .topTrailing) {
                         Text(attachment.filename).font(.caption).lineLimit(2).frame(width: 86, height: 70).padding(8).feedbackBorder(style)
-                        Button { model.attachments.removeAll { $0.id == attachment.id } } label: {
+                        Button {
+                            haptics.trigger(.selection)
+                            model.attachments.removeAll { $0.id == attachment.id }
+                        } label: {
                             Image(systemName: "xmark.circle.fill").symbolRenderingMode(.palette).foregroundStyle(.white, .black.opacity(0.7)).font(.title3)
                         }.buttonStyle(.plain).offset(x: 5, y: -5)
                     }
@@ -307,6 +337,24 @@ private struct FeedbackComposer: View {
     }
 
     private func requestClose() { if model.attachments.isEmpty { close() } else { confirmClose = true } }
+
+    private var diagnosticsBinding: Binding<Bool> {
+        Binding(
+            get: { model.includesDiagnostics },
+            set: {
+                model.includesDiagnostics = $0
+                haptics.trigger(.selection)
+            }
+        )
+    }
+
+    private func submit(diagnosticsOverride: Bool? = nil) {
+        Task {
+            let didSubmit = await model.submit(locale: locale, diagnosticsOverride: diagnosticsOverride)
+            haptics.trigger(didSubmit ? .success : .error)
+            if didSubmit { submitted() }
+        }
+    }
 }
 
 private struct FeedbackAttachmentAddLabel: View {
@@ -331,17 +379,23 @@ private final class FeedbackDetailModel {
     let voteChanged: (FeedbackVoteResult) -> Void
     init(id: String, client: FeedbackClient, voteChanged: @escaping (FeedbackVoteResult) -> Void) { self.id = id; self.client = client; self.voteChanged = voteChanged }
     func load() async { isLoading = true; defer { isLoading = false }; do { detail = try await client.feedback(id: id); error = nil } catch { self.error = error } }
-    func vote() async {
-        guard var current = detail, current.isPublic else { return }
+    func vote() async -> Bool {
+        guard var current = detail, current.isPublic else { return false }
         let original = (current.hasVoted, current.voteCount)
         current.hasVoted.toggle(); current.voteCount = max(0, current.voteCount + (current.hasVoted ? 1 : -1)); detail = current
-        do { let result = try await client.setVote(feedbackID: id, voted: current.hasVoted); current.hasVoted = result.hasVoted; current.voteCount = result.voteCount; detail = current; voteChanged(result) }
-        catch { current.hasVoted = original.0; current.voteCount = original.1; detail = current }
+        do {
+            let result = try await client.setVote(feedbackID: id, voted: current.hasVoted)
+            current.hasVoted = result.hasVoted; current.voteCount = result.voteCount; detail = current; voteChanged(result)
+            return true
+        } catch {
+            current.hasVoted = original.0; current.voteCount = original.1; detail = current
+            return false
+        }
     }
 
-    func reply() async {
+    func reply() async -> Bool {
         let body = replyBody.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard body.isEmpty == false, body.count <= 20_000, detail?.isOwner == true, detail?.status == .open else { return }
+        guard body.isEmpty == false, body.count <= 20_000, detail?.isOwner == true, detail?.status == .open else { return false }
         isReplying = true
         replyError = nil
         defer { isReplying = false }
@@ -357,8 +411,10 @@ private final class FeedbackDetailModel {
             replyBody = ""
             pendingReply = nil
             detail = try await client.feedback(id: id)
+            return true
         } catch {
             replyError = error.localizedDescription
+            return false
         }
     }
 }
@@ -367,6 +423,7 @@ private struct FeedbackDetailSheet: View {
     @State private var model: FeedbackDetailModel
     let style: FeedbackStyle
     let close: () -> Void
+    @Environment(\.feedbackHaptics) private var haptics
     init(id: String, client: FeedbackClient, style: FeedbackStyle, voteChanged: @escaping (FeedbackVoteResult) -> Void, close: @escaping () -> Void) {
         _model = State(initialValue: FeedbackDetailModel(id: id, client: client, voteChanged: voteChanged)); self.style = style; self.close = close
     }
@@ -374,7 +431,14 @@ private struct FeedbackDetailSheet: View {
         VStack(spacing: 0) {
             FeedbackSheetHeader(title: model.detail.map { "\(FK.kind($0.type))（\(FK.status($0.status))）" } ?? "") {
                 if let detail = model.detail, detail.isPublic {
-                    Button { Task { await model.vote() } } label: {
+                    Button {
+                        haptics.trigger(.selection)
+                        Task {
+                            if await model.vote() == false {
+                                haptics.trigger(.error)
+                            }
+                        }
+                    } label: {
                         Text("+\(detail.voteCount)").font(.system(size: 22, weight: .black, design: .rounded)).foregroundStyle(detail.hasVoted ? Color.accentColor : Color.primary).frame(minWidth: 44, minHeight: 36)
                     }.buttonStyle(.plain)
                 }
@@ -415,7 +479,12 @@ private struct FeedbackDetailSheet: View {
                         .padding(14)
                         .feedbackBorder(style)
                         .accessibilityLabel(FK.text("feedbackkit.reply.placeholder"))
-                        Button(FK.text("feedbackkit.reply.send")) { Task { await model.reply() } }
+                        Button(FK.text("feedbackkit.reply.send")) {
+                            Task {
+                                let didReply = await model.reply()
+                                haptics.trigger(didReply ? .success : .error)
+                            }
+                        }
                             .font(.headline)
                             .frame(maxWidth: .infinity, minHeight: 48)
                             .contentShape(Rectangle())
@@ -480,10 +549,18 @@ private struct FeedbackDeveloperPostSheet: View {
 struct FeedbackIdentityView: View {
     let client: FeedbackClient; let visitor: FeedbackVisitor?; let productSlug: String?; let deleted: () -> Void
     @State private var confirm = false; @State private var finalConfirm = false; @State private var isDeleting = false; @State private var error: Error?
+    @Environment(\.feedbackHaptics) private var haptics
     var body: some View {
         Form {
             Section(FK.text("feedbackkit.identity.yours")) { LabeledContent(FK.text("feedbackkit.identity.code"), value: visitor?.displayCode ?? "—"); Text(FK.text("feedbackkit.identity.independent")).foregroundStyle(.secondary) }
-            Section(FK.text("feedbackkit.identity.data")) { Text(FK.text("feedbackkit.identity.delete.explanation")); Button(FK.text("feedbackkit.identity.delete"), role: .destructive) { confirm = true }.disabled(isDeleting) }
+            Section(FK.text("feedbackkit.identity.data")) {
+                Text(FK.text("feedbackkit.identity.delete.explanation"))
+                Button(FK.text("feedbackkit.identity.delete"), role: .destructive) {
+                    haptics.trigger(.warning)
+                    confirm = true
+                }
+                .disabled(isDeleting)
+            }
             if let error { Text(error.localizedDescription).foregroundStyle(.red) }
         }
         .navigationTitle(FK.text("feedbackkit.identity.title")).feedbackInlineNavigationTitle()
@@ -496,9 +573,11 @@ struct FeedbackIdentityView: View {
         do {
             try await client.deleteVisitor()
             if let productSlug { try? await FeedbackDraftStore().remove(productSlug: productSlug) }
+            haptics.trigger(.success)
             deleted()
         } catch {
             self.error = error
+            haptics.trigger(.error)
         }
     }
 }

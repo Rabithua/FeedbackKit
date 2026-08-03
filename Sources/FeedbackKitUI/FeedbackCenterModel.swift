@@ -34,8 +34,8 @@ final class FeedbackCenterModel {
         }
     }
 
-    func updateVote(feedbackID: String, target: Bool) async {
-        guard var current = bootstrap else { return }
+    func updateVote(feedbackID: String, target: Bool) async -> Bool {
+        guard var current = bootstrap else { return false }
         current = FeedbackBootstrap(
             product: current.product,
             activity: FeedbackActivityPage(
@@ -60,6 +60,7 @@ final class FeedbackCenterModel {
         do {
             let result = try await client.setVote(feedbackID: feedbackID, voted: target)
             synchronizeVote(result)
+            return true
         } catch {
             if let vote = bootstrap?.activity.entries.first(where: { $0.id == feedbackID })?.vote {
                 synchronizeVote(
@@ -70,6 +71,7 @@ final class FeedbackCenterModel {
                     )
                 )
             }
+            return false
         }
     }
 
