@@ -28,6 +28,26 @@ struct FeedbackClientTests {
         #expect(result.activity.nextCursor == "opaque")
     }
 
+    @Test func inboxUsesServerCountInsteadOfSparseCursorDifference() async throws {
+        let transport = FeedbackFixtureTransport { _ in
+            let json = #"{"code":"ok","message":"OK","data":{"product":{"slug":"app","name":"App","defaultLocale":"en","defaultFeedbackVisibility":"private","iconUrl":null,"attachmentLimits":{"count":5,"imageBytes":100,"videoBytes":200},"diagnostics":null},"activity":{"entries":[],"nextCursor":null},"roadmap":[],"changelog":[],"visitor":{"displayCode":"ABC-123","lastReadCursor":0},"inbox":{"events":[{"sequence":25,"feedbackId":"11111111-1111-4111-8111-111111111111","type":"admin.reply","createdAt":"2026-08-03T10:00:00.000Z"}],"nextCursor":25,"acknowledgedCursor":0,"unreadCount":1,"hasMore":false}}}"#
+            return (200, [:], Data(json.utf8))
+        }
+        let client = FeedbackClient(
+            configuration: .init(baseURL: URL(string: "https://example.com/v1/api")!, productKey: "pk_test"),
+            transport: transport,
+            credentialStore: Credential()
+        )
+
+        let inbox = try await client.bootstrap(locale: Locale(identifier: "en")).inbox
+
+        #expect(inbox.nextCursor - inbox.acknowledgedCursor == 25)
+        #expect(inbox.unreadCount == 1)
+        let acknowledged = inbox.acknowledging(through: 25)
+        #expect(acknowledged.acknowledgedCursor == 25)
+        #expect(acknowledged.unreadCount == 0)
+    }
+
     @Test(arguments: ["validation_error", "validation_failed"])
     func treatsBothValidationCodesAsHTTP422(_ code: String) async throws {
         let transport = FeedbackFixtureTransport { _ in

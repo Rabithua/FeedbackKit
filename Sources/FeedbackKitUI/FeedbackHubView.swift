@@ -146,7 +146,7 @@ struct FeedbackHubView: View {
     }
 
     private var unreadCount: Int {
-        max(0, bootstrap.inbox.nextCursor - bootstrap.inbox.acknowledgedCursor)
+        bootstrap.inbox.unreadCount
     }
 }
 

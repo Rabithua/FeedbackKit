@@ -26,7 +26,18 @@ final class FeedbackCenterModel {
             let loaded = try await client.bootstrap(locale: locale)
             bootstrap = loaded
             if loaded.inbox.nextCursor > loaded.inbox.acknowledgedCursor {
-                _ = try? await client.acknowledgeInbox(cursor: loaded.inbox.nextCursor)
+                if let acknowledgedCursor = try? await client.acknowledgeInbox(cursor: loaded.inbox.nextCursor),
+                   let current = bootstrap
+                {
+                    bootstrap = FeedbackBootstrap(
+                        product: current.product,
+                        activity: current.activity,
+                        roadmap: current.roadmap,
+                        changelog: current.changelog,
+                        visitor: current.visitor,
+                        inbox: current.inbox.acknowledging(through: acknowledgedCursor)
+                    )
+                }
             }
         } catch is CancellationError {
         } catch {
