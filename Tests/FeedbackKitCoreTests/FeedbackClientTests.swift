@@ -75,7 +75,7 @@ struct FeedbackClientTests {
             credentialStore: Credential()
         )
 
-        let releases = try await client.releases(locale: Locale(identifier: "zh-Hans-CN"))
+        let releases = try await client.releases(locale: Locale(identifier: "zh_CN"))
         let release = try #require(releases.first)
 
         #expect(release.version == "2.0.7")

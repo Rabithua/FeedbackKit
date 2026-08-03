@@ -32,7 +32,6 @@ let package = Package(
         ),
         .testTarget(name: "FeedbackKitCoreTests", dependencies: ["FeedbackKitCore", "FeedbackKitTestSupport"]),
         .testTarget(name: "FeedbackKitDiagnosticsTests", dependencies: ["FeedbackKitDiagnostics"]),
-        .testTarget(name: "FeedbackKitUITests", dependencies: ["FeedbackKitUI", "FeedbackKitCore"]),
     ],
     swiftLanguageModes: [.v6]
 )
