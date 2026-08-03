@@ -20,10 +20,14 @@ struct FeedbackSkeletonView: View {
             case .hub:
                 VStack(spacing: 0) {
                     HStack(spacing: 10) {
-                        Circle().frame(width: 34, height: 34)
+                        Circle()
+                            .stroke(lineWidth: style.borderWidth)
+                            .frame(width: 34, height: 34)
                         Text("Feedback center").font(.title2.bold())
                         Spacer(minLength: 8)
-                        Circle().frame(width: 34, height: 34)
+                        Circle()
+                            .stroke(lineWidth: style.borderWidth)
+                            .frame(width: 34, height: 34)
                     }
                     .padding(.horizontal, style.pagePadding)
                     .padding(.top, 10)
