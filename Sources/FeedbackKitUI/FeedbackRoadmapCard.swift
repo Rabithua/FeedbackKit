@@ -7,13 +7,13 @@ struct FeedbackRoadmapCard: View {
     let height: CGFloat
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 8) {
             Text(FK.stage(item.roadmapStage))
                 .font(stageFont)
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
                 .minimumScaleFactor(0.72)
-                .frame(width: 66)
+                .frame(width: 44)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.title)
@@ -29,7 +29,7 @@ struct FeedbackRoadmapCard: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .foregroundStyle(.white)
-        .padding(.horizontal, 18)
+        .padding(.horizontal, 12)
         .frame(width: width, height: height, alignment: .leading)
         .background {
             LinearGradient(
@@ -49,7 +49,7 @@ struct FeedbackRoadmapCard: View {
     private var stageFont: Font {
         item.roadmapStage == .undecided
             ? .title3.weight(.black)
-            : .largeTitle.weight(.black)
+            : .system(size: 40, weight: .black)
     }
 }
 
