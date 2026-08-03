@@ -4,7 +4,8 @@ struct FeedbackSkeletonView: View {
     enum Layout {
         case hub
         case list
-        case detail
+        case feedbackDetail
+        case developerPostDetail
         case releases
     }
 
@@ -57,23 +58,10 @@ struct FeedbackSkeletonView: View {
                     FeedbackSkeletonRows(style: style, count: 5)
                         .padding(style.pagePadding)
                 }
-            case .detail:
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 14) {
-                        Text("Feedback title placeholder").font(.title3)
-                        Text("Feedback content placeholder that fills the available width.")
-                        Text("Additional feedback context placeholder.")
-                        Divider()
-                        Text("Reply content placeholder").font(.body)
-                        Text("Reply metadata").font(.caption)
-                        Divider()
-                        Text("Another response placeholder").font(.body)
-                        Text("Response metadata").font(.caption)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, style.pagePadding)
-                    .padding(.bottom, 24)
-                }
+            case .feedbackDetail:
+                FeedbackDetailSkeletonView(style: style)
+            case .developerPostDetail:
+                FeedbackDeveloperPostSkeletonView(style: style)
             case .releases:
                 ScrollView {
                     HStack(alignment: .top, spacing: 14) {

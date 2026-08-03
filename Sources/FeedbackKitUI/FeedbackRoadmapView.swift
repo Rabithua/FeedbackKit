@@ -16,13 +16,20 @@ struct FeedbackRoadmapView: View {
                 )
             } else {
                 ScrollView([.horizontal, .vertical]) {
-                    LazyHGrid(rows: rows, alignment: .top, spacing: 42) {
-                        ForEach(activeItems) { item in
-                            FeedbackRoadmapCard(
-                                item: item,
-                                width: cardWidth,
-                                height: rowHeight
-                            )
+                    HStack(alignment: .top, spacing: columnSpacing) {
+                        ForEach(0 ..< columnCount, id: \.self) { column in
+                            LazyVStack(spacing: itemSpacing) {
+                                ForEach(items(in: column)) { item in
+                                    let length = cardLength(for: item)
+                                    FeedbackRoadmapCard(
+                                        item: item,
+                                        width: length,
+                                        height: cardThickness
+                                    )
+                                    .rotationEffect(.degrees(90))
+                                    .frame(width: cardThickness, height: length)
+                                }
+                            }
                         }
                     }
                     .padding(style.pagePadding)
@@ -43,22 +50,28 @@ struct FeedbackRoadmapView: View {
             }
     }
 
-    private var rows: [GridItem] {
-        Array(
-            repeating: GridItem(.fixed(rowHeight), spacing: rowSpacing, alignment: .leading),
-            count: dynamicTypeSize.isAccessibilitySize ? 2 : 4
-        )
+    private let columnCount = 4
+
+    private func items(in column: Int) -> [FeedbackRoadmapItem] {
+        activeItems.enumerated().compactMap { index, item in
+            index % columnCount == column ? item : nil
+        }
     }
 
-    private var rowHeight: CGFloat {
-        dynamicTypeSize.isAccessibilitySize ? 132 : 86
+    private func cardLength(for item: FeedbackRoadmapItem) -> CGFloat {
+        let base: CGFloat = item.roadmapStage == .undecided ? 276 : 340
+        return dynamicTypeSize.isAccessibilitySize ? base + 100 : base
     }
 
-    private var rowSpacing: CGFloat {
-        dynamicTypeSize.isAccessibilitySize ? 24 : 18
+    private var cardThickness: CGFloat {
+        dynamicTypeSize.isAccessibilitySize ? 112 : 78
     }
 
-    private var cardWidth: CGFloat {
-        dynamicTypeSize.isAccessibilitySize ? 480 : 390
+    private var columnSpacing: CGFloat {
+        dynamicTypeSize.isAccessibilitySize ? 30 : 24
+    }
+
+    private var itemSpacing: CGFloat {
+        dynamicTypeSize.isAccessibilitySize ? 42 : 34
     }
 }

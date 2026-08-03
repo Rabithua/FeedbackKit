@@ -372,7 +372,7 @@ private struct FeedbackDetailSheet: View {
     }
     var body: some View {
         VStack(spacing: 0) {
-            FeedbackSheetHeader(title: model.detail.map { "\(FK.kind($0.type))（\(FK.status($0.status))）" } ?? FK.text("feedbackkit.feedback.title")) {
+            FeedbackSheetHeader(title: model.detail.map { "\(FK.kind($0.type))（\(FK.status($0.status))）" } ?? "") {
                 if let detail = model.detail, detail.isPublic {
                     Button { Task { await model.vote() } } label: {
                         Text("+\(detail.voteCount)").font(.system(size: 22, weight: .black, design: .rounded)).foregroundStyle(detail.hasVoted ? Color.accentColor : Color.primary).frame(minWidth: 44, minHeight: 36)
@@ -382,7 +382,7 @@ private struct FeedbackDetailSheet: View {
             .padding(.horizontal, style.pagePadding).padding(.top, 14).padding(.bottom, 8)
             Group {
                 if let detail = model.detail { content(detail) }
-                else if model.isLoading { FeedbackSkeletonView(layout: .detail, style: style) }
+                else if model.isLoading { FeedbackSkeletonView(layout: .feedbackDetail, style: style) }
                 else if let error = model.error { FeedbackErrorView(error: error) { Task { await model.load() } } }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -469,7 +469,7 @@ private struct FeedbackDeveloperPostSheet: View {
                         }
                         if let published = post.publishedAt { Text(published.feedbackRelativeText).font(.caption).foregroundStyle(.tertiary).frame(maxWidth: .infinity, alignment: .trailing) }
                     }.padding(.horizontal, style.pagePadding).padding(.bottom, 24) }
-                } else if model.isLoading { FeedbackSkeletonView(layout: .detail, style: style) }
+                } else if model.isLoading { FeedbackSkeletonView(layout: .developerPostDetail, style: style) }
                 else if let error = model.error { FeedbackErrorView(error: error) { Task { await model.load(locale: locale) } } }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
