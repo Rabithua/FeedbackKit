@@ -43,6 +43,45 @@ struct FeedbackClientTests {
         }
     }
 
+    @Test func releaseDetailUsesPublicEndpointLocaleAndDecodesCompleteBody() async throws {
+        let releaseID = "66666666-6666-4666-8666-666666666666"
+        let completeBody = "让大型笔记列表更流畅，并提升加载恢复和编辑可靠性。\n\n修复了附件、分享链接和输入区域的多个问题。"
+        let transport = FeedbackFixtureTransport { request in
+            #expect(request.httpMethod == "GET")
+            #expect(request.url?.path == "/v1/api/public/releases/\(releaseID)")
+            #expect(URLComponents(url: request.url!, resolvingAgainstBaseURL: false)?.queryItems == [
+                URLQueryItem(name: "locale", value: "zh-Hans-CN"),
+            ])
+            #expect(request.value(forHTTPHeaderField: "X-Product-Key") == "pk_test")
+            #expect(request.value(forHTTPHeaderField: "Authorization") == nil)
+            let object: [String: Any] = [
+                "code": "ok",
+                "message": "OK",
+                "data": [
+                    "id": releaseID,
+                    "version": "2.0.7",
+                    "releasedAt": "2026-08-01T08:00:00Z",
+                    "title": "Rote 2.0.7",
+                    "body": completeBody,
+                    "locale": "zh-Hans",
+                    "items": [],
+                ],
+            ]
+            return (200, [:], try JSONSerialization.data(withJSONObject: object))
+        }
+        let client = FeedbackClient(
+            configuration: .init(baseURL: URL(string: "https://example.com/v1/api")!, productKey: "pk_test"),
+            transport: transport,
+            credentialStore: Credential()
+        )
+
+        let release = try await client.release(id: releaseID, locale: Locale(identifier: "zh-Hans-CN"))
+
+        #expect(release.version == "2.0.7")
+        #expect(release.body == completeBody)
+        #expect(release.items.isEmpty)
+    }
+
     @Test func diagnosticUploadUsesSeparateEndpointsAndExactHeaders() async throws {
         let uploadURL = URL(string: "https://storage.example/private?signature=secret")!
         let transport = FeedbackFixtureTransport { request in

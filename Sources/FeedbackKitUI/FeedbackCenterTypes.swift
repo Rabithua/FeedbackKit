@@ -37,6 +37,7 @@ enum FeedbackCenterPage: Hashable {
     case mine
     case roadmap
     case releases
+    case release(id: String, initial: FeedbackRelease?)
     case diagnostics
     case identity
 }

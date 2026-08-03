@@ -84,6 +84,15 @@ public actor FeedbackClient {
         )
     }
 
+    public func release(id: String, locale: Locale) async throws -> FeedbackRelease {
+        try await get(
+            FeedbackRelease.self,
+            scope: .public,
+            path: "releases/\(id)",
+            query: [URLQueryItem(name: "locale", value: locale.feedbackContentIdentifier)]
+        )
+    }
+
     public func createFeedback(_ request: FeedbackCreateRequest, idempotencyKey: String) async throws -> OwnedFeedbackSummary {
         try await send(
             OwnedFeedbackSummary.self,

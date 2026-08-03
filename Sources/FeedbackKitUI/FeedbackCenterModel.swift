@@ -113,8 +113,9 @@ final class FeedbackCenterModel {
                 sheet = .developerPost(id)
             } else if routeUUID(components.path, prefix: "/items/") != nil {
                 path.append(.roadmap)
-            } else if routeUUID(components.path, prefix: "/releases/") != nil {
-                path.append(.releases)
+            } else if let id = routeUUID(components.path, prefix: "/releases/") {
+                let initial = bootstrap?.changelog.first { $0.id == id }
+                path.append(.release(id: id, initial: initial))
             } else {
                 return false
             }
