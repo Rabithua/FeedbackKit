@@ -91,18 +91,22 @@ enum FK {
 struct FeedbackBorder: ViewModifier {
     let style: FeedbackStyle
 
-    @ViewBuilder
     func body(content: Content) -> some View {
-        if style.cardCornerRadius > 0 {
-            content.overlay {
-                RoundedRectangle(cornerRadius: style.cardCornerRadius, style: .continuous)
-                    .stroke(Color.secondary.opacity(0.22), style: StrokeStyle(lineWidth: style.borderWidth, dash: [12, 9]))
-            }
+        content.overlay {
+            FeedbackComponentShape(cornerRadius: style.cardCornerRadius)
+                .stroke(Color.secondary.opacity(0.22), style: StrokeStyle(lineWidth: style.borderWidth, dash: [12, 9]))
+        }
+    }
+}
+
+struct FeedbackComponentShape: Shape {
+    let cornerRadius: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        if cornerRadius > 0 {
+            RoundedRectangle(cornerRadius: cornerRadius).path(in: rect)
         } else {
-            content.overlay {
-                Rectangle()
-                    .stroke(Color.secondary.opacity(0.22), style: StrokeStyle(lineWidth: style.borderWidth, dash: [12, 9]))
-            }
+            Rectangle().path(in: rect)
         }
     }
 }

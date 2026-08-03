@@ -32,12 +32,12 @@ struct FeedbackSkeletonView: View {
                     ScrollView {
                         VStack(alignment: .leading, spacing: style.sectionSpacing) {
                             HStack(spacing: 12) {
-                                RoundedRectangle(cornerRadius: style.cardCornerRadius)
+                                FeedbackComponentShape(cornerRadius: style.cardCornerRadius)
                                     .aspectRatio(1, contentMode: .fit)
                                 VStack(spacing: 12) {
-                                    RoundedRectangle(cornerRadius: style.cardCornerRadius)
+                                    FeedbackComponentShape(cornerRadius: style.cardCornerRadius)
                                         .frame(minHeight: 72)
-                                    RoundedRectangle(cornerRadius: style.cardCornerRadius)
+                                    FeedbackComponentShape(cornerRadius: style.cardCornerRadius)
                                         .frame(minHeight: 72)
                                 }
                             }
