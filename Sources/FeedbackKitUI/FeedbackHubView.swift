@@ -11,9 +11,13 @@ struct FeedbackHubView: View {
     let dismiss: () -> Void
     let activatePost: (FeedbackDeveloperPostAction) -> Void
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isContentVisible = false
+
     var body: some View {
         VStack(spacing: 0) {
             header
+                .feedbackEntrance(isVisible: isContentVisible, order: 0, reduceMotion: reduceMotion)
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: style.sectionSpacing) {
                     cards
@@ -25,6 +29,7 @@ struct FeedbackHubView: View {
                         .feedbackBorder(style)
                         .buttonStyle(.plain)
                         .accessibilityIdentifier("developerCommunity.newFeedback")
+                        .feedbackEntrance(isVisible: isContentVisible, order: 10, reduceMotion: reduceMotion)
                 }
                 .padding(.horizontal, style.pagePadding)
                 .padding(.bottom, 20)
@@ -32,6 +37,7 @@ struct FeedbackHubView: View {
             .refreshable { await refresh() }
         }
         .accessibilityIdentifier("developerCommunity.hub")
+        .task { await revealContent() }
     }
 
     private var header: some View {
@@ -59,9 +65,12 @@ struct FeedbackHubView: View {
         HStack(spacing: 12) {
             hubButton(FK.text("feedbackkit.mine.title"), identifier: "developerCommunity.hubCard.mine", badge: unreadCount) { openPage(.mine) }
                 .aspectRatio(1, contentMode: .fit)
+                .feedbackEntrance(isVisible: isContentVisible, order: 1, reduceMotion: reduceMotion)
             VStack(spacing: 12) {
                 hubButton(FK.text("feedbackkit.roadmap.title"), identifier: "developerCommunity.hubCard.roadmap") { openPage(.roadmap) }
+                    .feedbackEntrance(isVisible: isContentVisible, order: 2, reduceMotion: reduceMotion)
                 hubButton(FK.text("feedbackkit.releases.title"), identifier: "developerCommunity.hubCard.releases") { openPage(.releases) }
+                    .feedbackEntrance(isVisible: isContentVisible, order: 3, reduceMotion: reduceMotion)
             }
         }
     }
@@ -96,10 +105,13 @@ struct FeedbackHubView: View {
                 Spacer()
                 Button(FK.text("feedbackkit.all")) { openPage(.activity) }.font(.subheadline)
             }
+            .feedbackEntrance(isVisible: isContentVisible, order: 4, reduceMotion: reduceMotion)
             if bootstrap.activity.entries.isEmpty {
-                Text(FK.text("feedbackkit.activity.empty")).foregroundStyle(.secondary)
+                Text(FK.text("feedbackkit.activity.empty"))
+                    .foregroundStyle(.secondary)
+                    .feedbackEntrance(isVisible: isContentVisible, order: 5, reduceMotion: reduceMotion)
             } else {
-                ForEach(bootstrap.activity.entries.prefix(5)) { entry in
+                ForEach(Array(bootstrap.activity.entries.prefix(5).enumerated()), id: \.element.id) { index, entry in
                     FeedbackActivityRow(
                         entry: entry,
                         style: style,
@@ -112,9 +124,17 @@ struct FeedbackHubView: View {
                         vote: vote,
                         activatePost: activatePost
                     )
+                    .feedbackEntrance(isVisible: isContentVisible, order: 5 + index, reduceMotion: reduceMotion)
                 }
             }
         }
+    }
+
+    private func revealContent() async {
+        guard !isContentVisible else { return }
+        await Task.yield()
+        guard !Task.isCancelled else { return }
+        isContentVisible = true
     }
 
     private var unreadCount: Int {
