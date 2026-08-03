@@ -24,16 +24,7 @@ struct FeedbackReleaseTimelineRow: View {
                     .font(.headline)
             }
 
-            if release.body.isEmpty == false {
-                Text(verbatim: release.body)
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.leading)
-                    .lineLimit(nil)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .layoutPriority(1)
-                    .textSelection(.enabled)
-            }
+            FeedbackReleaseBodyText(text: release.body)
 
             ForEach(release.items) { item in
                 VStack(alignment: .leading, spacing: 3) {
@@ -54,6 +45,5 @@ struct FeedbackReleaseTimelineRow: View {
                 .frame(maxWidth: .infinity, alignment: .trailing)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityElement(children: .combine)
     }
 }
