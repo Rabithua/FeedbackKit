@@ -25,23 +25,27 @@ struct FeedbackReleaseTimelineRow: View {
             }
 
             if release.body.isEmpty == false {
-                Text(release.body)
+                Text(verbatim: release.body)
+                    .font(.body)
                     .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .multilineTextAlignment(.leading)
+                    .lineLimit(nil)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .layoutPriority(1)
+                    .textSelection(.enabled)
             }
 
             ForEach(release.items) { item in
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("• \(item.title)")
+                    Text(verbatim: "• \(item.title)")
                     if item.body.isEmpty == false {
-                        Text(item.body)
+                        Text(verbatim: item.body)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                             .padding(.leading, 14)
                     }
                 }
-                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
 
             Text(release.releasedAt.feedbackRelativeText)
@@ -49,7 +53,6 @@ struct FeedbackReleaseTimelineRow: View {
                 .foregroundStyle(.tertiary)
                 .frame(maxWidth: .infinity, alignment: .trailing)
         }
-        .fixedSize(horizontal: false, vertical: true)
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
     }
