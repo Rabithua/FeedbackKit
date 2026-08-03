@@ -20,7 +20,7 @@ public struct FeedbackStyle: Sendable {
     public init(
         pagePadding: CGFloat = 20,
         sectionSpacing: CGFloat = 24,
-        cardCornerRadius: CGFloat = 18,
+        cardCornerRadius: CGFloat = 0,
         borderWidth: CGFloat = 1
     ) {
         self.pagePadding = pagePadding
@@ -91,10 +91,18 @@ enum FK {
 struct FeedbackBorder: ViewModifier {
     let style: FeedbackStyle
 
+    @ViewBuilder
     func body(content: Content) -> some View {
-        content.overlay {
-            RoundedRectangle(cornerRadius: style.cardCornerRadius, style: .continuous)
-                .stroke(Color.secondary.opacity(0.22), style: StrokeStyle(lineWidth: style.borderWidth, dash: [12, 9]))
+        if style.cardCornerRadius > 0 {
+            content.overlay {
+                RoundedRectangle(cornerRadius: style.cardCornerRadius, style: .continuous)
+                    .stroke(Color.secondary.opacity(0.22), style: StrokeStyle(lineWidth: style.borderWidth, dash: [12, 9]))
+            }
+        } else {
+            content.overlay {
+                Rectangle()
+                    .stroke(Color.secondary.opacity(0.22), style: StrokeStyle(lineWidth: style.borderWidth, dash: [12, 9]))
+            }
         }
     }
 }

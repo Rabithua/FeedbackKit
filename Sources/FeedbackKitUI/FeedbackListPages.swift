@@ -183,16 +183,31 @@ struct FeedbackRoadmapView: View {
                 ForEach(RoadmapStage.allCases) { stage in
                     HStack(alignment: .top, spacing: 14) {
                         Text(FK.stage(stage))
-                            .font(stage == .undecided ? .system(size: 19, weight: .black) : .system(size: 29, weight: .black))
+                            .font(stage == .undecided ? .system(size: 18, weight: .black) : .system(size: 30, weight: .black))
+                            .foregroundStyle(.white)
                             .multilineTextAlignment(.center)
                             .frame(width: 82, height: 82)
-                            .feedbackBorder(style)
+                            .background(stage.feedbackColor)
                         VStack(alignment: .leading, spacing: 12) {
                             let staged = items.filter { $0.roadmapStage == stage && $0.archivedAt == nil }
                             if staged.isEmpty { Text(FK.text("feedbackkit.roadmap.empty.stage")).foregroundStyle(.secondary) }
-                            else { ForEach(staged) { item in Text(item.title).font(.headline).frame(maxWidth: .infinity, alignment: .leading) } }
+                            else {
+                                ForEach(staged) { item in
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(item.title)
+                                            .font(.headline)
+                                        if item.body.isEmpty == false {
+                                            Text(item.body)
+                                                .font(.subheadline)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                    }
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                            }
                         }
-                        .padding(.top, 10)
+                        .padding(.vertical, 8)
                     }
                 }
             }.padding(style.pagePadding)
@@ -243,12 +258,37 @@ struct FeedbackReleaseView: View {
                                         if release.normalizedVersion == normalizedCurrent { Text(FK.text("feedbackkit.release.current")).font(.headline).foregroundStyle(.tint) }
                                     }
                                     if release.title.isEmpty == false, release.title != release.version { Text(release.title).font(.headline) }
-                                    if release.body.isEmpty == false { Text(release.body).foregroundStyle(.secondary).textSelection(.enabled) }
+                                    if release.body.isEmpty == false {
+                                        Text(release.body)
+                                            .foregroundStyle(.secondary)
+                                            .fixedSize(horizontal: false, vertical: true)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                            .textSelection(.enabled)
+                                    }
+                                    if release.items.isEmpty == false {
+                                        ForEach(release.items) { item in
+                                            VStack(alignment: .leading, spacing: 3) {
+                                                Text("• \(item.title)")
+                                                if item.body.isEmpty == false {
+                                                    Text(item.body)
+                                                        .font(.subheadline)
+                                                        .foregroundStyle(.secondary)
+                                                        .padding(.leading, 14)
+                                                }
+                                            }
+                                            .fixedSize(horizontal: false, vertical: true)
+                                        }
+                                    }
                                     Text(release.releasedAt.feedbackRelativeText).font(.caption).foregroundStyle(.tertiary).frame(maxWidth: .infinity, alignment: .trailing)
                                 }
+                                .fixedSize(horizontal: false, vertical: true)
+                                .frame(maxWidth: .infinity, alignment: .leading)
                             }
                         }
-                    }.padding(style.pagePadding)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(style.pagePadding)
                 }.refreshable { await model.load(locale: locale) }
             }
         }
@@ -259,6 +299,16 @@ struct FeedbackReleaseView: View {
     }
 
     private var normalizedCurrent: String { currentVersion.lowercased().hasPrefix("v") ? String(currentVersion.dropFirst()) : currentVersion }
+}
+
+private extension RoadmapStage {
+    var feedbackColor: Color {
+        switch self {
+        case .urgent: .red
+        case .later: .accentColor
+        case .undecided: .gray
+        }
+    }
 }
 
 private struct FeedbackReleaseRail: View {
