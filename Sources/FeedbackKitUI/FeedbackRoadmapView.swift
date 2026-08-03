@@ -15,26 +15,16 @@ struct FeedbackRoadmapView: View {
                     systemImage: "map"
                 )
             } else {
-                ScrollView([.horizontal, .vertical]) {
-                    HStack(alignment: .top, spacing: columnSpacing) {
-                        ForEach(0 ..< columnCount, id: \.self) { column in
-                            LazyVStack(spacing: itemSpacing) {
-                                ForEach(items(in: column)) { item in
-                                    let length = cardLength(for: item)
-                                    FeedbackRoadmapCard(
-                                        item: item,
-                                        width: length,
-                                        height: cardThickness
-                                    )
-                                    .rotationEffect(.degrees(90))
-                                    .frame(width: cardThickness, height: length)
-                                }
-                            }
+                ScrollView {
+                    LazyVStack(spacing: itemSpacing) {
+                        ForEach(activeItems) { item in
+                            FeedbackRoadmapCard(
+                                item: item,
+                                minimumHeight: minimumCardHeight
+                            )
                         }
                     }
-                    .padding(.horizontal, horizontalPadding)
-                    .padding(.top, topPadding)
-                    .padding(.bottom, style.pagePadding)
+                    .padding(style.pagePadding)
                 }
             }
         }
@@ -52,39 +42,11 @@ struct FeedbackRoadmapView: View {
             }
     }
 
-    private let columnCount = 4
-
-    private func items(in column: Int) -> [FeedbackRoadmapItem] {
-        activeItems.enumerated().compactMap { index, item in
-            index % columnCount == column ? item : nil
-        }
-    }
-
-    private func cardLength(for item: FeedbackRoadmapItem) -> CGFloat {
-        let titleLength = min(item.title.count, 24)
-        let bodyLength = min(item.body.count, 48)
-        let contentLength = titleLength + bodyLength
-        let base = min(350, max(224, 205 + CGFloat(contentLength) * 3.2))
-        return dynamicTypeSize.isAccessibilitySize ? base + 100 : base
-    }
-
-    private var cardThickness: CGFloat {
-        dynamicTypeSize.isAccessibilitySize ? 104 : 68
-    }
-
-    private var columnSpacing: CGFloat {
-        dynamicTypeSize.isAccessibilitySize ? 28 : 23
+    private var minimumCardHeight: CGFloat {
+        dynamicTypeSize.isAccessibilitySize ? 124 : 86
     }
 
     private var itemSpacing: CGFloat {
-        dynamicTypeSize.isAccessibilitySize ? 36 : 26
-    }
-
-    private var horizontalPadding: CGFloat {
-        dynamicTypeSize.isAccessibilitySize ? style.pagePadding : 20
-    }
-
-    private var topPadding: CGFloat {
-        dynamicTypeSize.isAccessibilitySize ? style.pagePadding : 28
+        dynamicTypeSize.isAccessibilitySize ? 24 : 18
     }
 }

@@ -3,8 +3,9 @@ import SwiftUI
 
 struct FeedbackRoadmapCard: View {
     let item: FeedbackRoadmapItem
-    let width: CGFloat
-    let height: CGFloat
+    let minimumHeight: CGFloat
+
+    @ScaledMetric(relativeTo: .largeTitle) private var prominentStageSize: CGFloat = 40
 
     var body: some View {
         HStack(spacing: 8) {
@@ -30,7 +31,7 @@ struct FeedbackRoadmapCard: View {
         }
         .foregroundStyle(.white)
         .padding(.horizontal, 12)
-        .frame(width: width, height: height, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: minimumHeight, alignment: .leading)
         .background {
             LinearGradient(
                 stops: [
@@ -49,7 +50,7 @@ struct FeedbackRoadmapCard: View {
     private var stageFont: Font {
         item.roadmapStage == .undecided
             ? .title3.weight(.black)
-            : .system(size: 40, weight: .black)
+            : .system(size: prominentStageSize, weight: .black)
     }
 }
 
