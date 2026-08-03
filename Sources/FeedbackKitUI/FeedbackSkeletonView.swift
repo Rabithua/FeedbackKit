@@ -20,6 +20,10 @@ struct FeedbackSkeletonView: View {
             switch layout {
             case .hub:
                 VStack(spacing: 0) {
+                    Color.clear
+                        .frame(height: 56)
+                        .accessibilityHidden(true)
+
                     ScrollView {
                         VStack(alignment: .leading, spacing: style.sectionSpacing) {
                             HStack(spacing: 12) {
