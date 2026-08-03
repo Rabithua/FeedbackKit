@@ -84,8 +84,6 @@ public struct FeedbackCenterView: View {
             FeedbackRoadmapView(items: model.bootstrap?.roadmap ?? [], style: style)
         case .releases:
             FeedbackReleaseView(client: model.client, initial: model.bootstrap?.changelog ?? [], style: style)
-        case let .release(id, initial):
-            FeedbackReleaseDetailView(client: model.client, id: id, initial: initial, style: style)
         case .diagnostics:
             if let diagnostics = model.client.diagnosticsProvider as? FeedbackDiagnostics {
                 FeedbackDiagnosticsView(diagnostics: diagnostics, style: style)

@@ -65,11 +65,6 @@
 "feedbackkit.open.link" = "Open";
 "feedbackkit.pinned" = "PINNED";
 "feedbackkit.release.current" = "(Current Version)";
-"feedbackkit.release.body.empty" = "No release details are available.";
-"feedbackkit.release.detail.title" = "Release Details";
-"feedbackkit.release.items.title" = "Included Changes";
-"feedbackkit.release.open.hint" = "Opens the complete release details";
-"feedbackkit.release.released" = "Released";
 "feedbackkit.releases.empty" = "No releases yet";
 "feedbackkit.releases.title" = "Changelog";
 "feedbackkit.retry" = "Retry";

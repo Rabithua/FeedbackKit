@@ -31,16 +31,18 @@ struct FeedbackReleaseView: View {
 
                         LazyVStack(alignment: .leading, spacing: 30) {
                             ForEach(model.releases) { release in
-                                NavigationLink(value: FeedbackCenterPage.release(id: release.id, initial: release)) {
-                                    FeedbackReleaseTimelineRow(
-                                        release: release,
-                                        isCurrent: release.normalizedVersion == normalizedCurrent
-                                    )
-                                    .contentShape(Rectangle())
-                                }
-                                .buttonStyle(.plain)
-                                .accessibilityHint(FK.text("feedbackkit.release.open.hint"))
+                                FeedbackReleaseTimelineRow(
+                                    release: release,
+                                    isCurrent: release.normalizedVersion == normalizedCurrent
+                                )
                                 .accessibilityIdentifier("developerCommunity.release.\(release.normalizedVersion)")
+                                .task(id: "\(model.generation)|\(locale.identifier)|\(release.id)") {
+                                    await model.loadDetailsIfNeeded(
+                                        for: release.id,
+                                        locale: locale,
+                                        generation: model.generation
+                                    )
+                                }
                             }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)

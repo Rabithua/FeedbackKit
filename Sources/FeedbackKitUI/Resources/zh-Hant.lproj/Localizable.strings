@@ -65,11 +65,6 @@
 "feedbackkit.open.link" = "開啟";
 "feedbackkit.pinned" = "置頂";
 "feedbackkit.release.current" = "（目前版本）";
-"feedbackkit.release.body.empty" = "暫無更新說明。";
-"feedbackkit.release.detail.title" = "版本詳情";
-"feedbackkit.release.items.title" = "包含的更新";
-"feedbackkit.release.open.hint" = "開啟完整版本詳情";
-"feedbackkit.release.released" = "發佈於";
 "feedbackkit.releases.empty" = "尚無更新日誌";
 "feedbackkit.releases.title" = "更新日誌";
 "feedbackkit.retry" = "重試";

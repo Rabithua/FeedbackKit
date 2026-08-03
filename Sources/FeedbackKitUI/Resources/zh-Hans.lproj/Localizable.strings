@@ -65,11 +65,6 @@
 "feedbackkit.open.link" = "打开";
 "feedbackkit.pinned" = "置顶";
 "feedbackkit.release.current" = "（当前版本）";
-"feedbackkit.release.body.empty" = "暂无更新说明。";
-"feedbackkit.release.detail.title" = "版本详情";
-"feedbackkit.release.items.title" = "包含的更新";
-"feedbackkit.release.open.hint" = "打开完整版本详情";
-"feedbackkit.release.released" = "发布于";
 "feedbackkit.releases.empty" = "还没有更新日志";
 "feedbackkit.releases.title" = "更新日志";
 "feedbackkit.retry" = "重试";
