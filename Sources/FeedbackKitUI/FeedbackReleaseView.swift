@@ -36,13 +36,6 @@ struct FeedbackReleaseView: View {
                                     isCurrent: release.normalizedVersion == normalizedCurrent
                                 )
                                 .accessibilityIdentifier("developerCommunity.release.\(release.normalizedVersion)")
-                                .task(id: "\(model.generation)|\(locale.identifier)|\(release.id)") {
-                                    await model.loadDetailsIfNeeded(
-                                        for: release.id,
-                                        locale: locale,
-                                        generation: model.generation
-                                    )
-                                }
                             }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
