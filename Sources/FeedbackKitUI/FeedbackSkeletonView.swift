@@ -20,17 +20,6 @@ struct FeedbackSkeletonView: View {
             switch layout {
             case .hub:
                 VStack(spacing: 0) {
-                    HStack(spacing: 10) {
-                        Rectangle()
-                            .stroke(lineWidth: style.borderWidth)
-                            .frame(width: 34, height: 34)
-                        Text("Feedback center").font(.title2.bold())
-                        Spacer(minLength: 8)
-                    }
-                    .padding(.horizontal, style.pagePadding)
-                    .padding(.top, 10)
-                    .padding(.bottom, 12)
-
                     ScrollView {
                         VStack(alignment: .leading, spacing: style.sectionSpacing) {
                             HStack(spacing: 12) {
