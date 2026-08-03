@@ -43,7 +43,7 @@ struct FeedbackRoadmapView: View {
     }
 
     private var minimumCardHeight: CGFloat {
-        dynamicTypeSize.isAccessibilitySize ? 124 : 86
+        dynamicTypeSize.isAccessibilitySize ? 108 : 72
     }
 
     private var itemSpacing: CGFloat {
