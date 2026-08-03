@@ -56,7 +56,7 @@ struct FeedbackActivityListView: View {
 
     var body: some View {
         Group {
-            if model.entries.isEmpty, model.isLoading { ProgressView(FK.text("feedbackkit.loading")) }
+            if model.entries.isEmpty, model.isLoading { FeedbackSkeletonView(layout: .list, style: style) }
             else if model.entries.isEmpty, let error = model.error { FeedbackErrorView(error: error) { Task { await model.load(locale: locale, refresh: true) } } }
             else if model.entries.isEmpty { ContentUnavailableView(FK.text("feedbackkit.activity.empty"), systemImage: "text.bubble") }
             else {
@@ -133,7 +133,7 @@ struct MyFeedbackView: View {
 
     var body: some View {
         Group {
-            if model.items.isEmpty, model.isLoading { ProgressView(FK.text("feedbackkit.loading")) }
+            if model.items.isEmpty, model.isLoading { FeedbackSkeletonView(layout: .list, style: style) }
             else if model.items.isEmpty, let error = model.error { FeedbackErrorView(error: error) { Task { await model.load(refresh: true) } } }
             else if model.items.isEmpty { ContentUnavailableView(FK.text("feedbackkit.mine.empty"), systemImage: "bubble.left") }
             else {
@@ -229,7 +229,7 @@ struct FeedbackReleaseView: View {
 
     var body: some View {
         Group {
-            if model.releases.isEmpty, model.isLoading { ProgressView(FK.text("feedbackkit.loading")) }
+            if model.releases.isEmpty, model.isLoading { FeedbackSkeletonView(layout: .releases, style: style) }
             else if model.releases.isEmpty, let error = model.error { FeedbackErrorView(error: error) { Task { await model.load(locale: locale) } } }
             else {
                 ScrollView {
