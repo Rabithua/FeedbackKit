@@ -385,6 +385,7 @@ private struct FeedbackDetailSheet: View {
                 else if model.isLoading { ProgressView(FK.text("feedbackkit.loading")) }
                 else if let error = model.error { FeedbackErrorView(error: error) { Task { await model.load() } } }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .presentationDetents([.large])
         .task { await model.load() }
@@ -471,6 +472,7 @@ private struct FeedbackDeveloperPostSheet: View {
                 } else if model.isLoading { ProgressView(FK.text("feedbackkit.loading")) }
                 else if let error = model.error { FeedbackErrorView(error: error) { Task { await model.load(locale: locale) } } }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }.presentationDetents([.large]).task { await model.load(locale: locale) }
     }
 }
