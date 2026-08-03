@@ -22,19 +22,27 @@ struct FeedbackHubView: View {
                 LazyVStack(alignment: .leading, spacing: style.sectionSpacing) {
                     cards
                     activity
-                    Button(FK.text("feedbackkit.speak")) { openSheet(.kinds) }
-                        .font(.headline)
-                        .foregroundStyle(.primary)
-                        .frame(maxWidth: .infinity, minHeight: 56)
-                        .feedbackBorder(style)
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier("developerCommunity.newFeedback")
-                        .feedbackEntrance(isVisible: isContentVisible, order: 10, reduceMotion: reduceMotion)
                 }
                 .padding(.horizontal, style.pagePadding)
                 .padding(.bottom, 20)
             }
             .refreshable { await refresh() }
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            Button(action: { openSheet(.kinds) }) {
+                Text(FK.text("feedbackkit.speak"))
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+                    .frame(maxWidth: .infinity, minHeight: 56)
+                    .contentShape(Rectangle())
+                    .feedbackBorder(style)
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("developerCommunity.newFeedback")
+            .padding(.horizontal, style.pagePadding)
+            .padding(.vertical, 8)
+            .background(FeedbackSystemBackground())
+            .feedbackEntrance(isVisible: isContentVisible, order: 10, reduceMotion: reduceMotion)
         }
         .accessibilityIdentifier("developerCommunity.hub")
         .task { await revealContent() }
