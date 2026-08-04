@@ -33,7 +33,13 @@ struct FeedbackSheetHost: View {
                     )
                 }
             case let .feedback(id):
-                FeedbackDetailSheet(id: id, client: model.client, style: style, voteChanged: model.synchronizeVote) { model.sheet = nil }
+                FeedbackDetailSheet(
+                    id: id,
+                    client: model.client,
+                    style: style,
+                    voteChanged: model.synchronizeVote,
+                    viewed: { await model.markFeedbackRead(feedbackID: id) }
+                ) { model.sheet = nil }
             case let .developerPost(id):
                 FeedbackDeveloperPostSheet(id: id, client: model.client, style: style, activate: activatePost) { model.sheet = nil }
             }
@@ -378,7 +384,18 @@ private final class FeedbackDetailModel {
     let id: String
     let voteChanged: (FeedbackVoteResult) -> Void
     init(id: String, client: FeedbackClient, voteChanged: @escaping (FeedbackVoteResult) -> Void) { self.id = id; self.client = client; self.voteChanged = voteChanged }
-    func load() async { isLoading = true; defer { isLoading = false }; do { detail = try await client.feedback(id: id); error = nil } catch { self.error = error } }
+    func load() async -> Bool {
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            detail = try await client.feedback(id: id)
+            error = nil
+            return true
+        } catch {
+            self.error = error
+            return false
+        }
+    }
     func vote() async -> Bool {
         guard var current = detail, current.isPublic else { return false }
         let original = (current.hasVoted, current.voteCount)
@@ -422,10 +439,21 @@ private final class FeedbackDetailModel {
 private struct FeedbackDetailSheet: View {
     @State private var model: FeedbackDetailModel
     let style: FeedbackStyle
+    let viewed: () async -> Void
     let close: () -> Void
     @Environment(\.feedbackHaptics) private var haptics
-    init(id: String, client: FeedbackClient, style: FeedbackStyle, voteChanged: @escaping (FeedbackVoteResult) -> Void, close: @escaping () -> Void) {
-        _model = State(initialValue: FeedbackDetailModel(id: id, client: client, voteChanged: voteChanged)); self.style = style; self.close = close
+    init(
+        id: String,
+        client: FeedbackClient,
+        style: FeedbackStyle,
+        voteChanged: @escaping (FeedbackVoteResult) -> Void,
+        viewed: @escaping () async -> Void,
+        close: @escaping () -> Void
+    ) {
+        _model = State(initialValue: FeedbackDetailModel(id: id, client: client, voteChanged: voteChanged))
+        self.style = style
+        self.viewed = viewed
+        self.close = close
     }
     var body: some View {
         VStack(spacing: 0) {
@@ -447,13 +475,19 @@ private struct FeedbackDetailSheet: View {
             Group {
                 if let detail = model.detail { content(detail) }
                 else if model.isLoading { FeedbackSkeletonView(layout: .feedbackDetail, style: style) }
-                else if let error = model.error { FeedbackErrorView(error: error) { Task { await model.load() } } }
+                else if let error = model.error { FeedbackErrorView(error: error) { Task { await load() } } }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .presentationDetents([.large])
-        .task { await model.load() }
+        .task { await load() }
         .accessibilityIdentifier("developerCommunity.feedbackDetail")
+    }
+
+    private func load() async {
+        if await model.load() {
+            await viewed()
+        }
     }
     private func content(_ detail: FeedbackDetail) -> some View {
         ScrollView {
@@ -503,7 +537,7 @@ private struct FeedbackDetailSheet: View {
                 }
                 if detail.diagnosticsIncluded == true { Label(FK.text("feedbackkit.diagnostics.included"), systemImage: "lock.shield").font(.caption).foregroundStyle(.secondary) }
             }.padding(.horizontal, style.pagePadding).padding(.bottom, 24)
-        }.refreshable { await model.load() }
+        }.refreshable { await load() }
     }
 }
 

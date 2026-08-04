@@ -97,9 +97,11 @@ struct FeedbackHubView: View {
                         .padding(6)
                         .background(.tint, in: Circle())
                         .padding(8)
+                        .accessibilityIdentifier("developerCommunity.hubCard.mine.badge")
                 }
             }
             .frame(minHeight: 72)
+            .contentShape(.interaction, FeedbackComponentShape(cornerRadius: style.cardCornerRadius))
             .feedbackBorder(style)
         }
         .buttonStyle(.plain)

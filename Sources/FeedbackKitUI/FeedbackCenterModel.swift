@@ -23,26 +23,33 @@ final class FeedbackCenterModel {
         error = nil
         defer { isLoading = false }
         do {
-            let loaded = try await client.bootstrap(locale: locale)
-            bootstrap = loaded
-            if loaded.inbox.nextCursor > loaded.inbox.acknowledgedCursor {
-                if let acknowledgedCursor = try? await client.acknowledgeInbox(cursor: loaded.inbox.nextCursor),
-                   let current = bootstrap
-                {
-                    bootstrap = FeedbackBootstrap(
-                        product: current.product,
-                        activity: current.activity,
-                        roadmap: current.roadmap,
-                        changelog: current.changelog,
-                        visitor: current.visitor,
-                        inbox: current.inbox.acknowledging(through: acknowledgedCursor)
-                    )
-                }
-            }
+            bootstrap = try await client.bootstrap(locale: locale)
         } catch is CancellationError {
         } catch {
             self.error = error
         }
+    }
+
+    func markFeedbackRead(feedbackID: String) async {
+        guard let current = bootstrap,
+              let cursor = current.inbox.events
+                .filter({ $0.feedbackId == feedbackID && $0.sequence > current.inbox.acknowledgedCursor })
+                .map(\.sequence)
+                .max()
+        else { return }
+
+        guard let acknowledgedCursor = try? await client.acknowledgeInbox(cursor: cursor),
+              let latest = bootstrap
+        else { return }
+
+        bootstrap = FeedbackBootstrap(
+            product: latest.product,
+            activity: latest.activity,
+            roadmap: latest.roadmap,
+            changelog: latest.changelog,
+            visitor: latest.visitor,
+            inbox: latest.inbox.acknowledging(through: acknowledgedCursor)
+        )
     }
 
     func updateVote(feedbackID: String, target: Bool) async -> Bool {
