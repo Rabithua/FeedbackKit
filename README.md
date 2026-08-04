@@ -9,33 +9,45 @@ FeedbackKit is an iOS and iPadOS 18+ Swift package for integrating a complete fe
 - `FeedbackKitUI`: the localized SwiftUI feedback center.
 - `FeedbackKitTestSupport`: fixture transport, `URLProtocol`, fixed clocks, and metadata providers.
 
-## Integration
+## Add the package
+
+In Xcode, add `https://github.com/Rabithua/FeedbackKit.git` with the **Up to Next
+Minor Version** rule starting at `0.1.28`. Link these products to the app target:
+
+- `FeedbackKitCore`
+- `FeedbackKitUI`
+- `FeedbackKitDiagnostics` only when the app offers diagnostic upload
+
+`FeedbackKitTestSupport` is intended for test targets only.
+
+## Minimal integration
 
 ```swift
 import FeedbackKitCore
-import FeedbackKitDiagnostics
 import FeedbackKitUI
-
-let diagnostics = FeedbackDiagnostics(
-    configuration: .init(
-        retentionDays: 7,
-        maximumEventCount: 500,
-        maximumDiskBytes: 2 * 1024 * 1024
-    )
-)
 
 let client = FeedbackClient(
     configuration: .init(
         baseURL: URL(string: "https://feedback.example.com/v1/api")!,
-        productKey: "<publishable-product-key>"
-    ),
-    diagnostics: diagnostics
+        productKey: "<publishable-product-key>",
+        keychainService: "com.example.MyApp.feedback.visitor"
+    )
 )
 
-FeedbackCenterView(client: client, routeHandler: routeHandler)
+FeedbackCenterView(client: client)
 ```
 
-The package never uploads diagnostics automatically. A diagnostic snapshot is generated and uploaded only after the user enables the submission switch and sends that specific feedback. FeedbackServer keeps diagnostic artifacts private even when the related feedback is public.
+Keep one client instance for the lifetime of the app. The server URL must include `/v1/api`, and
+the Keychain service must be stable and unique to the host app.
+
+The package never uploads diagnostics automatically. New feedback always starts with diagnostic
+sharing disabled. A private snapshot is generated only after the server and host both support the
+feature and the user explicitly enables the switch for that submission.
+
+Follow the complete [new app onboarding guide](Documentation/GettingStarted.md) for Product setup,
+xcconfig/Info.plist configuration, diagnostics and privacy decisions, route handling, catalog
+seeding, and acceptance checks. The package also compiles a minimal host example as part of its
+test target: [FeedbackKitIntegrationExample.swift](Tests/FeedbackKitUITests/FeedbackKitIntegrationExample.swift).
 
 ## Host extension points
 
@@ -50,5 +62,5 @@ The package ships English, Simplified Chinese, Traditional Chinese, Japanese, an
 
 ```bash
 swift test
-xcodebuild -scheme FeedbackKit-Package -destination 'generic/platform=iOS' build
+xcodebuild -scheme FeedbackKit-Package -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO build
 ```
