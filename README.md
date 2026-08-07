@@ -12,7 +12,7 @@ FeedbackKit is an iOS and iPadOS 18+ Swift package for integrating a complete fe
 ## Add the package
 
 In Xcode, add `https://github.com/Rabithua/FeedbackKit.git` with the **Up to Next
-Minor Version** rule starting at `0.1.28`. Link these products to the app target:
+Minor Version** rule starting at `0.1.29`. Link these products to the app target:
 
 - `FeedbackKitCore`
 - `FeedbackKitUI`
@@ -37,6 +37,17 @@ let client = FeedbackClient(
 FeedbackCenterView(client: client)
 ```
 
+The default language policy follows the host app's effective SwiftUI locale. A single-language app
+can keep the feedback UI and server-authored content on that language even when the device uses a
+different language:
+
+```swift
+FeedbackCenterView(
+    client: client,
+    languagePolicy: .fixed(Locale(identifier: "zh-Hans"))
+)
+```
+
 Keep one client instance for the lifetime of the app. The server URL must include `/v1/api`, and
 the Keychain service must be stable and unique to the host app.
 
@@ -56,7 +67,9 @@ test target: [FeedbackKitIntegrationExample.swift](Tests/FeedbackKitUITests/Feed
 - Implement `FeedbackAppMetadataProvider` for deterministic tests or custom device context.
 - Use `FeedbackStyle` for the intentionally small set of spacing, radius, and border adjustments.
 
-The package ships English, Simplified Chinese, Traditional Chinese, Japanese, and Korean localizations and follows the host app's system background and tint.
+The package ships English, Simplified Chinese, Traditional Chinese, Japanese, and Korean
+localizations. Its UI strings, localized FeedbackServer content, submissions, and refreshes all use
+the same effective language. It also follows the host app's system background and tint.
 
 ## Validation
 

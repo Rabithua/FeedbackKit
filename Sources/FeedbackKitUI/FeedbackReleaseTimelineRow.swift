@@ -4,6 +4,8 @@ import SwiftUI
 struct FeedbackReleaseTimelineRow: View {
     let release: FeedbackRelease
     let isCurrent: Bool
+    @Environment(\.locale) private var locale
+    @Environment(\.feedbackLocalization) private var localization
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -13,7 +15,7 @@ struct FeedbackReleaseTimelineRow: View {
                     .foregroundStyle(.tint)
 
                 if isCurrent {
-                    Text(FK.text("feedbackkit.release.current"))
+                    Text(localization.text("feedbackkit.release.current"))
                         .font(.headline)
                         .foregroundStyle(.tint)
                 }
@@ -48,7 +50,7 @@ struct FeedbackReleaseTimelineRow: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            Text(release.releasedAt.feedbackRelativeText)
+            Text(release.releasedAt.feedbackRelativeText(locale: locale))
                 .font(.caption)
                 .foregroundStyle(.tertiary)
                 .frame(maxWidth: .infinity, alignment: .trailing)

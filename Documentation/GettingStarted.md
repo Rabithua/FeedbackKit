@@ -25,7 +25,7 @@ Neither is required for client bootstrap or feedback submission.
 ## 2. Add the Swift package
 
 Add `https://github.com/Rabithua/FeedbackKit.git` in Xcode with **Up to Next Minor Version**, starting
-at `0.1.28`.
+at `0.1.29`.
 
 Link `FeedbackKitCore` and `FeedbackKitUI` to the app target. Link `FeedbackKitDiagnostics` only when
 the app will offer opt-in diagnostic upload. Add `FeedbackKitTestSupport` only to test targets.
@@ -92,6 +92,27 @@ enum AppFeedbackRuntime {
 Present `FeedbackCenterView(client: AppFeedbackRuntime.client)` from a sheet or full-screen cover.
 `FeedbackCenterToolbarButton` provides a ready-made 44-point toolbar entry.
 
+### Choose the feedback language policy
+
+FeedbackKit follows the host view's effective SwiftUI locale by default. This keeps the package UI
+and localized server content aligned with an app that supports normal per-app language selection.
+
+For a single-language app, declare that language in the app target and fix FeedbackKit to the same
+locale. For example, a Simplified Chinese-only app should use `zh-Hans` as its development region,
+list only `zh-Hans` in `CFBundleLocalizations`, and present:
+
+```swift
+FeedbackCenterView(
+    client: AppFeedbackRuntime.client,
+    languagePolicy: .fixed(Locale(identifier: "zh-Hans"))
+)
+```
+
+Do not use the FeedbackServer Product default locale as an automatic UI override. That value is the
+server's deterministic content fallback, while the language policy represents the language the user
+should see. FeedbackKit applies the resolved policy consistently to package strings, content loads,
+submissions, and refreshes.
+
 ## 5. Add only the host integrations you need
 
 For server-authored `app_route` actions, implement `FeedbackRouteHandler` with an allow-list. Return
@@ -140,6 +161,8 @@ import creates a draft and does not publish automatically.
 ## 7. Acceptance checklist
 
 - Install a fresh build and open the feedback center without an existing visitor credential.
+- With a fixed language policy, test on a device whose preferred language differs and confirm the
+  feedback UI and server-authored content remain in the fixed language.
 - Confirm Activity, My Feedback, Roadmap, and Changelog load without errors when empty.
 - Confirm the entire hub card surface is tappable, not only its text.
 - Submit one private feedback item and verify it appears under My Feedback.

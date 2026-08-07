@@ -13,6 +13,7 @@ struct FeedbackSkeletonView: View {
     let style: FeedbackStyle
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.feedbackLocalization) private var localization
     @State private var isDimmed = false
 
     var body: some View {
@@ -83,7 +84,7 @@ struct FeedbackSkeletonView: View {
         )
         .allowsHitTesting(false)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(FK.text("feedbackkit.loading"))
+        .accessibilityLabel(localization.text("feedbackkit.loading"))
         .onAppear { isDimmed = reduceMotion == false }
         .onChange(of: reduceMotion) { _, shouldReduce in
             isDimmed = shouldReduce == false

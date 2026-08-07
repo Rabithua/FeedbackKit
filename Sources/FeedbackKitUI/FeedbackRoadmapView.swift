@@ -6,12 +6,13 @@ struct FeedbackRoadmapView: View {
     let style: FeedbackStyle
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.feedbackLocalization) private var localization
 
     var body: some View {
         Group {
             if activeItems.isEmpty {
                 ContentUnavailableView(
-                    FK.text("feedbackkit.roadmap.empty.stage"),
+                    localization.text("feedbackkit.roadmap.empty.stage"),
                     systemImage: "map"
                 )
             } else {
@@ -29,7 +30,7 @@ struct FeedbackRoadmapView: View {
             }
         }
         .background(FeedbackSystemBackground())
-        .navigationTitle(FK.text("feedbackkit.roadmap.title"))
+        .navigationTitle(localization.text("feedbackkit.roadmap.title"))
         .feedbackInlineNavigationTitle()
     }
 

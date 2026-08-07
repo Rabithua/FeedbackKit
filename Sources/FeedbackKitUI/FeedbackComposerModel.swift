@@ -69,7 +69,10 @@ final class FeedbackComposerModel {
         }
     }
 
-    func importItems(_ items: [PhotosPickerItem]) async -> Bool {
+    func importItems(
+        _ items: [PhotosPickerItem],
+        localization: FeedbackLocalization
+    ) async -> Bool {
         guard items.isEmpty == false, isImporting == false else { return false }
         isImporting = true
         defer { isImporting = false }
@@ -82,14 +85,14 @@ final class FeedbackComposerModel {
                       }),
                       let mime = type.preferredMIMEType
                 else {
-                    errorMessage = FK.text("feedbackkit.attachment.unsupported")
+                    errorMessage = localization.text("feedbackkit.attachment.unsupported")
                     continue
                 }
                 let limit = mime.hasPrefix("video/")
                     ? product.attachmentLimits.videoBytes
                     : product.attachmentLimits.imageBytes
                 guard data.count <= limit else {
-                    errorMessage = FK.text("feedbackkit.attachment.too.large")
+                    errorMessage = localization.text("feedbackkit.attachment.too.large")
                     continue
                 }
                 let filename = "attachment-\(UUID().uuidString).\(type.preferredFilenameExtension ?? "data")"
@@ -98,21 +101,25 @@ final class FeedbackComposerModel {
             } catch is CancellationError {
                 return imported
             } catch {
-                errorMessage = FK.text("feedbackkit.attachment.failed")
+                errorMessage = localization.text("feedbackkit.attachment.failed")
             }
         }
         return imported
     }
 
-    func submit(locale: Locale, diagnosticsOverride: Bool? = nil) async -> Bool {
+    func submit(
+        locale: Locale,
+        localization: FeedbackLocalization,
+        diagnosticsOverride: Bool? = nil
+    ) async -> Bool {
         let trimmedBody = body.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmedBody.isEmpty == false else {
-            errorMessage = FK.text("feedbackkit.composer.body.required")
+            errorMessage = localization.text("feedbackkit.composer.body.required")
             return false
         }
         guard trimmedTitle.count <= 240, trimmedBody.count <= 20_000 else {
-            errorMessage = FK.text("feedbackkit.composer.too.long")
+            errorMessage = localization.text("feedbackkit.composer.too.long")
             return false
         }
         isSubmitting = true
@@ -123,7 +130,7 @@ final class FeedbackComposerModel {
             let refreshed = try await client.bootstrap(locale: locale).product
             if refreshed.defaultFeedbackVisibility != disclosedVisibility {
                 disclosedVisibility = refreshed.defaultFeedbackVisibility
-                errorMessage = FK.text("feedbackkit.composer.visibility.changed")
+                errorMessage = localization.text("feedbackkit.composer.visibility.changed")
                 return false
             }
             let refreshedDiagnosticsAvailable = refreshed.diagnostics?.supportsSchemaOne == true
@@ -153,7 +160,7 @@ final class FeedbackComposerModel {
             return true
         } catch FeedbackClientError.diagnosticUploadFailed {
             diagnosticFailure = true
-            errorMessage = FK.text("feedbackkit.diagnostics.upload.failed")
+            errorMessage = localization.text("feedbackkit.diagnostics.upload.failed")
             return false
         } catch {
             errorMessage = error.localizedDescription

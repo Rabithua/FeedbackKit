@@ -12,6 +12,7 @@ struct FeedbackHubView: View {
     let activatePost: (FeedbackDeveloperPostAction) -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.feedbackLocalization) private var localization
     @State private var isContentVisible = false
 
     var body: some View {
@@ -30,7 +31,7 @@ struct FeedbackHubView: View {
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             Button(action: { openSheet(.kinds) }) {
-                Text(FK.text("feedbackkit.speak"))
+                Text(localization.text("feedbackkit.speak"))
                     .font(.headline)
                     .foregroundStyle(.primary)
                     .frame(maxWidth: .infinity, minHeight: 56)
@@ -51,15 +52,15 @@ struct FeedbackHubView: View {
     private var header: some View {
         HStack(spacing: 4) {
             Menu {
-                Button(FK.text("feedbackkit.identity.title")) { openPage(.identity) }
-                Button(FK.text("feedbackkit.diagnostics.title")) { openPage(.diagnostics) }
+                Button(localization.text("feedbackkit.identity.title")) { openPage(.identity) }
+                Button(localization.text("feedbackkit.diagnostics.title")) { openPage(.diagnostics) }
             } label: {
                 Image(systemName: "bubble.left.and.bubble.right")
                     .font(.title3.weight(.semibold))
                     .frame(width: 34, height: 36)
             }
             .buttonStyle(.plain)
-            Text(FK.text("feedbackkit.center.title"))
+            Text(localization.text("feedbackkit.center.title"))
                 .font(.title2.bold())
             Spacer(minLength: 8)
             FeedbackCloseButton(action: dismiss)
@@ -71,13 +72,13 @@ struct FeedbackHubView: View {
 
     private var cards: some View {
         HStack(spacing: 12) {
-            hubButton(FK.text("feedbackkit.mine.title"), identifier: "developerCommunity.hubCard.mine", badge: unreadCount) { openPage(.mine) }
+            hubButton(localization.text("feedbackkit.mine.title"), identifier: "developerCommunity.hubCard.mine", badge: unreadCount) { openPage(.mine) }
                 .aspectRatio(1, contentMode: .fit)
                 .feedbackEntrance(isVisible: isContentVisible, order: 1, reduceMotion: reduceMotion)
             VStack(spacing: 12) {
-                hubButton(FK.text("feedbackkit.roadmap.title"), identifier: "developerCommunity.hubCard.roadmap") { openPage(.roadmap) }
+                hubButton(localization.text("feedbackkit.roadmap.title"), identifier: "developerCommunity.hubCard.roadmap") { openPage(.roadmap) }
                     .feedbackEntrance(isVisible: isContentVisible, order: 2, reduceMotion: reduceMotion)
-                hubButton(FK.text("feedbackkit.releases.title"), identifier: "developerCommunity.hubCard.releases") { openPage(.releases) }
+                hubButton(localization.text("feedbackkit.releases.title"), identifier: "developerCommunity.hubCard.releases") { openPage(.releases) }
                     .feedbackEntrance(isVisible: isContentVisible, order: 3, reduceMotion: reduceMotion)
             }
         }
@@ -111,13 +112,13 @@ struct FeedbackHubView: View {
     private var activity: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text(FK.text("feedbackkit.activity.title")).font(.headline)
+                Text(localization.text("feedbackkit.activity.title")).font(.headline)
                 Spacer()
-                Button(FK.text("feedbackkit.all")) { openPage(.activity) }.font(.subheadline)
+                Button(localization.text("feedbackkit.all")) { openPage(.activity) }.font(.subheadline)
             }
             .feedbackEntrance(isVisible: isContentVisible, order: 4, reduceMotion: reduceMotion)
             if bootstrap.activity.entries.isEmpty {
-                Text(FK.text("feedbackkit.activity.empty"))
+                Text(localization.text("feedbackkit.activity.empty"))
                     .foregroundStyle(.secondary)
                     .feedbackEntrance(isVisible: isContentVisible, order: 5, reduceMotion: reduceMotion)
             } else {
@@ -158,6 +159,7 @@ struct FeedbackActivityRow: View {
     let open: () -> Void
     let vote: (String, Bool) -> Void
     let activatePost: (FeedbackDeveloperPostAction) -> Void
+    @Environment(\.feedbackLocalization) private var localization
 
     var body: some View {
         HStack(alignment: .center, spacing: 10) {
@@ -182,7 +184,7 @@ struct FeedbackActivityRow: View {
                         .frame(minWidth: 48, minHeight: 44)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(FK.text(voteState.hasVoted ? "feedbackkit.vote.remove" : "feedbackkit.vote"))
+                .accessibilityLabel(localization.text(voteState.hasVoted ? "feedbackkit.vote.remove" : "feedbackkit.vote"))
             } else if case let .developerPost(_, data) = entry, let action = data.action {
                 Button { activatePost(action) } label: {
                     Image(systemName: "arrow.up.right")
@@ -195,7 +197,7 @@ struct FeedbackActivityRow: View {
         }
         .overlay(alignment: .topTrailing) {
             if entry.metadata.pinnedAt != nil {
-                Text(FK.text("feedbackkit.pinned"))
+                Text(localization.text("feedbackkit.pinned"))
                     .font(.caption2.bold())
                     .offset(y: -8)
             }
@@ -207,8 +209,8 @@ struct FeedbackActivityRow: View {
 
     private var category: String {
         switch entry {
-        case let .feedback(_, data): FK.kind(data.type)
-        case .developerPost: FK.text("feedbackkit.developer.post")
+        case let .feedback(_, data): localization.kind(data.type)
+        case .developerPost: localization.text("feedbackkit.developer.post")
         }
     }
     private var title: String {

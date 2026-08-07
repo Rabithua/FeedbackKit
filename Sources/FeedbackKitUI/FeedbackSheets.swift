@@ -10,6 +10,7 @@ struct FeedbackSheetHost: View {
     let style: FeedbackStyle
     @Environment(\.openURL) private var openURL
     @Environment(\.feedbackHaptics) private var haptics
+    @Environment(\.locale) private var locale
 
     var body: some View {
         Group {
@@ -26,7 +27,7 @@ struct FeedbackSheetHost: View {
                         style: style,
                         submitted: {
                             model.sheet = nil
-                            Task { await model.load(locale: .current, force: true) }
+                            Task { await model.load(locale: locale, force: true) }
                         },
                         close: { model.sheet = nil }
                     )
@@ -71,10 +72,11 @@ private struct FeedbackKindPicker: View {
     let close: () -> Void
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.feedbackHaptics) private var haptics
+    @Environment(\.feedbackLocalization) private var localization
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            FeedbackSheetHeader(title: FK.text("feedbackkit.kind.title"), close: close)
+            FeedbackSheetHeader(title: localization.text("feedbackkit.kind.title"), close: close)
             let columns = dynamicTypeSize.isAccessibilitySize ? [GridItem(.flexible())] : [GridItem(.flexible()), GridItem(.flexible())]
             LazyVGrid(columns: columns, spacing: 12) {
                 ForEach(FeedbackKind.allCases) { kind in
@@ -83,7 +85,7 @@ private struct FeedbackKindPicker: View {
                         select(kind)
                     } label: {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(FK.kind(kind)).font(.headline)
+                            Text(localization.kind(kind)).font(.headline)
                             Text(kindDescription(kind)).font(.subheadline).foregroundStyle(.secondary)
                         }
                         .frame(maxWidth: .infinity, minHeight: 90, alignment: .leading)
@@ -91,7 +93,7 @@ private struct FeedbackKindPicker: View {
                         .feedbackBorder(style)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel(FK.kind(kind))
+                    .accessibilityLabel(localization.kind(kind))
                 }
             }
             Spacer(minLength: 4)
@@ -104,10 +106,10 @@ private struct FeedbackKindPicker: View {
 
     private func kindDescription(_ kind: FeedbackKind) -> String {
         switch kind {
-        case .bug: FK.text("feedbackkit.kind.bug.description")
-        case .suggestion: FK.text("feedbackkit.kind.suggestion.description")
-        case .praise: FK.text("feedbackkit.kind.praise.description")
-        case .conversation: FK.text("feedbackkit.kind.conversation.description")
+        case .bug: localization.text("feedbackkit.kind.bug.description")
+        case .suggestion: localization.text("feedbackkit.kind.suggestion.description")
+        case .praise: localization.text("feedbackkit.kind.praise.description")
+        case .conversation: localization.text("feedbackkit.kind.conversation.description")
         }
     }
 }
@@ -148,6 +150,7 @@ private struct FeedbackComposer: View {
     let close: () -> Void
     @Environment(\.locale) private var locale
     @Environment(\.feedbackHaptics) private var haptics
+    @Environment(\.feedbackLocalization) private var localization
 
     private enum Field { case title; case body }
 
@@ -157,30 +160,30 @@ private struct FeedbackComposer: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            FeedbackSheetHeader(title: FK.kind(model.kind), close: requestClose)
+            FeedbackSheetHeader(title: localization.kind(model.kind), close: requestClose)
                 .padding(.horizontal, style.pagePadding).padding(.top, 14).padding(.bottom, 8)
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     disclosure
-                    TextField("", text: $model.title, prompt: Text(FK.text("feedbackkit.composer.title.placeholder")).foregroundStyle(.secondary))
+                    TextField("", text: $model.title, prompt: Text(localization.text("feedbackkit.composer.title.placeholder")).foregroundStyle(.secondary))
                         .focused($focused, equals: .title).padding(14).feedbackBorder(style)
-                        .accessibilityLabel(FK.text("feedbackkit.composer.title.placeholder"))
+                        .accessibilityLabel(localization.text("feedbackkit.composer.title.placeholder"))
                     ZStack(alignment: .topLeading) {
-                        if model.body.isEmpty { Text(FK.text("feedbackkit.composer.body.placeholder")).foregroundStyle(.secondary).padding(.horizontal, 18).padding(.vertical, 16).allowsHitTesting(false) }
+                        if model.body.isEmpty { Text(localization.text("feedbackkit.composer.body.placeholder")).foregroundStyle(.secondary).padding(.horizontal, 18).padding(.vertical, 16).allowsHitTesting(false) }
                         TextEditor(text: $model.body).focused($focused, equals: .body).scrollContentBackground(.hidden).frame(minHeight: 170).padding(10)
-                            .accessibilityLabel(FK.text("feedbackkit.composer.body.placeholder"))
+                            .accessibilityLabel(localization.text("feedbackkit.composer.body.placeholder"))
                     }.feedbackBorder(style)
                     attachmentStrip
                     if model.diagnosticsAvailable {
                         Toggle(isOn: diagnosticsBinding) {
                             VStack(alignment: .leading, spacing: 3) {
-                                Text(FK.text("feedbackkit.diagnostics.include")).font(.headline)
-                                Text(FK.text("feedbackkit.diagnostics.disclosure")).font(.caption).foregroundStyle(.secondary)
+                                Text(localization.text("feedbackkit.diagnostics.include")).font(.headline)
+                                Text(localization.text("feedbackkit.diagnostics.disclosure")).font(.caption).foregroundStyle(.secondary)
                             }
                         }
                     }
                     if let message = model.errorMessage { Text(message).font(.footnote).foregroundStyle(.red).accessibilityLabel(message) }
-                    Button(model.disclosedVisibility == .public ? FK.text("feedbackkit.send.public") : FK.text("feedbackkit.send")) {
+                    Button(model.disclosedVisibility == .public ? localization.text("feedbackkit.send.public") : localization.text("feedbackkit.send")) {
                         submit()
                     }
                     .font(.headline).foregroundStyle(.primary).frame(maxWidth: .infinity, minHeight: 54).feedbackBorder(style).buttonStyle(.plain).disabled(model.canSubmit == false)
@@ -192,33 +195,33 @@ private struct FeedbackComposer: View {
         .onChange(of: selections) { _, items in
             guard items.isEmpty == false else { return }
             Task {
-                let imported = await model.importItems(items)
+                let imported = await model.importItems(items, localization: localization)
                 selections.removeAll()
                 haptics.trigger(imported ? .success : .error)
             }
         }
         .onDisappear { Task { await model.saveDraft() } }
-        .confirmationDialog(FK.text("feedbackkit.attachment.discard.title"), isPresented: $confirmClose) {
-            Button(FK.text("feedbackkit.attachment.discard"), role: .destructive) {
+        .confirmationDialog(localization.text("feedbackkit.attachment.discard.title"), isPresented: $confirmClose) {
+            Button(localization.text("feedbackkit.attachment.discard"), role: .destructive) {
                 haptics.trigger(.warning)
                 close()
             }
-            Button(FK.text("feedbackkit.cancel"), role: .cancel) {}
-        } message: { Text(FK.text("feedbackkit.attachment.discard.message")) }
-        .alert(FK.text("feedbackkit.diagnostics.upload.failed"), isPresented: $model.diagnosticFailure) {
-            Button(FK.text("feedbackkit.diagnostics.retry")) { submit(diagnosticsOverride: true) }
-            Button(FK.text("feedbackkit.diagnostics.send.without")) { submit(diagnosticsOverride: false) }
-            Button(FK.text("feedbackkit.cancel"), role: .cancel) {}
+            Button(localization.text("feedbackkit.cancel"), role: .cancel) {}
+        } message: { Text(localization.text("feedbackkit.attachment.discard.message")) }
+        .alert(localization.text("feedbackkit.diagnostics.upload.failed"), isPresented: $model.diagnosticFailure) {
+            Button(localization.text("feedbackkit.diagnostics.retry")) { submit(diagnosticsOverride: true) }
+            Button(localization.text("feedbackkit.diagnostics.send.without")) { submit(diagnosticsOverride: false) }
+            Button(localization.text("feedbackkit.cancel"), role: .cancel) {}
         }
     }
 
     private var disclosure: some View {
-        Text(model.disclosedVisibility == .public ? FK.text("feedbackkit.visibility.public.disclosure") : FK.text("feedbackkit.visibility.private.disclosure"))
+        Text(model.disclosedVisibility == .public ? localization.text("feedbackkit.visibility.public.disclosure") : localization.text("feedbackkit.visibility.private.disclosure"))
             .font(.subheadline).foregroundStyle(.secondary)
     }
 
     private var attachmentStrip: some View {
-        let addTitle = model.isImporting ? FK.text("feedbackkit.loading") : FK.text("feedbackkit.attachment.add")
+        let addTitle = model.isImporting ? localization.text("feedbackkit.loading") : localization.text("feedbackkit.attachment.add")
         return ScrollView(.horizontal) {
             HStack(spacing: 10) {
                 ForEach(model.attachments) { attachment in
@@ -253,7 +256,11 @@ private struct FeedbackComposer: View {
 
     private func submit(diagnosticsOverride: Bool? = nil) {
         Task {
-            let didSubmit = await model.submit(locale: locale, diagnosticsOverride: diagnosticsOverride)
+            let didSubmit = await model.submit(
+                locale: locale,
+                localization: localization,
+                diagnosticsOverride: diagnosticsOverride
+            )
             haptics.trigger(didSubmit ? .success : .error)
             if didSubmit { submitted() }
         }
@@ -339,6 +346,8 @@ private struct FeedbackDetailSheet: View {
     let viewed: () async -> Void
     let close: () -> Void
     @Environment(\.feedbackHaptics) private var haptics
+    @Environment(\.locale) private var locale
+    @Environment(\.feedbackLocalization) private var localization
     init(
         id: String,
         client: FeedbackClient,
@@ -354,7 +363,7 @@ private struct FeedbackDetailSheet: View {
     }
     var body: some View {
         VStack(spacing: 0) {
-            FeedbackSheetHeader(title: model.detail.map { "\(FK.kind($0.type))（\(FK.status($0.status))）" } ?? "") {
+            FeedbackSheetHeader(title: model.detail.map { "\(localization.kind($0.type))（\(localization.status($0.status))）" } ?? "") {
                 if let detail = model.detail, detail.isPublic {
                     Button {
                         haptics.trigger(.selection)
@@ -391,26 +400,26 @@ private struct FeedbackDetailSheet: View {
             VStack(alignment: .leading, spacing: 14) {
                 if let title = detail.title, title.isEmpty == false { Text(title).font(.title3) }
                 Text(detail.body).textSelection(.enabled)
-                if detail.attachments.isEmpty == false { Text(FK.text("feedbackkit.attachments")).font(.headline); ForEach(detail.attachments) { Text($0.filename).foregroundStyle(.secondary) } }
-                Text(detail.createdAt.feedbackRelativeText).font(.caption).foregroundStyle(.tertiary).frame(maxWidth: .infinity, alignment: .trailing)
+                if detail.attachments.isEmpty == false { Text(localization.text("feedbackkit.attachments")).font(.headline); ForEach(detail.attachments) { Text($0.filename).foregroundStyle(.secondary) } }
+                Text(detail.createdAt.feedbackRelativeText(locale: locale)).font(.caption).foregroundStyle(.tertiary).frame(maxWidth: .infinity, alignment: .trailing)
                 ForEach(detail.messages.sorted { $0.createdAt < $1.createdAt }) { message in
                     Divider()
                     Text(message.body).textSelection(.enabled)
-                    HStack { Text(message.actor == "visitor" ? FK.text("feedbackkit.visitor.message") : FK.text("feedbackkit.developer.reply")); Spacer(); Text(message.createdAt.feedbackRelativeText) }.font(.caption).foregroundStyle(.secondary)
+                    HStack { Text(message.actor == "visitor" ? localization.text("feedbackkit.visitor.message") : localization.text("feedbackkit.developer.reply")); Spacer(); Text(message.createdAt.feedbackRelativeText(locale: locale)) }.font(.caption).foregroundStyle(.secondary)
                 }
                 if detail.isOwner, detail.status == .open {
                     VStack(alignment: .leading, spacing: 10) {
                         TextField(
                             "",
                             text: $model.replyBody,
-                            prompt: Text(FK.text("feedbackkit.reply.placeholder")).foregroundStyle(.secondary),
+                            prompt: Text(localization.text("feedbackkit.reply.placeholder")).foregroundStyle(.secondary),
                             axis: .vertical
                         )
                         .lineLimit(2...6)
                         .padding(14)
                         .feedbackBorder(style)
-                        .accessibilityLabel(FK.text("feedbackkit.reply.placeholder"))
-                        Button(FK.text("feedbackkit.reply.send")) {
+                        .accessibilityLabel(localization.text("feedbackkit.reply.placeholder"))
+                        Button(localization.text("feedbackkit.reply.send")) {
                             Task {
                                 let didReply = await model.reply()
                                 haptics.trigger(didReply ? .success : .error)
@@ -428,11 +437,11 @@ private struct FeedbackDetailSheet: View {
                     }
                     .padding(.top, 4)
                 } else if detail.isOwner {
-                    Text(FK.text("feedbackkit.reply.closed"))
+                    Text(localization.text("feedbackkit.reply.closed"))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
-                if detail.diagnosticsIncluded == true { Label(FK.text("feedbackkit.diagnostics.included"), systemImage: "lock.shield").font(.caption).foregroundStyle(.secondary) }
+                if detail.diagnosticsIncluded == true { Label(localization.text("feedbackkit.diagnostics.included"), systemImage: "lock.shield").font(.caption).foregroundStyle(.secondary) }
             }.padding(.horizontal, style.pagePadding).padding(.bottom, 24)
         }.refreshable { await load() }
     }
@@ -450,12 +459,13 @@ private struct FeedbackDeveloperPostSheet: View {
     @State private var model: DeveloperPostModel
     let style: FeedbackStyle; let activate: (FeedbackDeveloperPostAction) -> Void; let close: () -> Void
     @Environment(\.locale) private var locale
+    @Environment(\.feedbackLocalization) private var localization
     init(id: String, client: FeedbackClient, style: FeedbackStyle, activate: @escaping (FeedbackDeveloperPostAction) -> Void, close: @escaping () -> Void) {
         _model = State(initialValue: DeveloperPostModel(id: id, client: client)); self.style = style; self.activate = activate; self.close = close
     }
     var body: some View {
         VStack(spacing: 0) {
-            FeedbackSheetHeader(title: FK.text("feedbackkit.developer.post"), close: close)
+            FeedbackSheetHeader(title: localization.text("feedbackkit.developer.post"), close: close)
                 .padding(.horizontal, style.pagePadding).padding(.top, 14).padding(.bottom, 8)
             Group {
                 if let post = model.post {
@@ -463,11 +473,11 @@ private struct FeedbackDeveloperPostSheet: View {
                         Text(post.title).font(.title2.bold()); Text(post.body).textSelection(.enabled)
                         if let action = post.action {
                             Button { activate(action) } label: {
-                                HStack { Text(action.label ?? FK.text("feedbackkit.open.link")); Spacer(); Image(systemName: "arrow.up.right").font(.system(size: 25, weight: .bold)) }
+                                HStack { Text(action.label ?? localization.text("feedbackkit.open.link")); Spacer(); Image(systemName: "arrow.up.right").font(.system(size: 25, weight: .bold)) }
                                     .frame(maxWidth: .infinity, minHeight: 52).contentShape(Rectangle()).padding(.horizontal, 14).feedbackBorder(style)
                             }.buttonStyle(.plain)
                         }
-                        if let published = post.publishedAt { Text(published.feedbackRelativeText).font(.caption).foregroundStyle(.tertiary).frame(maxWidth: .infinity, alignment: .trailing) }
+                        if let published = post.publishedAt { Text(published.feedbackRelativeText(locale: locale)).font(.caption).foregroundStyle(.tertiary).frame(maxWidth: .infinity, alignment: .trailing) }
                     }.padding(.horizontal, style.pagePadding).padding(.bottom, 24) }
                 } else if model.isLoading { FeedbackSkeletonView(layout: .developerPostDetail, style: style) }
                 else if let error = model.error { FeedbackErrorView(error: error) { Task { await model.load(locale: locale) } } }
@@ -481,12 +491,13 @@ struct FeedbackIdentityView: View {
     let client: FeedbackClient; let visitor: FeedbackVisitor?; let productSlug: String?; let deleted: () -> Void
     @State private var confirm = false; @State private var finalConfirm = false; @State private var isDeleting = false; @State private var error: Error?
     @Environment(\.feedbackHaptics) private var haptics
+    @Environment(\.feedbackLocalization) private var localization
     var body: some View {
         Form {
-            Section(FK.text("feedbackkit.identity.yours")) { LabeledContent(FK.text("feedbackkit.identity.code"), value: visitor?.displayCode ?? "—"); Text(FK.text("feedbackkit.identity.independent")).foregroundStyle(.secondary) }
-            Section(FK.text("feedbackkit.identity.data")) {
-                Text(FK.text("feedbackkit.identity.delete.explanation"))
-                Button(FK.text("feedbackkit.identity.delete"), role: .destructive) {
+            Section(localization.text("feedbackkit.identity.yours")) { LabeledContent(localization.text("feedbackkit.identity.code"), value: visitor?.displayCode ?? "—"); Text(localization.text("feedbackkit.identity.independent")).foregroundStyle(.secondary) }
+            Section(localization.text("feedbackkit.identity.data")) {
+                Text(localization.text("feedbackkit.identity.delete.explanation"))
+                Button(localization.text("feedbackkit.identity.delete"), role: .destructive) {
                     haptics.trigger(.warning)
                     confirm = true
                 }
@@ -494,9 +505,9 @@ struct FeedbackIdentityView: View {
             }
             if let error { Text(error.localizedDescription).foregroundStyle(.red) }
         }
-        .navigationTitle(FK.text("feedbackkit.identity.title")).feedbackInlineNavigationTitle()
-        .alert(FK.text("feedbackkit.identity.delete"), isPresented: $confirm) { Button(FK.text("feedbackkit.continue"), role: .destructive) { finalConfirm = true }; Button(FK.text("feedbackkit.cancel"), role: .cancel) {} }
-        .alert(FK.text("feedbackkit.identity.delete.final"), isPresented: $finalConfirm) { Button(FK.text("feedbackkit.identity.delete"), role: .destructive) { Task { await remove() } }; Button(FK.text("feedbackkit.cancel"), role: .cancel) {} }
+        .navigationTitle(localization.text("feedbackkit.identity.title")).feedbackInlineNavigationTitle()
+        .alert(localization.text("feedbackkit.identity.delete"), isPresented: $confirm) { Button(localization.text("feedbackkit.continue"), role: .destructive) { finalConfirm = true }; Button(localization.text("feedbackkit.cancel"), role: .cancel) {} }
+        .alert(localization.text("feedbackkit.identity.delete.final"), isPresented: $finalConfirm) { Button(localization.text("feedbackkit.identity.delete"), role: .destructive) { Task { await remove() } }; Button(localization.text("feedbackkit.cancel"), role: .cancel) {} }
     }
     private func remove() async {
         isDeleting = true

@@ -6,10 +6,11 @@ struct FeedbackRoadmapCard: View {
     let minimumHeight: CGFloat
 
     @ScaledMetric(relativeTo: .largeTitle) private var prominentStageSize: CGFloat = 40
+    @Environment(\.feedbackLocalization) private var localization
 
     var body: some View {
         HStack(spacing: 8) {
-            Text(FK.stage(item.roadmapStage))
+            Text(localization.stage(item.roadmapStage))
                 .font(stageFont)
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
