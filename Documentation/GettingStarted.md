@@ -38,7 +38,7 @@ Define host-owned build settings in an xcconfig file. In xcconfig syntax, `$()` 
 the URL from being parsed as a comment:
 
 ```text
-FEEDBACK_SERVER_BASE_URL = https:/$()/feedback.example.com/v1/api
+FEEDBACK_SERVER_BASE_URL = https:/$()/api.feedkit.cn/v1/api
 FEEDBACK_PRODUCT_KEY = pk_example
 ```
 

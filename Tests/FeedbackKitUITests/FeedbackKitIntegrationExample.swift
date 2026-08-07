@@ -6,7 +6,7 @@ import SwiftUI
 struct FeedbackKitIntegrationExample: View {
     private static let client = FeedbackClient(
         configuration: .init(
-            baseURL: URL(string: "https://feedback.example.com/v1/api")!,
+            baseURL: URL(string: "https://api.feedkit.cn/v1/api")!,
             productKey: "pk_example",
             keychainService: "com.example.MyApp.feedback.visitor"
         )
