@@ -143,7 +143,13 @@ struct FeedbackCenterModelTests {
         model.body = "Reproduction details"
         model.includesDiagnostics = includesDiagnostics
 
-        #expect(await model.submit(locale: Locale(identifier: "en")) == true)
+        let locale = Locale(identifier: "en")
+        #expect(
+            await model.submit(
+                locale: locale,
+                localization: FeedbackLocalization(locale: locale)
+            ) == true
+        )
 
         let paths = await transport.requests.compactMap(\.url?.path)
         #expect(paths.contains("/v1/api/client/diagnostics/presign") == includesDiagnostics)
@@ -178,7 +184,13 @@ struct FeedbackCenterModelTests {
         model.body = "Reproduction details"
         model.includesDiagnostics = true
 
-        #expect(await model.submit(locale: Locale(identifier: "en")) == true)
+        let locale = Locale(identifier: "en")
+        #expect(
+            await model.submit(
+                locale: locale,
+                localization: FeedbackLocalization(locale: locale)
+            ) == true
+        )
         #expect(model.includesDiagnostics == false)
         #expect(await diagnostics.snapshotCount == 0)
         #expect(

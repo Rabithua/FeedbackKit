@@ -4,6 +4,7 @@ import SwiftUI
 struct FeedbackReleaseView: View {
     @State private var model: FeedbackReleaseListModel
     @Environment(\.locale) private var locale
+    @Environment(\.feedbackLocalization) private var localization
 
     let style: FeedbackStyle
 
@@ -21,7 +22,7 @@ struct FeedbackReleaseView: View {
             } else if model.releases.isEmpty, let error = model.error {
                 FeedbackErrorView(error: error, retry: retry)
             } else if model.releases.isEmpty {
-                ContentUnavailableView(FK.text("feedbackkit.releases.empty"), systemImage: "clock.arrow.trianglehead.counterclockwise.rotate.90")
+                ContentUnavailableView(localization.text("feedbackkit.releases.empty"), systemImage: "clock.arrow.trianglehead.counterclockwise.rotate.90")
             } else {
                 ScrollView {
                     HStack(alignment: .top, spacing: 8) {
@@ -47,7 +48,7 @@ struct FeedbackReleaseView: View {
             }
         }
         .background(FeedbackSystemBackground())
-        .navigationTitle(FK.text("feedbackkit.releases.title"))
+        .navigationTitle(localization.text("feedbackkit.releases.title"))
         .feedbackInlineNavigationTitle()
         .task(id: locale.identifier) { await model.load(locale: locale) }
     }

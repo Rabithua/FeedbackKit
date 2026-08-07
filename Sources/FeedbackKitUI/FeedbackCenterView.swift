@@ -8,10 +8,11 @@ public struct FeedbackCenterView: View {
     private let style: FeedbackStyle
     private let haptics: FeedbackHaptics
     private let initialRoute: String?
+    private let languagePolicy: FeedbackLanguagePolicy
     @State private var didOpenInitialRoute = false
 
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.locale) private var locale
+    @Environment(\.locale) private var hostLocale
     @Environment(\.openURL) private var openURL
 
     public init(
@@ -19,13 +20,15 @@ public struct FeedbackCenterView: View {
         routeHandler: any FeedbackRouteHandler = IgnoreFeedbackRouteHandler(),
         style: FeedbackStyle = .default,
         haptics: FeedbackHaptics = .none,
-        initialRoute: String? = nil
+        initialRoute: String? = nil,
+        languagePolicy: FeedbackLanguagePolicy = .followHost
     ) {
         _model = State(initialValue: FeedbackCenterModel(client: client))
         self.routeHandler = routeHandler
         self.style = style
         self.haptics = haptics
         self.initialRoute = initialRoute
+        self.languagePolicy = languagePolicy
     }
 
     public var body: some View {
@@ -82,6 +85,8 @@ public struct FeedbackCenterView: View {
             )
         }
         .environment(\.feedbackHaptics, haptics)
+        .environment(\.locale, locale)
+        .environment(\.feedbackLocalization, FeedbackLocalization(locale: locale))
         .tint(.accentColor)
     }
 
@@ -111,7 +116,7 @@ public struct FeedbackCenterView: View {
             if let diagnostics = model.client.diagnosticsProvider as? FeedbackDiagnostics {
                 FeedbackDiagnosticsView(diagnostics: diagnostics, style: style)
             } else {
-                ContentUnavailableView(FK.text("feedbackkit.diagnostics.unavailable"), systemImage: "doc.text.magnifyingglass")
+                ContentUnavailableView(feedbackLocalization.text("feedbackkit.diagnostics.unavailable"), systemImage: "doc.text.magnifyingglass")
             }
         case .identity:
             FeedbackIdentityView(
@@ -145,14 +150,29 @@ public struct FeedbackCenterView: View {
     private func openPackageRoute(_ route: String) -> Bool {
         model.openPackageRoute(route)
     }
+
+    private var locale: Locale {
+        languagePolicy.resolve(hostLocale: hostLocale)
+    }
+
+    private var feedbackLocalization: FeedbackLocalization {
+        FeedbackLocalization(locale: locale)
+    }
 }
 
 public struct FeedbackCenterToolbarButton: View {
     private let action: () -> Void
     private let haptics: FeedbackHaptics
+    private let languagePolicy: FeedbackLanguagePolicy
+    @Environment(\.locale) private var locale
 
-    public init(haptics: FeedbackHaptics = .none, action: @escaping () -> Void) {
+    public init(
+        haptics: FeedbackHaptics = .none,
+        languagePolicy: FeedbackLanguagePolicy = .followHost,
+        action: @escaping () -> Void
+    ) {
         self.haptics = haptics
+        self.languagePolicy = languagePolicy
         self.action = action
     }
 
@@ -165,7 +185,11 @@ public struct FeedbackCenterToolbarButton: View {
                 .frame(minWidth: 44, minHeight: 44)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(FK.text("feedbackkit.open"))
+        .accessibilityLabel(
+            FeedbackLocalization(
+                locale: languagePolicy.resolve(hostLocale: locale)
+            ).text("feedbackkit.open")
+        )
         .accessibilityIdentifier("developerCommunity.toolbarButton")
     }
 }

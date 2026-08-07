@@ -92,37 +92,6 @@ enum FeedbackCenterSheet: Identifiable {
     }
 }
 
-enum FK {
-    static func text(_ key: String) -> String {
-        String(localized: String.LocalizationValue(key), bundle: .module)
-    }
-
-    static func kind(_ kind: FeedbackKind) -> String {
-        switch kind {
-        case .bug: text("feedbackkit.kind.bug")
-        case .suggestion: text("feedbackkit.kind.suggestion")
-        case .praise: text("feedbackkit.kind.praise")
-        case .conversation: text("feedbackkit.kind.conversation")
-        }
-    }
-
-    static func status(_ status: FeedbackStatus) -> String {
-        switch status {
-        case .open: text("feedbackkit.status.open")
-        case .resolved: text("feedbackkit.status.resolved")
-        case .closed: text("feedbackkit.status.closed")
-        }
-    }
-
-    static func stage(_ stage: RoadmapStage) -> String {
-        switch stage {
-        case .urgent: text("feedbackkit.stage.urgent")
-        case .later: text("feedbackkit.stage.later")
-        case .undecided: text("feedbackkit.stage.undecided")
-        }
-    }
-}
-
 struct FeedbackBorder: ViewModifier {
     let style: FeedbackStyle
 
@@ -162,6 +131,7 @@ extension View {
 struct FeedbackCloseButton: View {
     let action: () -> Void
     @Environment(\.feedbackHaptics) private var haptics
+    @Environment(\.feedbackLocalization) private var localization
 
     var body: some View {
         Button {
@@ -175,7 +145,7 @@ struct FeedbackCloseButton: View {
         }
         .buttonStyle(.plain)
         .foregroundStyle(.secondary)
-        .accessibilityLabel(FK.text("feedbackkit.close"))
+        .accessibilityLabel(localization.text("feedbackkit.close"))
     }
 }
 
@@ -183,14 +153,15 @@ struct FeedbackErrorView: View {
     let error: Error
     let retry: () -> Void
     @Environment(\.feedbackHaptics) private var haptics
+    @Environment(\.feedbackLocalization) private var localization
 
     var body: some View {
         ContentUnavailableView {
-            Label(FK.text("feedbackkit.error.title"), systemImage: "exclamationmark.triangle")
+            Label(localization.text("feedbackkit.error.title"), systemImage: "exclamationmark.triangle")
         } description: {
             Text(error.localizedDescription)
         } actions: {
-            Button(FK.text("feedbackkit.retry")) {
+            Button(localization.text("feedbackkit.retry")) {
                 haptics.trigger(.action)
                 retry()
             }
@@ -199,7 +170,10 @@ struct FeedbackErrorView: View {
 }
 
 extension Date {
-    var feedbackRelativeText: String {
-        formatted(.relative(presentation: .named, unitsStyle: .wide))
+    func feedbackRelativeText(locale: Locale) -> String {
+        formatted(
+            .relative(presentation: .named, unitsStyle: .wide)
+                .locale(locale)
+        )
     }
 }

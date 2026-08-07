@@ -55,6 +55,7 @@ struct FeedbackActivityListView: View {
     @Environment(\.locale) private var locale
     @Environment(\.openURL) private var openURL
     @Environment(\.feedbackHaptics) private var haptics
+    @Environment(\.feedbackLocalization) private var localization
 
     init(client: FeedbackClient, style: FeedbackStyle, open: @escaping (FeedbackCenterSheet) -> Void, activatePost: @escaping (FeedbackDeveloperPostAction) -> Void) {
         _model = State(initialValue: ActivityListModel(client: client)); self.style = style; self.open = open; self.activatePost = activatePost
@@ -64,7 +65,7 @@ struct FeedbackActivityListView: View {
         Group {
             if model.entries.isEmpty, model.isLoading { FeedbackSkeletonView(layout: .list, style: style) }
             else if model.entries.isEmpty, let error = model.error { FeedbackErrorView(error: error) { Task { await model.load(locale: locale, refresh: true) } } }
-            else if model.entries.isEmpty { ContentUnavailableView(FK.text("feedbackkit.activity.empty"), systemImage: "text.bubble") }
+            else if model.entries.isEmpty { ContentUnavailableView(localization.text("feedbackkit.activity.empty"), systemImage: "text.bubble") }
             else {
                 ScrollView {
                     LazyVStack(spacing: 10) {
@@ -91,7 +92,7 @@ struct FeedbackActivityListView: View {
             }
         }
         .background(FeedbackSystemBackground())
-        .navigationTitle(FK.text("feedbackkit.activity.title"))
+        .navigationTitle(localization.text("feedbackkit.activity.title"))
         .feedbackInlineNavigationTitle()
         .task { if model.entries.isEmpty { await model.load(locale: locale) } }
     }
@@ -139,6 +140,8 @@ struct MyFeedbackView: View {
     @State private var model: MyFeedbackModel
     let style: FeedbackStyle
     let open: (String) -> Void
+    @Environment(\.locale) private var locale
+    @Environment(\.feedbackLocalization) private var localization
 
     init(client: FeedbackClient, style: FeedbackStyle, open: @escaping (String) -> Void) {
         _model = State(initialValue: MyFeedbackModel(client: client)); self.style = style; self.open = open
@@ -148,7 +151,7 @@ struct MyFeedbackView: View {
         Group {
             if model.items.isEmpty, model.isLoading { FeedbackSkeletonView(layout: .list, style: style) }
             else if model.items.isEmpty, let error = model.error { FeedbackErrorView(error: error) { Task { await model.load(refresh: true) } } }
-            else if model.items.isEmpty { ContentUnavailableView(FK.text("feedbackkit.mine.empty"), systemImage: "bubble.left") }
+            else if model.items.isEmpty { ContentUnavailableView(localization.text("feedbackkit.mine.empty"), systemImage: "bubble.left") }
             else {
                 ScrollView {
                     LazyVStack(spacing: 10) {
@@ -157,7 +160,7 @@ struct MyFeedbackView: View {
                                 HStack(alignment: .center, spacing: 10) {
                                     VStack(alignment: .leading, spacing: 4) {
                                         HStack(spacing: 7) {
-                                            Text(FK.kind(feedback.type)).font(.headline)
+                                            Text(localization.kind(feedback.type)).font(.headline)
                                             Text("|").foregroundStyle(.secondary)
                                             Text(feedback.displayTitle).font(.headline).lineLimit(1)
                                         }
@@ -165,8 +168,8 @@ struct MyFeedbackView: View {
                                     }
                                     Spacer(minLength: 4)
                                     VStack(alignment: .trailing, spacing: 3) {
-                                        Text(FK.status(feedback.status)).font(.caption)
-                                        Text(feedback.lastActivityAt.feedbackRelativeText).font(.caption2).foregroundStyle(.secondary)
+                                        Text(localization.status(feedback.status)).font(.caption)
+                                        Text(feedback.lastActivityAt.feedbackRelativeText(locale: locale)).font(.caption2).foregroundStyle(.secondary)
                                     }
                                 }
                                 .padding(.horizontal, 14).padding(.vertical, 10).feedbackBorder(style)
@@ -180,7 +183,7 @@ struct MyFeedbackView: View {
             }
         }
         .background(FeedbackSystemBackground())
-        .navigationTitle(FK.text("feedbackkit.mine.title"))
+        .navigationTitle(localization.text("feedbackkit.mine.title"))
         .feedbackInlineNavigationTitle()
         .task { if model.items.isEmpty { await model.load() } }
     }
