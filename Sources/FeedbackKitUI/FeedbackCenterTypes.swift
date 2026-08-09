@@ -134,18 +134,21 @@ struct FeedbackCloseButton: View {
     @Environment(\.feedbackLocalization) private var localization
 
     var body: some View {
-        Button {
-            haptics.trigger(.navigation)
-            action()
-        } label: {
-            Image(systemName: "xmark")
+        Button(action: close) {
+            Label(localization.text("feedbackkit.close"), systemImage: "xmark")
+                .labelStyle(.iconOnly)
                 .font(.system(size: 18, weight: .bold))
-                .frame(width: 36, height: 36)
+                .frame(minWidth: 44, minHeight: 44)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .foregroundStyle(.secondary)
-        .accessibilityLabel(localization.text("feedbackkit.close"))
+        .accessibilityIdentifier("developerCommunity.close")
+    }
+
+    private func close() {
+        haptics.trigger(.navigation)
+        action()
     }
 }
 

@@ -208,6 +208,9 @@ public actor FeedbackClient {
             )
             return finalized.id
         } catch {
+            if error is CancellationError || Task.isCancelled {
+                throw CancellationError()
+            }
             throw FeedbackClientError.diagnosticUploadFailed
         }
     }
@@ -254,6 +257,9 @@ public actor FeedbackClient {
             do { return try FeedbackCoding.decoder().decode(FeedbackEnvelope<Value>.self, from: data).data }
             catch { throw FeedbackClientError.decoding }
         } catch {
+            if error is CancellationError || Task.isCancelled {
+                throw CancellationError()
+            }
             if error is FeedbackClientError { throw error }
             let duration = started.duration(to: .now).timeInterval
             await diagnostics?.recordNetwork(method: method.rawValue, host: url.host ?? "", path: url.path, statusCode: nil, duration: duration, errorCategory: String(reflecting: error))

@@ -31,8 +31,52 @@ private actor DiagnosticProvider: FeedbackDiagnosticsProviding {
     ) async {}
 }
 
+private actor SuspendingFeedbackTransport: FeedbackTransport {
+    private(set) var didStart = false
+
+    func data(for request: URLRequest) async throws -> (Data, HTTPURLResponse) {
+        didStart = true
+        while Task.isCancelled == false {
+            await Task.yield()
+        }
+        throw CancellationError()
+    }
+
+    func upload(for request: URLRequest, data: Data) async throws -> HTTPURLResponse {
+        throw CancellationError()
+    }
+}
+
 @MainActor
 struct FeedbackCenterModelTests {
+    @Test func cancellingInitialLoadClearsLoadingWithoutPresentingAnError() async {
+        let transport = SuspendingFeedbackTransport()
+        let client = FeedbackClient(
+            configuration: .init(
+                baseURL: URL(string: "https://example.com/v1/api")!,
+                productKey: "pk_test"
+            ),
+            transport: transport,
+            credentialStore: Credential()
+        )
+        let model = FeedbackCenterModel(client: client)
+        let loadingTask = Task {
+            await model.load(locale: Locale(identifier: "en"))
+        }
+
+        while await transport.didStart == false {
+            await Task.yield()
+        }
+        #expect(model.isLoading == true)
+
+        loadingTask.cancel()
+        await loadingTask.value
+
+        #expect(model.isLoading == false)
+        #expect(model.error == nil)
+        #expect(model.bootstrap == nil)
+    }
+
     @Test func viewingFeedbackAcknowledgesThroughItsNewestInboxEvent() async throws {
         let feedbackID = "11111111-1111-4111-8111-111111111111"
         let transport = FeedbackFixtureTransport { request in

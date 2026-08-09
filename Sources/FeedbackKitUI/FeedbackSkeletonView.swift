@@ -20,32 +20,26 @@ struct FeedbackSkeletonView: View {
         Group {
             switch layout {
             case .hub:
-                VStack(spacing: 0) {
-                    Color.clear
-                        .frame(height: 56)
-                        .accessibilityHidden(true)
-
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: style.sectionSpacing) {
-                            HStack(spacing: 12) {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: style.sectionSpacing) {
+                        HStack(spacing: 12) {
+                            Color.clear
+                                .feedbackBorder(style)
+                                .aspectRatio(1, contentMode: .fit)
+                            VStack(spacing: 12) {
                                 Color.clear
                                     .feedbackBorder(style)
-                                    .aspectRatio(1, contentMode: .fit)
-                                VStack(spacing: 12) {
-                                    Color.clear
-                                        .feedbackBorder(style)
-                                        .frame(minHeight: 72)
-                                    Color.clear
-                                        .feedbackBorder(style)
-                                        .frame(minHeight: 72)
-                                }
+                                    .frame(minHeight: 72)
+                                Color.clear
+                                    .feedbackBorder(style)
+                                    .frame(minHeight: 72)
                             }
-                            Text("Recent activity").font(.headline)
-                            FeedbackSkeletonRows(style: style, count: 3)
                         }
-                        .padding(.horizontal, style.pagePadding)
-                        .padding(.bottom, 20)
+                        Text("Recent activity").font(.headline)
+                        FeedbackSkeletonRows(style: style, count: 3)
                     }
+                    .padding(.horizontal, style.pagePadding)
+                    .padding(.bottom, 20)
                 }
             case .list:
                 ScrollView {
