@@ -33,36 +33,42 @@ public struct FeedbackCenterView: View {
 
     public var body: some View {
         NavigationStack(path: $model.path) {
-            Group {
-                if let bootstrap = model.bootstrap {
-                    FeedbackHubView(
-                        bootstrap: bootstrap,
-                        style: style,
-                        openPage: {
-                            haptics.trigger(.navigation)
-                            model.path.append($0)
-                        },
-                        openSheet: {
-                            haptics.trigger(.navigation)
-                            model.sheet = $0
-                        },
-                        vote: { id, target in
-                            haptics.trigger(.selection)
-                            Task {
-                                if await model.updateVote(feedbackID: id, target: target) == false {
-                                    haptics.trigger(.error)
+            VStack(spacing: 0) {
+                FeedbackCenterHeader(
+                    showsMenu: model.bootstrap != nil,
+                    style: style,
+                    openPage: openPage,
+                    dismiss: dismissCenter
+                )
+
+                Group {
+                    if let bootstrap = model.bootstrap {
+                        FeedbackHubView(
+                            bootstrap: bootstrap,
+                            style: style,
+                            openPage: openPage,
+                            openSheet: {
+                                haptics.trigger(.navigation)
+                                model.sheet = $0
+                            },
+                            vote: { id, target in
+                                haptics.trigger(.selection)
+                                Task {
+                                    if await model.updateVote(feedbackID: id, target: target) == false {
+                                        haptics.trigger(.error)
+                                    }
                                 }
-                            }
-                        },
-                        refresh: { await model.load(locale: locale, force: true) },
-                        dismiss: { dismiss() },
-                        activatePost: activatePost
-                    )
-                } else if model.isLoading {
-                    FeedbackSkeletonView(layout: .hub, style: style)
-                } else if let error = model.error {
-                    FeedbackErrorView(error: error) { Task { await model.load(locale: locale, force: true) } }
+                            },
+                            refresh: { await model.load(locale: locale, force: true) },
+                            activatePost: activatePost
+                        )
+                    } else if model.isLoading {
+                        FeedbackSkeletonView(layout: .hub, style: style)
+                    } else if let error = model.error {
+                        FeedbackErrorView(error: error) { Task { await model.load(locale: locale, force: true) } }
+                    }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .background(FeedbackSystemBackground())
             .navigationDestination(for: FeedbackCenterPage.self) { page in
@@ -149,6 +155,15 @@ public struct FeedbackCenterView: View {
 
     private func openPackageRoute(_ route: String) -> Bool {
         model.openPackageRoute(route)
+    }
+
+    private func openPage(_ page: FeedbackCenterPage) {
+        haptics.trigger(.navigation)
+        model.path.append(page)
+    }
+
+    private func dismissCenter() {
+        dismiss()
     }
 
     private var locale: Locale {

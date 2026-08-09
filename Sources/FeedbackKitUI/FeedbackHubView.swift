@@ -8,7 +8,6 @@ struct FeedbackHubView: View {
     let openSheet: (FeedbackCenterSheet) -> Void
     let vote: (String, Bool) -> Void
     let refresh: () async -> Void
-    let dismiss: () -> Void
     let activatePost: (FeedbackDeveloperPostAction) -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -16,19 +15,15 @@ struct FeedbackHubView: View {
     @State private var isContentVisible = false
 
     var body: some View {
-        VStack(spacing: 0) {
-            header
-                .feedbackEntrance(isVisible: isContentVisible, order: 0, reduceMotion: reduceMotion)
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: style.sectionSpacing) {
-                    cards
-                    activity
-                }
-                .padding(.horizontal, style.pagePadding)
-                .padding(.bottom, 20)
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: style.sectionSpacing) {
+                cards
+                activity
             }
-            .refreshable { await refresh() }
+            .padding(.horizontal, style.pagePadding)
+            .padding(.bottom, 20)
         }
+        .refreshable { await refresh() }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             Button(action: { openSheet(.kinds) }) {
                 Text(localization.text("feedbackkit.speak"))
@@ -47,27 +42,6 @@ struct FeedbackHubView: View {
         }
         .accessibilityIdentifier("developerCommunity.hub")
         .task { await revealContent() }
-    }
-
-    private var header: some View {
-        HStack(spacing: 4) {
-            Menu {
-                Button(localization.text("feedbackkit.identity.title")) { openPage(.identity) }
-                Button(localization.text("feedbackkit.diagnostics.title")) { openPage(.diagnostics) }
-            } label: {
-                Image(systemName: "bubble.left.and.bubble.right")
-                    .font(.title3.weight(.semibold))
-                    .frame(width: 34, height: 36)
-            }
-            .buttonStyle(.plain)
-            Text(localization.text("feedbackkit.center.title"))
-                .font(.title2.bold())
-            Spacer(minLength: 8)
-            FeedbackCloseButton(action: dismiss)
-        }
-        .padding(.horizontal, style.pagePadding)
-        .padding(.top, 10)
-        .padding(.bottom, 12)
     }
 
     private var cards: some View {
