@@ -140,7 +140,6 @@ public struct FeedbackRelease: Codable, Hashable, Identifiable, Sendable {
     public let id: String
     public let version: String
     public let releasedAt: Date
-    public let title: String
     public let body: String
     public let locale: String?
     public let items: [FeedbackRoadmapItem]

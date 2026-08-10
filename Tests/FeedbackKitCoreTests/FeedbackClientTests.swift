@@ -73,6 +73,7 @@ struct FeedbackClientTests {
                 URLQueryItem(name: "locale", value: "zh-Hans-CN"),
             ])
             #expect(request.value(forHTTPHeaderField: "X-Product-Key") == "pk_test")
+            #expect(request.value(forHTTPHeaderField: "X-FeedbackKit-Capabilities") == "release-body-only")
             #expect(request.value(forHTTPHeaderField: "Authorization") == nil)
             let object: [String: Any] = [
                 "code": "ok",
@@ -81,7 +82,6 @@ struct FeedbackClientTests {
                     "id": releaseID,
                     "version": "2.0.7",
                     "releasedAt": "2026-08-01T08:00:00Z",
-                    "title": "Rote 2.0.7",
                     "body": completeBody,
                     "locale": "zh-Hans",
                     "items": [],
