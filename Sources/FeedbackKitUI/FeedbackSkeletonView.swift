@@ -68,7 +68,7 @@ struct FeedbackSkeletonView: View {
                 }
             }
         }
-        .foregroundStyle(.secondary.opacity(0.28))
+        .foregroundStyle(FeedbackStyle.skeletonForeground)
         .redacted(reason: .placeholder)
         .opacity(isDimmed ? 0.45 : 0.85)
         .animation(
