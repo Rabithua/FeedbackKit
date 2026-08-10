@@ -36,6 +36,7 @@ public struct FeedbackCenterView: View {
             VStack(spacing: 0) {
                 FeedbackCenterHeader(
                     showsMenu: model.bootstrap != nil,
+                    isLoading: isShowingInitialSkeleton,
                     style: style,
                     openPage: openPage,
                     dismiss: dismissCenter
@@ -62,7 +63,7 @@ public struct FeedbackCenterView: View {
                             refresh: { await model.load(locale: locale, force: true) },
                             activatePost: activatePost
                         )
-                    } else if model.isLoading {
+                    } else if isShowingInitialSkeleton {
                         FeedbackSkeletonView(layout: .hub, style: style)
                     } else if let error = model.error {
                         FeedbackErrorView(error: error) { Task { await model.load(locale: locale, force: true) } }
@@ -172,6 +173,10 @@ public struct FeedbackCenterView: View {
 
     private var feedbackLocalization: FeedbackLocalization {
         FeedbackLocalization(locale: locale)
+    }
+
+    private var isShowingInitialSkeleton: Bool {
+        model.bootstrap == nil && model.error == nil
     }
 }
 

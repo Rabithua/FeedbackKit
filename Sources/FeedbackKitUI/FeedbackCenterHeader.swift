@@ -2,6 +2,7 @@ import SwiftUI
 
 struct FeedbackCenterHeader: View {
     let showsMenu: Bool
+    let isLoading: Bool
     let style: FeedbackStyle
     let openPage: (FeedbackCenterPage) -> Void
     let dismiss: () -> Void
@@ -22,21 +23,29 @@ struct FeedbackCenterHeader: View {
                     .labelStyle(.iconOnly)
                     .font(.title3.weight(.semibold))
                     .frame(minWidth: 44, minHeight: 44)
+                    .foregroundStyle(headerForegroundStyle)
                 }
                 .buttonStyle(.plain)
             } else {
-                Color.clear
+                Image(systemName: "bubble.left.and.bubble.right")
+                    .font(.title3.weight(.semibold))
                     .frame(width: 44, height: 44)
+                    .foregroundStyle(headerForegroundStyle)
                     .accessibilityHidden(true)
             }
 
             Text(localization.text("feedbackkit.center.title"))
                 .font(.title2.bold())
+                .foregroundStyle(headerForegroundStyle)
             Spacer(minLength: 8)
             FeedbackCloseButton(action: dismiss)
         }
         .padding(.horizontal, style.pagePadding)
         .padding(.top, 6)
         .padding(.bottom, 8)
+    }
+
+    private var headerForegroundStyle: Color {
+        isLoading ? FeedbackStyle.skeletonForeground : .primary
     }
 }
