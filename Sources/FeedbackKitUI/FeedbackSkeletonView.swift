@@ -58,7 +58,6 @@ struct FeedbackSkeletonView: View {
                             ForEach(0 ..< 3, id: \.self) { _ in
                                 VStack(alignment: .leading, spacing: 10) {
                                     Text("v0.0.0").font(.title2.bold())
-                                    Text("Release title placeholder").font(.headline)
                                     Text("Release notes placeholder that fills the available width.")
                                     Text("Release date").font(.caption).frame(maxWidth: .infinity, alignment: .trailing)
                                 }

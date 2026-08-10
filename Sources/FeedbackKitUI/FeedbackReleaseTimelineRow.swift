@@ -21,11 +21,6 @@ struct FeedbackReleaseTimelineRow: View {
                 }
             }
 
-            if release.title.isEmpty == false, release.title != release.version {
-                Text(release.title)
-                    .font(.headline)
-            }
-
             if release.body.isEmpty == false {
                 Text(verbatim: release.body)
                     .font(.body)

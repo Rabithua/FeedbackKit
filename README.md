@@ -1,6 +1,6 @@
 # FeedbackKit
 
-FeedbackKit is an iOS and iPadOS 18+ Swift package for integrating a complete feedback center with FeedbackServer. It includes anonymous visitor identity, public activity, owned feedback conversations, attachments, voting, roadmap, changelog, user-controlled private diagnostics, and a default SwiftUI interface.
+FeedbackKit is an iOS and iPadOS 18+ Swift package for integrating a complete feedback center with FeedbackServer. It includes anonymous visitor identity, public activity, owned feedback conversations, attachments, voting, a version-and-body changelog, user-controlled private diagnostics, and a default SwiftUI interface.
 
 ## Products
 
@@ -12,7 +12,7 @@ FeedbackKit is an iOS and iPadOS 18+ Swift package for integrating a complete fe
 ## Add the package
 
 In Xcode, add `https://github.com/Rabithua/FeedbackKit.git` with the **Up to Next
-Minor Version** rule starting at `0.1.29`. Link these products to the app target:
+Minor Version** rule starting at `0.1.31`. Link these products to the app target:
 
 - `FeedbackKitCore`
 - `FeedbackKitUI`
