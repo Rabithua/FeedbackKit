@@ -254,16 +254,14 @@ private struct FeedbackComposer: View {
                 .padding(.horizontal, style.pagePadding)
                 .padding(.top, 14)
                 .padding(.bottom, 8)
-                ScrollView {
-                    Text(disclosureText)
-                        .font(.body)
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, style.pagePadding)
-                        .padding(.bottom, 24)
-                }
+                Text(disclosureText)
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, style.pagePadding)
+                    .padding(.bottom, 24)
             }
-            .presentationDetents([.medium])
+            .presentationSizing(.page.fitted(horizontal: false, vertical: true))
             .presentationDragIndicator(.hidden)
         }
     }
@@ -295,6 +293,7 @@ private struct FeedbackComposer: View {
                             .frame(width: 44, height: 44)
                             .contentShape(Rectangle())
                             .buttonStyle(.plain)
+                            .offset(x: 16, y: -16)
                         }
                 }
                 PhotosPicker(selection: $selections, maxSelectionCount: max(0, model.product.attachmentLimits.count - model.attachments.count), matching: .any(of: [.images, .videos])) {
