@@ -203,6 +203,7 @@ public struct FeedbackCenterToolbarButton: View {
         } label: {
             Image(systemName: "bubble.left.and.bubble.right")
                 .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(

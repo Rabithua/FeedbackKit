@@ -90,6 +90,7 @@ private struct FeedbackKindPicker: View {
                         }
                         .frame(maxWidth: .infinity, minHeight: 90, alignment: .leading)
                         .padding(.horizontal, 14)
+                        .contentShape(.interaction, FeedbackComponentShape(cornerRadius: style.cardCornerRadius))
                         .feedbackBorder(style)
                     }
                     .buttonStyle(.plain)
@@ -183,10 +184,18 @@ private struct FeedbackComposer: View {
                         }
                     }
                     if let message = model.errorMessage { Text(message).font(.footnote).foregroundStyle(.red).accessibilityLabel(message) }
-                    Button(model.disclosedVisibility == .public ? localization.text("feedbackkit.send.public") : localization.text("feedbackkit.send")) {
+                    Button {
                         submit()
+                    } label: {
+                        Text(model.disclosedVisibility == .public ? localization.text("feedbackkit.send.public") : localization.text("feedbackkit.send"))
+                            .font(.headline)
+                            .foregroundStyle(.primary)
+                            .frame(maxWidth: .infinity, minHeight: 54)
+                            .contentShape(.interaction, FeedbackComponentShape(cornerRadius: style.cardCornerRadius))
+                            .feedbackBorder(style)
                     }
-                    .font(.headline).foregroundStyle(.primary).frame(maxWidth: .infinity, minHeight: 54).feedbackBorder(style).buttonStyle(.plain).disabled(model.canSubmit == false)
+                    .buttonStyle(.plain)
+                    .disabled(model.canSubmit == false)
                 }.padding(.horizontal, style.pagePadding).padding(.bottom, 20)
             }
         }
@@ -232,7 +241,9 @@ private struct FeedbackComposer: View {
                             model.attachments.removeAll { $0.id == attachment.id }
                         } label: {
                             Image(systemName: "xmark.circle.fill").symbolRenderingMode(.palette).foregroundStyle(.white, .black.opacity(0.7)).font(.title3)
-                        }.buttonStyle(.plain).offset(x: 5, y: -5)
+                        }
+                        .buttonStyle(.plain)
+                        .offset(x: 5, y: -5)
                     }
                 }
                 PhotosPicker(selection: $selections, maxSelectionCount: max(0, model.product.attachmentLimits.count - model.attachments.count), matching: .any(of: [.images, .videos])) {
@@ -271,7 +282,11 @@ private struct FeedbackAttachmentAddLabel: View {
     let title: String
     let style: FeedbackStyle
     var body: some View {
-        Text(title).foregroundStyle(.secondary).frame(width: 86, height: 70).feedbackBorder(style)
+        Text(title)
+            .foregroundStyle(.secondary)
+            .frame(width: 86, height: 70)
+            .contentShape(.interaction, FeedbackComponentShape(cornerRadius: style.cardCornerRadius))
+            .feedbackBorder(style)
     }
 }
 
@@ -373,7 +388,11 @@ private struct FeedbackDetailSheet: View {
                             }
                         }
                     } label: {
-                        Text("+\(detail.voteCount)").font(.system(size: 22, weight: .black, design: .rounded)).foregroundStyle(detail.hasVoted ? Color.accentColor : Color.primary).frame(minWidth: 44, minHeight: 36)
+                        Text("+\(detail.voteCount)")
+                            .font(.system(size: 22, weight: .black, design: .rounded))
+                            .foregroundStyle(detail.hasVoted ? Color.accentColor : Color.primary)
+                            .frame(minWidth: 44, minHeight: 36)
+                            .contentShape(Rectangle())
                     }.buttonStyle(.plain)
                 }
             } close: { close() }
@@ -419,18 +438,20 @@ private struct FeedbackDetailSheet: View {
                         .padding(14)
                         .feedbackBorder(style)
                         .accessibilityLabel(localization.text("feedbackkit.reply.placeholder"))
-                        Button(localization.text("feedbackkit.reply.send")) {
+                        Button {
                             Task {
                                 let didReply = await model.reply()
                                 haptics.trigger(didReply ? .success : .error)
                             }
+                        } label: {
+                            Text(localization.text("feedbackkit.reply.send"))
+                                .font(.headline)
+                                .frame(maxWidth: .infinity, minHeight: 48)
+                                .contentShape(.interaction, FeedbackComponentShape(cornerRadius: style.cardCornerRadius))
+                                .feedbackBorder(style)
                         }
-                            .font(.headline)
-                            .frame(maxWidth: .infinity, minHeight: 48)
-                            .contentShape(Rectangle())
-                            .feedbackBorder(style)
-                            .buttonStyle(.plain)
-                            .disabled(model.replyBody.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || model.isReplying)
+                        .buttonStyle(.plain)
+                        .disabled(model.replyBody.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || model.isReplying)
                         if let replyError = model.replyError {
                             Text(replyError).font(.footnote).foregroundStyle(.red)
                         }
@@ -474,7 +495,10 @@ private struct FeedbackDeveloperPostSheet: View {
                         if let action = post.action {
                             Button { activate(action) } label: {
                                 HStack { Text(action.label ?? localization.text("feedbackkit.open.link")); Spacer(); Image(systemName: "arrow.up.right").font(.system(size: 25, weight: .bold)) }
-                                    .frame(maxWidth: .infinity, minHeight: 52).contentShape(Rectangle()).padding(.horizontal, 14).feedbackBorder(style)
+                                    .frame(maxWidth: .infinity, minHeight: 52)
+                                    .padding(.horizontal, 14)
+                                    .contentShape(.interaction, FeedbackComponentShape(cornerRadius: style.cardCornerRadius))
+                                    .feedbackBorder(style)
                             }.buttonStyle(.plain)
                         }
                         if let published = post.publishedAt { Text(published.feedbackRelativeText(locale: locale)).font(.caption).foregroundStyle(.tertiary).frame(maxWidth: .infinity, alignment: .trailing) }
