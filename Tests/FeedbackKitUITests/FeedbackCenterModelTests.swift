@@ -202,6 +202,59 @@ struct FeedbackCenterModelTests {
         #expect(await diagnostics.snapshotCount == (includesDiagnostics ? 1 : 0))
     }
 
+    @Test func successfulSubmissionClearsComposerDataAndDoesNotRestoreItsDraft() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = FeedbackDraftStore(directory: directory)
+        let transport = submissionTransport(
+            capabilityEnabled: true,
+            expectedDiagnosticsIncluded: true
+        )
+        let client = FeedbackClient(
+            configuration: .init(
+                baseURL: URL(string: "https://example.com/v1/api")!,
+                productKey: "pk_test"
+            ),
+            diagnostics: DiagnosticProvider(),
+            transport: transport,
+            credentialStore: Credential()
+        )
+        let model = FeedbackComposerModel(
+            kind: .bug,
+            product: makeProduct(diagnosticsEnabled: true),
+            client: client,
+            draftStore: store
+        )
+        model.title = "Title"
+        model.body = "Reproduction details"
+        model.includesDiagnostics = true
+        model.attachments = [
+            FeedbackAttachmentSource(
+                filename: "screenshot.png",
+                contentType: "image/png",
+                data: Data("image".utf8)
+            )
+        ]
+        await model.saveDraft()
+
+        let locale = Locale(identifier: "en")
+        #expect(
+            await model.submit(
+                locale: locale,
+                localization: FeedbackLocalization(locale: locale)
+            ) == true
+        )
+
+        #expect(model.title.isEmpty)
+        #expect(model.body.isEmpty)
+        #expect(model.includesDiagnostics == false)
+        #expect(model.attachments.isEmpty)
+        #expect(model.uploadedAttachmentIDs == nil)
+
+        await model.saveDraft()
+        #expect(await store.load(productSlug: "app") == nil)
+    }
+
     @Test func submissionFallsBackToNoDiagnosticsWhenServerDisablesCapability() async throws {
         let directory = temporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -298,6 +351,14 @@ struct FeedbackCenterModelTests {
                 return (200, [:], Data())
             case ("POST", "/v1/api/client/diagnostics/finalize"):
                 let json = #"{"code":"ok","message":"OK","data":{"id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","filename":"diagnostics.json","contentType":"application/json","sizeBytes":2,"sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","schemaVersion":1,"finalizedAt":"2026-08-03T10:00:00.000Z"}}"#
+                return (200, [:], Data(json.utf8))
+            case ("POST", "/v1/api/client/uploads/presign"):
+                let json = #"{"code":"ok","message":"OK","data":[{"attachmentId":"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb","uploadUrl":"https://storage.example/attachment","headers":{"Content-Type":"image/png","Content-Length":"5"},"expiresIn":900}]}"#
+                return (200, [:], Data(json.utf8))
+            case ("PUT", "/attachment"):
+                return (200, [:], Data())
+            case ("POST", "/v1/api/client/uploads/finalize"):
+                let json = #"{"code":"ok","message":"OK","data":[{"id":"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"}]}"#
                 return (200, [:], Data(json.utf8))
             case ("POST", "/v1/api/client/feedback"):
                 let body = try #require(request.httpBody)
