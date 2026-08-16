@@ -187,12 +187,22 @@ private struct FeedbackComposer: View {
                     Button {
                         submit()
                     } label: {
-                        Text(model.disclosedVisibility == .public ? localization.text("feedbackkit.send.public") : localization.text("feedbackkit.send"))
-                            .font(.headline)
-                            .foregroundStyle(.primary)
-                            .frame(maxWidth: .infinity, minHeight: 54)
-                            .contentShape(.interaction, FeedbackComponentShape(cornerRadius: style.cardCornerRadius))
-                            .feedbackBorder(style)
+                        ZStack {
+                            if model.isSubmitting {
+                                ProgressView()
+                                    .controlSize(.small)
+                                    .tint(.primary)
+                                    .accessibilityLabel(localization.text("feedbackkit.loading"))
+                            } else {
+                                Text(model.disclosedVisibility == .public ? localization.text("feedbackkit.send.public") : localization.text("feedbackkit.send"))
+                                    .lineLimit(1)
+                            }
+                        }
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+                        .frame(maxWidth: .infinity, minHeight: 54)
+                        .contentShape(.interaction, FeedbackComponentShape(cornerRadius: style.cardCornerRadius))
+                        .feedbackBorder(style)
                     }
                     .buttonStyle(.plain)
                     .disabled(model.canSubmit == false)
@@ -266,6 +276,7 @@ private struct FeedbackComposer: View {
     }
 
     private func submit(diagnosticsOverride: Bool? = nil) {
+        focused = nil
         Task {
             let didSubmit = await model.submit(
                 locale: locale,
