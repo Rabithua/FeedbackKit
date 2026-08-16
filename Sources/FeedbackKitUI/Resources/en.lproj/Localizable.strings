@@ -22,6 +22,7 @@
 "feedbackkit.copy" = "Copy";
 "feedbackkit.developer.post" = "Developer Update";
 "feedbackkit.developer.reply" = "Developer reply";
+"feedbackkit.disclosure.title" = "Information";
 "feedbackkit.diagnostics.clear.final" = "Permanently clear all diagnostics?";
 "feedbackkit.diagnostics.clear.title" = "Clear diagnostic logs?";
 "feedbackkit.diagnostics.disclosure" = "Includes redacted recent errors, activity breadcrumbs, and device information. Only developers can view it.";

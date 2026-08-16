@@ -145,6 +145,7 @@ private struct FeedbackComposer: View {
     @State private var model: FeedbackComposerModel
     @State private var selections: [PhotosPickerItem] = []
     @State private var confirmClose = false
+    @State private var showsDisclosure = false
     @FocusState private var focused: Field?
     let style: FeedbackStyle
     let submitted: () -> Void
@@ -161,11 +162,23 @@ private struct FeedbackComposer: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            FeedbackSheetHeader(title: localization.kind(model.kind), close: requestClose)
+            FeedbackSheetHeader(title: localization.kind(model.kind)) {
+                Button(
+                    localization.text("feedbackkit.disclosure.title"),
+                    systemImage: "info.circle",
+                    action: showDisclosure
+                )
+                .labelStyle(.iconOnly)
+                .font(.system(size: 18, weight: .bold))
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .accessibilityIdentifier("developerCommunity.composer.disclosure")
+            } close: { requestClose() }
                 .padding(.horizontal, style.pagePadding).padding(.top, 14).padding(.bottom, 8)
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    disclosure
                     TextField("", text: $model.title, prompt: Text(localization.text("feedbackkit.composer.title.placeholder")).foregroundStyle(.secondary))
                         .focused($focused, equals: .title).padding(14).feedbackBorder(style)
                         .accessibilityLabel(localization.text("feedbackkit.composer.title.placeholder"))
@@ -209,7 +222,7 @@ private struct FeedbackComposer: View {
                 }.padding(.horizontal, style.pagePadding).padding(.bottom, 20)
             }
         }
-        .presentationDetents([.large])
+        .presentationDetents([.medium])
         .task { await model.restore() }
         .onChange(of: selections) { _, items in
             guard items.isEmpty == false else { return }
@@ -232,38 +245,84 @@ private struct FeedbackComposer: View {
             Button(localization.text("feedbackkit.diagnostics.send.without")) { submit(diagnosticsOverride: false) }
             Button(localization.text("feedbackkit.cancel"), role: .cancel) {}
         }
-    }
-
-    private var disclosure: some View {
-        Text(model.disclosedVisibility == .public ? localization.text("feedbackkit.visibility.public.disclosure") : localization.text("feedbackkit.visibility.private.disclosure"))
-            .font(.subheadline).foregroundStyle(.secondary)
+        .sheet(isPresented: $showsDisclosure) {
+            VStack(spacing: 0) {
+                FeedbackSheetHeader(
+                    title: localization.text("feedbackkit.disclosure.title"),
+                    close: { showsDisclosure = false }
+                )
+                .padding(.horizontal, style.pagePadding)
+                .padding(.top, 14)
+                .padding(.bottom, 8)
+                ScrollView {
+                    Text(disclosureText)
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, style.pagePadding)
+                        .padding(.bottom, 24)
+                }
+            }
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.hidden)
+        }
     }
 
     private var attachmentStrip: some View {
         let addTitle = model.isImporting ? localization.text("feedbackkit.loading") : localization.text("feedbackkit.attachment.add")
+        let isImporting = model.isImporting
         return ScrollView(.horizontal) {
             HStack(spacing: 10) {
                 ForEach(model.attachments) { attachment in
-                    ZStack(alignment: .topTrailing) {
-                        Text(attachment.filename).font(.caption).lineLimit(2).frame(width: 86, height: 70).padding(8).feedbackBorder(style)
-                        Button {
-                            haptics.trigger(.selection)
-                            model.attachments.removeAll { $0.id == attachment.id }
-                        } label: {
-                            Image(systemName: "xmark.circle.fill").symbolRenderingMode(.palette).foregroundStyle(.white, .black.opacity(0.7)).font(.title3)
+                    Text(attachment.filename)
+                        .font(.caption)
+                        .lineLimit(3)
+                        .multilineTextAlignment(.center)
+                        .padding(8)
+                        .frame(width: FeedbackStyle.attachmentTileSize, height: FeedbackStyle.attachmentTileSize)
+                        .feedbackBorder(style)
+                        .overlay(alignment: .topTrailing) {
+                            Button(
+                                localization.text("feedbackkit.attachment.discard"),
+                                systemImage: "xmark.circle.fill"
+                            ) {
+                                removeAttachment(id: attachment.id)
+                            }
+                            .labelStyle(.iconOnly)
+                            .symbolRenderingMode(.palette)
+                            .foregroundStyle(.white, .black.opacity(0.7))
+                            .font(.title3)
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
-                        .offset(x: 5, y: -5)
-                    }
                 }
                 PhotosPicker(selection: $selections, maxSelectionCount: max(0, model.product.attachmentLimits.count - model.attachments.count), matching: .any(of: [.images, .videos])) {
-                    FeedbackAttachmentAddLabel(title: addTitle, style: style)
-                }.disabled(model.isImporting || model.attachments.count >= model.product.attachmentLimits.count)
+                    FeedbackAttachmentAddLabel(title: addTitle, isLoading: isImporting, style: style)
+                }
+                .buttonStyle(.plain)
+                .disabled(model.isImporting || model.attachments.count >= model.product.attachmentLimits.count)
             }.padding(.vertical, 7).padding(.horizontal, 2)
         }.scrollIndicators(.hidden)
     }
 
     private func requestClose() { if model.attachments.isEmpty { close() } else { confirmClose = true } }
+
+    private func showDisclosure() {
+        haptics.trigger(.navigation)
+        showsDisclosure = true
+    }
+
+    private func removeAttachment(id: UUID) {
+        haptics.trigger(.selection)
+        model.attachments.removeAll { $0.id == id }
+    }
+
+    private var disclosureText: String {
+        model.disclosedVisibility == .public
+            ? localization.text("feedbackkit.visibility.public.disclosure")
+            : localization.text("feedbackkit.visibility.private.disclosure")
+    }
 
     private var diagnosticsBinding: Binding<Bool> {
         Binding(
@@ -291,11 +350,23 @@ private struct FeedbackComposer: View {
 
 private struct FeedbackAttachmentAddLabel: View {
     let title: String
+    let isLoading: Bool
     let style: FeedbackStyle
+
     var body: some View {
-        Text(title)
+        Group {
+            if isLoading {
+                ProgressView()
+                    .tint(.secondary)
+                    .accessibilityLabel(title)
+            } else {
+                Label(title, systemImage: "paperclip")
+                    .labelStyle(.iconOnly)
+                    .font(.title2)
+            }
+        }
             .foregroundStyle(.secondary)
-            .frame(width: 86, height: 70)
+            .frame(width: FeedbackStyle.attachmentTileSize, height: FeedbackStyle.attachmentTileSize)
             .contentShape(.interaction, FeedbackComponentShape(cornerRadius: style.cardCornerRadius))
             .feedbackBorder(style)
     }

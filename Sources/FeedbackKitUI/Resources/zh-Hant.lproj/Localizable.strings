@@ -22,6 +22,7 @@
 "feedbackkit.copy" = "複製";
 "feedbackkit.developer.post" = "開發者說";
 "feedbackkit.developer.reply" = "開發者回覆";
+"feedbackkit.disclosure.title" = "說明";
 "feedbackkit.diagnostics.clear.final" = "永久清除全部診斷資訊？";
 "feedbackkit.diagnostics.clear.title" = "清除診斷日誌？";
 "feedbackkit.diagnostics.disclosure" = "包含經過脫敏的近期錯誤、操作軌跡和裝置資訊，僅開發者可見。";

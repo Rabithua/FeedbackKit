@@ -22,6 +22,7 @@
 "feedbackkit.copy" = "复制";
 "feedbackkit.developer.post" = "开发者说";
 "feedbackkit.developer.reply" = "开发者回复";
+"feedbackkit.disclosure.title" = "说明";
 "feedbackkit.diagnostics.clear.final" = "永久清空全部诊断信息？";
 "feedbackkit.diagnostics.clear.title" = "清空诊断日志？";
 "feedbackkit.diagnostics.disclosure" = "包含经过脱敏的近期错误、操作轨迹和设备信息，仅开发者可见。";
