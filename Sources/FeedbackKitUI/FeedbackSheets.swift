@@ -263,7 +263,7 @@ private struct FeedbackComposer: View {
                         .padding(.bottom, 24)
                 }
             }
-            .presentationSizing(.page.fitted(horizontal: false, vertical: true))
+            .presentationDetents([.height(220)])
             .presentationDragIndicator(.hidden)
         }
     }
