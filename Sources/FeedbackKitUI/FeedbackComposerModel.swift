@@ -156,6 +156,7 @@ final class FeedbackComposerModel {
                 includeDiagnostics: includeDiagnostics,
                 idempotencyKey: idempotencyKey
             )
+            resetAfterSubmission()
             try? await draftStore.remove(productSlug: product.slug)
             return true
         } catch FeedbackClientError.diagnosticUploadFailed {
@@ -166,6 +167,14 @@ final class FeedbackComposerModel {
             errorMessage = error.localizedDescription
             return false
         }
+    }
+
+    private func resetAfterSubmission() {
+        title = ""
+        body = ""
+        includesDiagnostics = false
+        attachments.removeAll()
+        uploadedAttachmentIDs = nil
     }
 
     private static let allowedTypes: Set<String> = [
