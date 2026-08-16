@@ -22,6 +22,7 @@
 "feedbackkit.copy" = "복사";
 "feedbackkit.developer.post" = "개발자 소식";
 "feedbackkit.developer.reply" = "개발자 답변";
+"feedbackkit.disclosure.title" = "안내";
 "feedbackkit.diagnostics.clear.final" = "모든 진단 정보를 영구적으로 지울까요?";
 "feedbackkit.diagnostics.clear.title" = "진단 로그를 지울까요?";
 "feedbackkit.diagnostics.disclosure" = "민감 정보가 제거된 최근 오류, 작업 기록 및 기기 정보가 포함되며 개발자만 볼 수 있습니다.";

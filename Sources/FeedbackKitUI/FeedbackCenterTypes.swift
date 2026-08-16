@@ -30,6 +30,7 @@ public struct FeedbackStyle: Sendable {
     }
 
     public static let `default` = FeedbackStyle()
+    static let attachmentTileSize: CGFloat = 86
     static let skeletonForeground = Color.secondary.opacity(0.28)
     static let headerTransitionDuration = 0.28
 }

@@ -22,6 +22,7 @@
 "feedbackkit.copy" = "コピー";
 "feedbackkit.developer.post" = "開発者からのお知らせ";
 "feedbackkit.developer.reply" = "開発者の返信";
+"feedbackkit.disclosure.title" = "説明";
 "feedbackkit.diagnostics.clear.final" = "すべての診断情報を完全に消去しますか？";
 "feedbackkit.diagnostics.clear.title" = "診断ログを消去しますか？";
 "feedbackkit.diagnostics.disclosure" = "匿名化された最近のエラー、操作履歴、デバイス情報が含まれます。開発者のみ閲覧できます。";
