@@ -254,12 +254,14 @@ private struct FeedbackComposer: View {
                 .padding(.horizontal, style.pagePadding)
                 .padding(.top, 14)
                 .padding(.bottom, 8)
-                Text(disclosureText)
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, style.pagePadding)
-                    .padding(.bottom, 24)
+                ScrollView {
+                    Text(disclosureText)
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, style.pagePadding)
+                        .padding(.bottom, 24)
+                }
             }
             .presentationSizing(.page.fitted(horizontal: false, vertical: true))
             .presentationDragIndicator(.hidden)
@@ -280,20 +282,19 @@ private struct FeedbackComposer: View {
                         .frame(width: FeedbackStyle.attachmentTileSize, height: FeedbackStyle.attachmentTileSize)
                         .feedbackBorder(style)
                         .overlay(alignment: .topTrailing) {
-                            Button(
-                                localization.text("feedbackkit.attachment.discard"),
-                                systemImage: "xmark.circle.fill"
-                            ) {
+                            Button {
                                 removeAttachment(id: attachment.id)
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .symbolRenderingMode(.palette)
+                                    .foregroundStyle(.white, .black.opacity(0.7))
+                                    .font(.title3)
+                                    .offset(x: 16, y: -16)
                             }
-                            .labelStyle(.iconOnly)
-                            .symbolRenderingMode(.palette)
-                            .foregroundStyle(.white, .black.opacity(0.7))
-                            .font(.title3)
                             .frame(width: 44, height: 44)
                             .contentShape(Rectangle())
                             .buttonStyle(.plain)
-                            .offset(x: 16, y: -16)
+                            .accessibilityLabel(localization.text("feedbackkit.attachment.discard"))
                         }
                 }
                 PhotosPicker(selection: $selections, maxSelectionCount: max(0, model.product.attachmentLimits.count - model.attachments.count), matching: .any(of: [.images, .videos])) {
