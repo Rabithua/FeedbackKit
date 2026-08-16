@@ -518,7 +518,7 @@ private struct FeedbackDeveloperPostSheet: View {
                 else if let error = model.error { FeedbackErrorView(error: error) { Task { await model.load(locale: locale) } } }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }.presentationDetents([.large]).task { await model.load(locale: locale) }
+        }.presentationDetents([.medium]).task { await model.load(locale: locale) }
     }
 }
 
