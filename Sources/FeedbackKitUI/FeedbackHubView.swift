@@ -156,6 +156,7 @@ struct FeedbackActivityRow: View {
                         .font(.system(size: 25, weight: .black, design: .rounded))
                         .foregroundStyle(voteState.hasVoted ? Color.accentColor : Color.primary)
                         .frame(minWidth: 48, minHeight: 44)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(localization.text(voteState.hasVoted ? "feedbackkit.vote.remove" : "feedbackkit.vote"))
@@ -164,6 +165,7 @@ struct FeedbackActivityRow: View {
                     Image(systemName: "arrow.up.right")
                         .font(.system(size: 25, weight: .bold))
                         .frame(minWidth: 48, minHeight: 44)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.primary)

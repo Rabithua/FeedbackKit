@@ -172,7 +172,10 @@ struct MyFeedbackView: View {
                                         Text(feedback.lastActivityAt.feedbackRelativeText(locale: locale)).font(.caption2).foregroundStyle(.secondary)
                                     }
                                 }
-                                .padding(.horizontal, 14).padding(.vertical, 10).feedbackBorder(style)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 10)
+                                .contentShape(.interaction, FeedbackComponentShape(cornerRadius: style.cardCornerRadius))
+                                .feedbackBorder(style)
                             }
                             .buttonStyle(.plain)
                             .onAppear { if feedback.id == model.items.last?.id { Task { await model.more() } } }
