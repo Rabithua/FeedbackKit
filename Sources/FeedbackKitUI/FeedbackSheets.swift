@@ -415,7 +415,7 @@ private struct FeedbackDetailSheet: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .presentationDetents([.large])
+        .presentationDetents([.medium])
         .task { await load() }
         .accessibilityIdentifier("developerCommunity.feedbackDetail")
     }
