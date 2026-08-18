@@ -156,8 +156,34 @@ struct FeedbackCenterModelTests {
 
         await model.restore()
 
-        #expect(model.kind == .bug)
         #expect(model.includesDiagnostics == diagnosticsAvailable)
+    }
+
+    @Test func draftRestorePreservesSelectedFeedbackKind() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = FeedbackDraftStore(directory: directory)
+        try await store.save(
+            FeedbackDraft(
+                productSlug: "app",
+                kind: .bug,
+                title: "Title",
+                body: "Body",
+                includesDiagnostics: false
+            )
+        )
+        let model = makeComposer(
+            kind: .suggestion,
+            product: makeProduct(diagnosticsEnabled: false),
+            diagnostics: nil,
+            draftStore: store
+        )
+
+        await model.restore()
+
+        #expect(model.kind == .suggestion)
+        #expect(model.title == "Title")
+        #expect(model.body == "Body")
     }
 
     @Test(arguments: [false, true])

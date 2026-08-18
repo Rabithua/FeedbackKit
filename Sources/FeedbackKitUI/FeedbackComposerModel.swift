@@ -48,7 +48,6 @@ final class FeedbackComposerModel {
 
     func restore() async {
         guard let draft = await draftStore.load(productSlug: product.slug) else { return }
-        kind = draft.kind
         title = draft.title
         body = draft.body
         includesDiagnostics = diagnosticsAvailable && draft.includesDiagnostics
