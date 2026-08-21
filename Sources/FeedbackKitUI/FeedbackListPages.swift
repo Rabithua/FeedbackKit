@@ -160,7 +160,10 @@ struct MyFeedbackView: View {
                                 HStack(alignment: .center, spacing: 10) {
                                     VStack(alignment: .leading, spacing: 4) {
                                         HStack(spacing: 7) {
-                                            Text(localization.kind(feedback.type)).font(.headline)
+                                            Text(localization.kind(feedback.type))
+                                                .font(.headline)
+                                                .lineLimit(1)
+                                                .truncationMode(.tail)
                                             Text("|").foregroundStyle(.secondary)
                                             Text(feedback.displayTitle).font(.headline).lineLimit(1)
                                         }
