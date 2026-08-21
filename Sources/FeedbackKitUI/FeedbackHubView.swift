@@ -140,7 +140,10 @@ struct FeedbackActivityRow: View {
             Button(action: open) {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(alignment: .firstTextBaseline, spacing: 7) {
-                        Text(category).font(.headline)
+                        Text(category)
+                            .font(.headline)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
                         Text("|").foregroundStyle(.secondary)
                         Text(title).font(.headline).lineLimit(1)
                     }
