@@ -35,8 +35,16 @@ public actor URLSessionFeedbackTransport: FeedbackTransport {
 }
 
 final class FeedbackSecureRedirectDelegate: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
-    func approvedRedirectRequest(_ request: URLRequest) -> URLRequest? {
-        request.url?.isFeedbackSecureTransportURL == true ? request : nil
+    func approvedRedirectRequest(
+        _ request: URLRequest,
+        originalRequest: URLRequest?
+    ) -> URLRequest? {
+        guard let redirectURL = request.url,
+              let originalURL = originalRequest?.url,
+              redirectURL.isFeedbackSecureTransportURL,
+              redirectURL.feedbackTransportOrigin == originalURL.feedbackTransportOrigin
+        else { return nil }
+        return request
     }
 
     func urlSession(
@@ -46,8 +54,14 @@ final class FeedbackSecureRedirectDelegate: NSObject, URLSessionTaskDelegate, @u
         newRequest request: URLRequest,
         completionHandler: @escaping (URLRequest?) -> Void
     ) {
-        completionHandler(approvedRedirectRequest(request))
+        completionHandler(approvedRedirectRequest(request, originalRequest: task.originalRequest))
     }
+}
+
+private struct FeedbackTransportOrigin: Equatable {
+    let scheme: String
+    let host: String
+    let port: Int
 }
 
 extension URL {
@@ -60,6 +74,19 @@ extension URL {
         if scheme?.lowercased() == "https" { return true }
         guard scheme?.lowercased() == "http" else { return false }
         return host == "localhost" || host == "127.0.0.1" || host == "::1"
+    }
+
+    fileprivate var feedbackTransportOrigin: FeedbackTransportOrigin? {
+        guard let scheme = scheme?.lowercased(),
+              let host = host?.lowercased()
+        else { return nil }
+        let defaultPort: Int
+        switch scheme {
+        case "https": defaultPort = 443
+        case "http": defaultPort = 80
+        default: return nil
+        }
+        return FeedbackTransportOrigin(scheme: scheme, host: host, port: port ?? defaultPort)
     }
 }
 

@@ -172,18 +172,27 @@ struct FeedbackClientTests {
 
     @Test func redirectPolicyRejectsInsecureOrMalformedTargets() {
         let policy = FeedbackSecureRedirectDelegate()
+        let original = URLRequest(url: URL(string: "https://storage.example/private")!)
 
         #expect(policy.approvedRedirectRequest(
-            URLRequest(url: URL(string: "https://storage.example/private")!)
+            URLRequest(url: URL(string: "https://storage.example:443/next")!),
+            originalRequest: original
         ) != nil)
         #expect(policy.approvedRedirectRequest(
-            URLRequest(url: URL(string: "http://127.0.0.1:9000/private")!)
-        ) != nil)
-        #expect(policy.approvedRedirectRequest(
-            URLRequest(url: URL(string: "http://storage.example/private")!)
+            URLRequest(url: URL(string: "https://other-storage.example/private")!),
+            originalRequest: original
         ) == nil)
         #expect(policy.approvedRedirectRequest(
-            URLRequest(url: URL(string: "https:/storage.example/private")!)
+            URLRequest(url: URL(string: "https://storage.example:8443/private")!),
+            originalRequest: original
+        ) == nil)
+        #expect(policy.approvedRedirectRequest(
+            URLRequest(url: URL(string: "http://storage.example/private")!),
+            originalRequest: original
+        ) == nil)
+        #expect(policy.approvedRedirectRequest(
+            URLRequest(url: URL(string: "https:/storage.example/private")!),
+            originalRequest: original
         ) == nil)
     }
 
