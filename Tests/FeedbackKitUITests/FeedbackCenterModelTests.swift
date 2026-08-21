@@ -281,6 +281,63 @@ struct FeedbackCenterModelTests {
         #expect(await store.load(productSlug: "app") == nil)
     }
 
+    @Test func failedSubmissionPreservesComposerAndPersistsDraft() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = FeedbackDraftStore(directory: directory)
+        let transport = submissionTransport(
+            capabilityEnabled: true,
+            expectedDiagnosticsIncluded: true,
+            uploadFailureCode: "feedback_storage_unavailable"
+        )
+        let client = FeedbackClient(
+            configuration: .init(
+                baseURL: URL(string: "https://example.com/v1/api")!,
+                productKey: "pk_test"
+            ),
+            diagnostics: DiagnosticProvider(),
+            transport: transport,
+            credentialStore: Credential()
+        )
+        let model = FeedbackComposerModel(
+            kind: .bug,
+            product: makeProduct(diagnosticsEnabled: true),
+            client: client,
+            draftStore: store
+        )
+        model.title = "Title"
+        model.body = "Reproduction details"
+        model.includesDiagnostics = true
+        model.attachments = [
+            FeedbackAttachmentSource(
+                filename: "screenshot.png",
+                contentType: "image/png",
+                data: Data("image".utf8)
+            )
+        ]
+        let locale = Locale(identifier: "zh-Hans")
+
+        #expect(
+            await model.submit(
+                locale: locale,
+                localization: FeedbackLocalization(locale: locale)
+            ) == false
+        )
+
+        #expect(model.title == "Title")
+        #expect(model.body == "Reproduction details")
+        #expect(model.includesDiagnostics == true)
+        #expect(model.attachments.count == 1)
+        #expect(model.attachments.first?.filename == "screenshot.png")
+        #expect(model.attachments.first?.data == Data("image".utf8))
+        #expect(model.uploadedAttachmentIDs == nil)
+        #expect(model.errorMessage == "反馈服务暂时不可用，请稍后再试")
+        let draft = try #require(await store.load(productSlug: "app"))
+        #expect(draft.title == "Title")
+        #expect(draft.body == "Reproduction details")
+        #expect(draft.includesDiagnostics == true)
+    }
+
     @Test func submissionFallsBackToNoDiagnosticsWhenServerDisablesCapability() async throws {
         let directory = temporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -360,7 +417,8 @@ struct FeedbackCenterModelTests {
 
     private func submissionTransport(
         capabilityEnabled: Bool,
-        expectedDiagnosticsIncluded: Bool
+        expectedDiagnosticsIncluded: Bool,
+        uploadFailureCode: String? = nil
     ) -> FeedbackFixtureTransport {
         FeedbackFixtureTransport { request in
             switch (request.httpMethod, request.url?.path) {
@@ -379,6 +437,16 @@ struct FeedbackCenterModelTests {
                 let json = #"{"code":"ok","message":"OK","data":{"id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","filename":"diagnostics.json","contentType":"application/json","sizeBytes":2,"sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","schemaVersion":1,"finalizedAt":"2026-08-03T10:00:00.000Z"}}"#
                 return (200, [:], Data(json.utf8))
             case ("POST", "/v1/api/client/uploads/presign"):
+                if let uploadFailureCode {
+                    return (
+                        503,
+                        [:],
+                        try FeedbackFixtureTransport.error(
+                            code: uploadFailureCode,
+                            message: "Unavailable"
+                        )
+                    )
+                }
                 let json = #"{"code":"ok","message":"OK","data":[{"attachmentId":"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb","uploadUrl":"https://storage.example/attachment","headers":{"Content-Type":"image/png","Content-Length":"5"},"expiresIn":900}]}"#
                 return (200, [:], Data(json.utf8))
             case ("PUT", "/attachment"):

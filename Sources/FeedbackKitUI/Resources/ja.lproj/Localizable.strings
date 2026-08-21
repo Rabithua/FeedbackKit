@@ -36,6 +36,7 @@
 "feedbackkit.diagnostics.unavailable" = "診断機能が設定されていません";
 "feedbackkit.diagnostics.upload.failed" = "診断情報を添付できませんでした。";
 "feedbackkit.error.title" = "コンテンツを利用できません";
+"feedbackkit.error.service.temporarily.unavailable" = "フィードバックサービスは一時的に利用できません。しばらくしてからもう一度お試しください。";
 "feedbackkit.export" = "書き出す";
 "feedbackkit.feedback.title" = "フィードバック";
 "feedbackkit.filter.all" = "すべて";

@@ -161,9 +161,11 @@ final class FeedbackComposerModel {
         } catch FeedbackClientError.diagnosticUploadFailed {
             diagnosticFailure = true
             errorMessage = localization.text("feedbackkit.diagnostics.upload.failed")
+            await saveDraft()
             return false
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = localization.errorMessage(for: error)
+            await saveDraft()
             return false
         }
     }

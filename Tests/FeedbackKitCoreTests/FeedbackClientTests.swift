@@ -63,6 +63,33 @@ struct FeedbackClientTests {
         }
     }
 
+    @Test(
+        arguments: [
+            "feedback_feature_unavailable",
+            "feedback_service_read_only",
+            "feedback_storage_unavailable",
+        ]
+    )
+    func preservesServiceRestrictionMachineCode(_ code: String) async {
+        let transport = FeedbackFixtureTransport { _ in
+            (503, [:], try FeedbackFixtureTransport.error(code: code, message: "Unavailable"))
+        }
+        let client = FeedbackClient(
+            configuration: .init(
+                baseURL: URL(string: "https://example.com/v1/api")!,
+                productKey: "pk_test"
+            ),
+            transport: transport,
+            credentialStore: Credential()
+        )
+
+        await #expect(
+            throws: FeedbackClientError.server(statusCode: 503, code: code)
+        ) {
+            _ = try await client.ownedFeedback()
+        }
+    }
+
     @Test func releaseListUsesPublicEndpointLocaleAndDecodesCompleteBody() async throws {
         let releaseID = "66666666-6666-4666-8666-666666666666"
         let completeBody = "让大型笔记列表更流畅，并提升加载恢复和编辑可靠性。\n\n修复了附件、分享链接和输入区域的多个问题。"
@@ -131,6 +158,88 @@ struct FeedbackClientTests {
         )
         let id = try await client.uploadDiagnosticSnapshot(.init(data: Data("{}".utf8), schemaVersion: 1, sha256: String(repeating: "a", count: 64)))
         #expect(id == "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa")
+    }
+
+    @Test func diagnosticFinalizePreservesServiceRestrictionMachineCode() async {
+        let code = "feedback_storage_unavailable"
+        let transport = FeedbackFixtureTransport { request in
+            switch (request.httpMethod, request.url?.path) {
+            case ("POST", "/v1/api/client/diagnostics/presign"):
+                let json = #"{"code":"ok","message":"OK","data":{"diagnosticArtifactId":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","uploadUrl":"https://storage.example/private","headers":{"Content-Type":"application/json","Content-Length":"2","X-Amz-Checksum-Sha256":"test-base64-checksum"},"expiresIn":900}}"#
+                return (200, [:], Data(json.utf8))
+            case ("PUT", "/private"):
+                return (200, [:], Data())
+            case ("POST", "/v1/api/client/diagnostics/finalize"):
+                return (
+                    503,
+                    [:],
+                    try FeedbackFixtureTransport.error(
+                        code: code,
+                        message: "Unavailable"
+                    )
+                )
+            default:
+                Issue.record(
+                    "Unexpected request: \(request.httpMethod ?? "") \(request.url?.path ?? "")"
+                )
+                return (500, [:], Data())
+            }
+        }
+        let client = FeedbackClient(
+            configuration: .init(
+                baseURL: URL(string: "https://example.com/v1/api")!,
+                productKey: "pk_test"
+            ),
+            transport: transport,
+            credentialStore: Credential()
+        )
+
+        await #expect(
+            throws: FeedbackClientError.server(statusCode: 503, code: code)
+        ) {
+            _ = try await client.uploadDiagnosticSnapshot(
+                .init(
+                    data: Data("{}".utf8),
+                    schemaVersion: 1,
+                    sha256: String(repeating: "a", count: 64)
+                )
+            )
+        }
+    }
+
+    @Test func diagnosticStorage503WithoutMachineCodeUsesDiagnosticFallback() async {
+        let transport = FeedbackFixtureTransport { request in
+            switch (request.httpMethod, request.url?.path) {
+            case ("POST", "/v1/api/client/diagnostics/presign"):
+                let json = #"{"code":"ok","message":"OK","data":{"diagnosticArtifactId":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","uploadUrl":"https://storage.example/private","headers":{"Content-Type":"application/json","Content-Length":"2","X-Amz-Checksum-Sha256":"test-base64-checksum"},"expiresIn":900}}"#
+                return (200, [:], Data(json.utf8))
+            case ("PUT", "/private"):
+                return (503, [:], Data())
+            default:
+                Issue.record(
+                    "Unexpected request: \(request.httpMethod ?? "") \(request.url?.path ?? "")"
+                )
+                return (500, [:], Data())
+            }
+        }
+        let client = FeedbackClient(
+            configuration: .init(
+                baseURL: URL(string: "https://example.com/v1/api")!,
+                productKey: "pk_test"
+            ),
+            transport: transport,
+            credentialStore: Credential()
+        )
+
+        await #expect(throws: FeedbackClientError.diagnosticUploadFailed) {
+            _ = try await client.uploadDiagnosticSnapshot(
+                .init(
+                    data: Data("{}".utf8),
+                    schemaVersion: 1,
+                    sha256: String(repeating: "a", count: 64)
+                )
+            )
+        }
     }
 
     @Test func rejectsInsecureRemoteAPIEndpointsBeforeSendingCredentials() async {

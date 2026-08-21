@@ -165,7 +165,7 @@ struct FeedbackErrorView: View {
         ContentUnavailableView {
             Label(localization.text("feedbackkit.error.title"), systemImage: "exclamationmark.triangle")
         } description: {
-            Text(error.localizedDescription)
+            Text(localization.errorMessage(for: error))
         } actions: {
             Button(localization.text("feedbackkit.retry")) {
                 haptics.trigger(.action)
