@@ -3,7 +3,7 @@ import Foundation
 public struct FeedbackRedactor: Sendable {
     private static let sensitiveKeyFragments = [
         "authorization", "cookie", "password", "token", "apikey", "credential",
-        "secret", "sessionid", "sessiontoken",
+        "secret", "sessionid", "sessiontoken", "phone",
     ]
 
     public init() {}
@@ -38,10 +38,15 @@ public struct FeedbackRedactor: Sendable {
     }
 
     public func redact(metadata: [String: String]) -> [String: String] {
-        Dictionary(uniqueKeysWithValues: metadata.prefix(64).map { key, value in
+        var redacted: [String: String] = [:]
+        var usedKeys: Set<String> = []
+        for key in metadata.keys.sorted().prefix(64) {
+            guard let value = metadata[key] else { continue }
             let sensitive = isSensitiveKey(key)
-            return (String(key.prefix(128)), sensitive ? "[REDACTED]" : String(redact(value).prefix(2_048)))
-        })
+            let redactedKey = uniqueRedactedKey(key, usedKeys: &usedKeys)
+            redacted[redactedKey] = sensitive ? "[REDACTED]" : String(redact(value).prefix(2_048))
+        }
+        return redacted
     }
 
     private func redactJSON(_ value: String) -> String? {
@@ -58,15 +63,37 @@ public struct FeedbackRedactor: Sendable {
     private func redactJSONValue(_ value: Any, key: String? = nil) -> Any {
         if let key, isSensitiveKey(key) { return "[REDACTED]" }
         if let object = value as? [String: Any] {
-            return Dictionary(uniqueKeysWithValues: object.map { key, value in
-                (key, redactJSONValue(value, key: key))
-            })
+            var redacted: [String: Any] = [:]
+            var usedKeys: Set<String> = []
+            for key in object.keys.sorted() {
+                guard let value = object[key] else { continue }
+                let redactedKey = uniqueRedactedKey(key, usedKeys: &usedKeys)
+                redacted[redactedKey] = redactJSONValue(value, key: key)
+            }
+            return redacted
         }
         if let array = value as? [Any] {
             return array.map { redactJSONValue($0) }
         }
         if let string = value as? String { return redactText(string) }
+        if let number = value as? NSNumber {
+            let string = number.stringValue
+            let redacted = redactText(string)
+            if redacted != string { return redacted }
+        }
         return value
+    }
+
+    private func uniqueRedactedKey(_ key: String, usedKeys: inout Set<String>) -> String {
+        let redacted = String(redactText(key).prefix(128))
+        let base = redacted.isEmpty ? "[REDACTED_KEY]" : redacted
+        var candidate = base
+        var suffix = 2
+        while usedKeys.insert(candidate).inserted == false {
+            candidate = "\(base)#\(suffix)"
+            suffix += 1
+        }
+        return candidate
     }
 
     private func isSensitiveKey(_ key: String) -> Bool {

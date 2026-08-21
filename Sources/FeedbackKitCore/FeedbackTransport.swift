@@ -14,7 +14,11 @@ public actor URLSessionFeedbackTransport: FeedbackTransport {
     public init(configuration: URLSessionConfiguration = .ephemeral) {
         configuration.urlCache = nil
         configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
-        session = URLSession(configuration: configuration)
+        session = URLSession(
+            configuration: configuration,
+            delegate: FeedbackSecureRedirectDelegate(),
+            delegateQueue: nil
+        )
     }
 
     public func data(for request: URLRequest) async throws -> (Data, HTTPURLResponse) {
@@ -27,6 +31,35 @@ public actor URLSessionFeedbackTransport: FeedbackTransport {
         let (_, response) = try await session.upload(for: request, from: data)
         guard let http = response as? HTTPURLResponse else { throw FeedbackClientError.invalidResponse }
         return http
+    }
+}
+
+final class FeedbackSecureRedirectDelegate: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
+    func approvedRedirectRequest(_ request: URLRequest) -> URLRequest? {
+        request.url?.isFeedbackSecureTransportURL == true ? request : nil
+    }
+
+    func urlSession(
+        _ session: URLSession,
+        task: URLSessionTask,
+        willPerformHTTPRedirection response: HTTPURLResponse,
+        newRequest request: URLRequest,
+        completionHandler: @escaping (URLRequest?) -> Void
+    ) {
+        completionHandler(approvedRedirectRequest(request))
+    }
+}
+
+extension URL {
+    var isFeedbackSecureTransportURL: Bool {
+        guard user == nil,
+              password == nil,
+              let host = host?.lowercased(),
+              host.isEmpty == false
+        else { return false }
+        if scheme?.lowercased() == "https" { return true }
+        guard scheme?.lowercased() == "http" else { return false }
+        return host == "localhost" || host == "127.0.0.1" || host == "::1"
     }
 }
 

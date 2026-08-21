@@ -1,4 +1,4 @@
-import FeedbackKitCore
+@testable import FeedbackKitCore
 import FeedbackKitTestSupport
 import Foundation
 import Testing
@@ -148,6 +148,43 @@ struct FeedbackClientTests {
             _ = try await client.ownedFeedback()
         }
         #expect(await transport.requests.isEmpty)
+    }
+
+    @Test func rejectsHTTPSAPIEndpointsWithoutAHostBeforeSendingCredentials() async {
+        let transport = FeedbackFixtureTransport { request in
+            Issue.record("Unexpected malformed request: \(request.url?.absoluteString ?? "")")
+            return (500, [:], Data())
+        }
+        let client = FeedbackClient(
+            configuration: .init(
+                baseURL: URL(string: "https:/feedback.example.com/v1/api")!,
+                productKey: "pk_test"
+            ),
+            transport: transport,
+            credentialStore: Credential()
+        )
+
+        await #expect(throws: FeedbackClientError.invalidURL) {
+            _ = try await client.ownedFeedback()
+        }
+        #expect(await transport.requests.isEmpty)
+    }
+
+    @Test func redirectPolicyRejectsInsecureOrMalformedTargets() {
+        let policy = FeedbackSecureRedirectDelegate()
+
+        #expect(policy.approvedRedirectRequest(
+            URLRequest(url: URL(string: "https://storage.example/private")!)
+        ) != nil)
+        #expect(policy.approvedRedirectRequest(
+            URLRequest(url: URL(string: "http://127.0.0.1:9000/private")!)
+        ) != nil)
+        #expect(policy.approvedRedirectRequest(
+            URLRequest(url: URL(string: "http://storage.example/private")!)
+        ) == nil)
+        #expect(policy.approvedRedirectRequest(
+            URLRequest(url: URL(string: "https:/storage.example/private")!)
+        ) == nil)
     }
 
     @Test func allowsLoopbackHTTPForLocalDevelopment() async throws {

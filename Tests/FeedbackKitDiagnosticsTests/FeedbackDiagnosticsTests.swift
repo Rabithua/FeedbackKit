@@ -47,6 +47,35 @@ struct FeedbackDiagnosticsTests {
         #expect(output.contains("client-value") == false)
     }
 
+    @Test func redactsStructuredKeysAndNumericPhoneValuesWithoutDroppingCollisions() throws {
+        let input = #"{"person@example.com":"first","other@example.com":"second","https://example.com?token=secret":"third","identifier":15551234567}"#
+
+        let output = FeedbackRedactor().redact(input)
+        let object = try #require(
+            JSONSerialization.jsonObject(with: Data(output.utf8)) as? [String: Any]
+        )
+
+        #expect(output.contains("person@example.com") == false)
+        #expect(output.contains("other@example.com") == false)
+        #expect(output.contains("token=secret") == false)
+        #expect(output.contains("15551234567") == false)
+        #expect(object.count == 4)
+        #expect(Set(object.values.compactMap { $0 as? String }).isSuperset(of: [
+            "first", "second", "[REDACTED]", "[REDACTED_PHONE]",
+        ]))
+    }
+
+    @Test func redactsSensitiveMetadataKeysWithoutDroppingCollisions() {
+        let output = FeedbackRedactor().redact(metadata: [
+            "person@example.com": "first",
+            "other@example.com": "second",
+        ])
+
+        #expect(output.keys.contains { $0.contains("example.com") } == false)
+        #expect(output.count == 2)
+        #expect(Set(output.values) == ["first", "second"])
+    }
+
     @Test func appliesCountRetentionUnderConcurrentWrites() async throws {
         let directory = temporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }

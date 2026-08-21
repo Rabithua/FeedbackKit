@@ -35,6 +35,68 @@ struct FeedbackHitTargetButtonTests {
         #expect(tapCount == 2)
     }
 
+    @Test func attachmentRemoveTargetDoesNotOverlapTheNextTile() throws {
+        var firstRemovalCount = 0
+        var secondRemovalCount = 0
+        let spacing: CGFloat = 10
+        let width = FeedbackAttachmentTile.layoutWidth * 2 + spacing
+        let height = FeedbackAttachmentTile.layoutHeight
+        let host = NSHostingView(
+            rootView: HStack(alignment: .bottom, spacing: spacing) {
+                FeedbackAttachmentTile(
+                    filename: "First",
+                    removeLabel: "Remove first",
+                    style: .default,
+                    remove: { firstRemovalCount += 1 }
+                )
+                FeedbackAttachmentTile(
+                    filename: "Second",
+                    removeLabel: "Remove second",
+                    style: .default,
+                    remove: { secondRemovalCount += 1 }
+                )
+            }
+            .frame(width: width, height: height, alignment: .topLeading)
+        )
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: width, height: height),
+            styleMask: [.borderless],
+            backing: .buffered,
+            defer: false
+        )
+        window.contentView = host
+        window.makeKeyAndOrderFront(nil)
+        defer { window.orderOut(nil) }
+        host.layoutSubtreeIfNeeded()
+
+        let secondTileLeft = FeedbackAttachmentTile.layoutWidth + spacing
+        try click(
+            window: window,
+            at: NSPoint(
+                x: secondTileLeft + 2,
+                y: height - FeedbackAttachmentTile.controlRadius - 2
+            )
+        )
+        #expect(firstRemovalCount == 0)
+        #expect(secondRemovalCount == 0)
+
+        let secondButtonLeft = secondTileLeft
+            + FeedbackStyle.attachmentTileSize
+            - FeedbackAttachmentTile.controlRadius
+        for point in [
+            NSPoint(x: secondButtonLeft + 2, y: height - 2),
+            NSPoint(
+                x: secondButtonLeft + FeedbackAttachmentTile.controlSize - 2,
+                y: height - FeedbackAttachmentTile.controlSize + 2
+            ),
+        ] {
+            try click(window: window, at: point)
+        }
+
+        #expect(firstRemovalCount == 0)
+        #expect(secondRemovalCount == 2)
+    }
+
     private func click(window: NSWindow, at point: NSPoint) throws {
         let timestamp = ProcessInfo.processInfo.systemUptime
         let down = try #require(
