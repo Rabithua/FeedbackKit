@@ -11,6 +11,11 @@ public actor FeedbackClient {
     private let credentialStore: any FeedbackVisitorCredentialProviding
     private let metadataProvider: any FeedbackAppMetadataProvider
     private let diagnostics: (any FeedbackDiagnosticsProviding)?
+    private static let serviceRestrictionCodes: Set<String> = [
+        "feedback_feature_unavailable",
+        "feedback_service_read_only",
+        "feedback_storage_unavailable",
+    ]
 
     public init(
         configuration: FeedbackConfiguration,
@@ -212,8 +217,10 @@ public actor FeedbackClient {
                 throw CancellationError()
             }
             if let clientError = error as? FeedbackClientError,
-               case let .server(statusCode, _) = clientError,
-               statusCode == 503 {
+               case let .server(statusCode, code) = clientError,
+               statusCode == 503,
+               let code,
+               Self.serviceRestrictionCodes.contains(code) {
                 throw clientError
             }
             throw FeedbackClientError.diagnosticUploadFailed
