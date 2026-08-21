@@ -163,15 +163,11 @@ private struct FeedbackComposer: View {
     var body: some View {
         VStack(spacing: 0) {
             FeedbackSheetHeader(title: localization.kind(model.kind)) {
-                Button(
-                    localization.text("feedbackkit.disclosure.title"),
-                    systemImage: "info.circle",
-                    action: showDisclosure
-                )
-                .labelStyle(.iconOnly)
+                FeedbackHitTargetButton(action: showDisclosure) {
+                    Label(localization.text("feedbackkit.disclosure.title"), systemImage: "info.circle")
+                        .labelStyle(.iconOnly)
+                }
                 .font(.system(size: 18, weight: .bold))
-                .frame(minWidth: 44, minHeight: 44)
-                .contentShape(Rectangle())
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
                 .accessibilityIdentifier("developerCommunity.composer.disclosure")
@@ -282,17 +278,15 @@ private struct FeedbackComposer: View {
                         .frame(width: FeedbackStyle.attachmentTileSize, height: FeedbackStyle.attachmentTileSize)
                         .feedbackBorder(style)
                         .overlay(alignment: .topTrailing) {
-                            Button {
+                            FeedbackHitTargetButton {
                                 removeAttachment(id: attachment.id)
                             } label: {
                                 Image(systemName: "xmark.circle.fill")
                                     .symbolRenderingMode(.palette)
                                     .foregroundStyle(.white, .black.opacity(0.7))
                                     .font(.title3)
-                                    .offset(x: 16, y: -16)
                             }
-                            .frame(width: 44, height: 44)
-                            .contentShape(Rectangle())
+                            .offset(x: 16, y: -16)
                             .buttonStyle(.plain)
                             .accessibilityLabel(localization.text("feedbackkit.attachment.discard"))
                         }
@@ -462,7 +456,7 @@ private struct FeedbackDetailSheet: View {
         VStack(spacing: 0) {
             FeedbackSheetHeader(title: model.detail.map { "\(localization.kind($0.type))（\(localization.status($0.status))）" } ?? "") {
                 if let detail = model.detail, detail.isPublic {
-                    Button {
+                    FeedbackHitTargetButton {
                         haptics.trigger(.selection)
                         Task {
                             if await model.vote() == false {
@@ -473,8 +467,6 @@ private struct FeedbackDetailSheet: View {
                         Text("+\(detail.voteCount)")
                             .font(.system(size: 22, weight: .black, design: .rounded))
                             .foregroundStyle(detail.hasVoted ? Color.accentColor : Color.primary)
-                            .frame(minWidth: 44, minHeight: 36)
-                            .contentShape(Rectangle())
                     }.buttonStyle(.plain)
                 }
             } close: { close() }

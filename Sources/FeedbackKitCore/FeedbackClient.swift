@@ -269,6 +269,7 @@ public actor FeedbackClient {
     }
 
     private func upload(_ data: Data, to url: URL, headers: RequiredHeaders) async throws {
+        guard url.isFeedbackSecureTransportURL else { throw FeedbackClientError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "PUT"
         request.setValue(headers.contentType, forHTTPHeaderField: "Content-Type")
@@ -283,12 +284,20 @@ public actor FeedbackClient {
     }
 
     private func makeURL(scope: Scope, path: String, query: [URLQueryItem]) throws -> URL {
+        guard configuration.baseURL.isFeedbackSecureTransportURL else {
+            throw FeedbackClientError.invalidURL
+        }
         var url = configuration.baseURL.appending(path: scope.rawValue)
         for component in path.split(separator: "/") { url.append(path: String(component)) }
-        guard query.isEmpty == false else { return url }
+        guard query.isEmpty == false else {
+            guard url.isFeedbackSecureTransportURL else { throw FeedbackClientError.invalidURL }
+            return url
+        }
         guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { throw FeedbackClientError.invalidURL }
         components.queryItems = query
-        guard let result = components.url else { throw FeedbackClientError.invalidURL }
+        guard let result = components.url, result.isFeedbackSecureTransportURL else {
+            throw FeedbackClientError.invalidURL
+        }
         return result
     }
 
@@ -309,6 +318,15 @@ public actor FeedbackClient {
         if let error = error as? FeedbackClientError { return error }
         if let error = error as? URLError, [.notConnectedToInternet, .networkConnectionLost, .dataNotAllowed].contains(error.code) { return .offline }
         return .transport
+    }
+}
+
+private extension URL {
+    var isFeedbackSecureTransportURL: Bool {
+        guard user == nil, password == nil else { return false }
+        if scheme?.lowercased() == "https" { return true }
+        guard scheme?.lowercased() == "http", let host = host?.lowercased() else { return false }
+        return host == "localhost" || host == "127.0.0.1" || host == "::1"
     }
 }
 
