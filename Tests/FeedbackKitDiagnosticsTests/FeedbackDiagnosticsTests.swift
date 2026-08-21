@@ -27,6 +27,26 @@ struct FeedbackDiagnosticsTests {
         #expect(disk.contains("pk_secretvalue") == false)
     }
 
+    @Test func redactsQuotedAndNestedJSONSecrets() {
+        let input = #"{"password":"dummy-password","nested":{"client_secret":"client-value","sessionToken":"session-value"},"items":[{"credential":"credential-value"}],"safe":"visible"}"#
+
+        let output = FeedbackRedactor().redact(input)
+
+        #expect(output.contains("dummy-password") == false)
+        #expect(output.contains("client-value") == false)
+        #expect(output.contains("session-value") == false)
+        #expect(output.contains("credential-value") == false)
+        #expect(output.contains("visible") == true)
+        #expect(output.contains("[REDACTED]") == true)
+    }
+
+    @Test func redactsQuotedSecretKeysEmbeddedInText() {
+        let output = FeedbackRedactor().redact(#"request failed: {"password":"dummy-password","client_secret":"client-value"}"#)
+
+        #expect(output.contains("dummy-password") == false)
+        #expect(output.contains("client-value") == false)
+    }
+
     @Test func appliesCountRetentionUnderConcurrentWrites() async throws {
         let directory = temporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }

@@ -133,6 +133,61 @@ struct FeedbackClientTests {
         #expect(id == "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa")
     }
 
+    @Test func rejectsInsecureRemoteAPIEndpointsBeforeSendingCredentials() async {
+        let transport = FeedbackFixtureTransport { request in
+            Issue.record("Unexpected insecure request: \(request.url?.absoluteString ?? "")")
+            return (500, [:], Data())
+        }
+        let client = FeedbackClient(
+            configuration: .init(baseURL: URL(string: "http://feedback.example.com/v1/api")!, productKey: "pk_test"),
+            transport: transport,
+            credentialStore: Credential()
+        )
+
+        await #expect(throws: FeedbackClientError.invalidURL) {
+            _ = try await client.ownedFeedback()
+        }
+        #expect(await transport.requests.isEmpty)
+    }
+
+    @Test func allowsLoopbackHTTPForLocalDevelopment() async throws {
+        let transport = FeedbackFixtureTransport { request in
+            #expect(request.url?.host == "127.0.0.1")
+            return (200, [:], Data(#"{"code":"ok","message":"OK","data":{"feedback":[],"nextCursor":null}}"#.utf8))
+        }
+        let client = FeedbackClient(
+            configuration: .init(baseURL: URL(string: "http://127.0.0.1:3000/v1/api")!, productKey: "pk_test"),
+            transport: transport,
+            credentialStore: Credential()
+        )
+
+        _ = try await client.ownedFeedback()
+        #expect(await transport.requests.count == 1)
+    }
+
+    @Test func rejectsInsecureRemotePresignedUploads() async {
+        let transport = FeedbackFixtureTransport { request in
+            if request.url?.path == "/v1/api/client/diagnostics/presign" {
+                let json = #"{"code":"ok","message":"OK","data":{"diagnosticArtifactId":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","uploadUrl":"http://storage.example/private","headers":{"Content-Type":"application/json","Content-Length":"2"},"expiresIn":900}}"#
+                return (200, [:], Data(json.utf8))
+            }
+            Issue.record("Unexpected insecure upload: \(request.url?.absoluteString ?? "")")
+            return (500, [:], Data())
+        }
+        let client = FeedbackClient(
+            configuration: .init(baseURL: URL(string: "https://example.com/v1/api")!, productKey: "pk_test"),
+            transport: transport,
+            credentialStore: Credential()
+        )
+
+        await #expect(throws: FeedbackClientError.diagnosticUploadFailed) {
+            _ = try await client.uploadDiagnosticSnapshot(
+                .init(data: Data("{}".utf8), schemaVersion: 1, sha256: String(repeating: "a", count: 64))
+            )
+        }
+        #expect(await transport.requests.count == 1)
+    }
+
     @Test func visitorMessageUsesOwnedConversationEndpointAndStableIdempotencyKey() async throws {
         let transport = FeedbackFixtureTransport { request in
             #expect(request.httpMethod == "POST")
