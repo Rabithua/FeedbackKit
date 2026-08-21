@@ -21,6 +21,18 @@ struct FeedbackLocalization: EnvironmentKey, Sendable {
         )
     }
 
+    func errorMessage(for error: Error) -> String {
+        guard let clientError = error as? FeedbackClientError,
+              case let .server(statusCode, code) = clientError,
+              statusCode == 503,
+              let code,
+              Self.temporarilyUnavailableCodes.contains(code)
+        else {
+            return error.localizedDescription
+        }
+        return text("feedbackkit.error.service.temporarily.unavailable")
+    }
+
     private static func bundle(for locale: Locale) -> Bundle {
         let available = Bundle.module.localizations.filter { $0 != "Base" }
         let identifier = Bundle.preferredLocalizations(
@@ -38,6 +50,12 @@ struct FeedbackLocalization: EnvironmentKey, Sendable {
         }
         return bundle
     }
+
+    private static let temporarilyUnavailableCodes: Set<String> = [
+        "feedback_feature_unavailable",
+        "feedback_service_read_only",
+        "feedback_storage_unavailable",
+    ]
 
     func kind(_ kind: FeedbackKind) -> String {
         switch kind {

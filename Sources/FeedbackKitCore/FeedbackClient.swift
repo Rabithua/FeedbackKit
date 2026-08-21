@@ -211,6 +211,11 @@ public actor FeedbackClient {
             if error is CancellationError || Task.isCancelled {
                 throw CancellationError()
             }
+            if let clientError = error as? FeedbackClientError,
+               case let .server(statusCode, _) = clientError,
+               statusCode == 503 {
+                throw clientError
+            }
             throw FeedbackClientError.diagnosticUploadFailed
         }
     }

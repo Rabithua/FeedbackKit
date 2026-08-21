@@ -36,6 +36,7 @@
 "feedbackkit.diagnostics.unavailable" = "尚未配置诊断功能";
 "feedbackkit.diagnostics.upload.failed" = "诊断信息附带失败。";
 "feedbackkit.error.title" = "内容暂时不可用";
+"feedbackkit.error.service.temporarily.unavailable" = "反馈服务暂时不可用，请稍后再试";
 "feedbackkit.export" = "导出";
 "feedbackkit.feedback.title" = "反馈";
 "feedbackkit.filter.all" = "全部";

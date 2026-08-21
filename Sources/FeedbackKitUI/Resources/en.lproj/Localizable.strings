@@ -36,6 +36,7 @@
 "feedbackkit.diagnostics.unavailable" = "Diagnostics are not configured";
 "feedbackkit.diagnostics.upload.failed" = "Diagnostics could not be attached.";
 "feedbackkit.error.title" = "Content unavailable";
+"feedbackkit.error.service.temporarily.unavailable" = "Feedback is temporarily unavailable. Please try again later.";
 "feedbackkit.export" = "Export";
 "feedbackkit.feedback.title" = "Feedback";
 "feedbackkit.filter.all" = "All";

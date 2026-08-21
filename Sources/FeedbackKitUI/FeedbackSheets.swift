@@ -391,7 +391,7 @@ private final class FeedbackDetailModel {
         }
     }
 
-    func reply() async -> Bool {
+    func reply(localization: FeedbackLocalization) async -> Bool {
         let body = replyBody.trimmingCharacters(in: .whitespacesAndNewlines)
         guard body.isEmpty == false, body.count <= 20_000, detail?.isOwner == true, detail?.status == .open else { return false }
         isReplying = true
@@ -411,7 +411,7 @@ private final class FeedbackDetailModel {
             detail = try await client.feedback(id: id)
             return true
         } catch {
-            replyError = error.localizedDescription
+            replyError = localization.errorMessage(for: error)
             return false
         }
     }
@@ -500,7 +500,7 @@ private struct FeedbackDetailSheet: View {
                         .accessibilityLabel(localization.text("feedbackkit.reply.placeholder"))
                         Button {
                             Task {
-                                let didReply = await model.reply()
+                                let didReply = await model.reply(localization: localization)
                                 haptics.trigger(didReply ? .success : .error)
                             }
                         } label: {
@@ -587,7 +587,7 @@ struct FeedbackIdentityView: View {
                 }
                 .disabled(isDeleting)
             }
-            if let error { Text(error.localizedDescription).foregroundStyle(.red) }
+            if let error { Text(localization.errorMessage(for: error)).foregroundStyle(.red) }
         }
         .navigationTitle(localization.text("feedbackkit.identity.title")).feedbackInlineNavigationTitle()
         .alert(localization.text("feedbackkit.identity.delete"), isPresented: $confirm) { Button(localization.text("feedbackkit.continue"), role: .destructive) { finalConfirm = true }; Button(localization.text("feedbackkit.cancel"), role: .cancel) {} }

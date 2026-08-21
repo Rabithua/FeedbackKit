@@ -71,6 +71,11 @@ The package ships English, Simplified Chinese, Traditional Chinese, Japanese, an
 localizations. Its UI strings, localized FeedbackServer content, submissions, and refreshes all use
 the same effective language. It also follows the host app's system background and tint.
 
+Server-side availability restrictions remain available to custom integrations as
+`FeedbackClientError.server(statusCode: 503, code:)`. The packaged UI intentionally presents a
+localized generic temporary-unavailability message for these codes and preserves the in-progress
+body, attachments, and draft after a failed submission.
+
 ## Validation
 
 ```bash

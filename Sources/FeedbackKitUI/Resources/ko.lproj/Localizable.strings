@@ -36,6 +36,7 @@
 "feedbackkit.diagnostics.unavailable" = "진단 기능이 설정되지 않았습니다";
 "feedbackkit.diagnostics.upload.failed" = "진단 정보를 첨부하지 못했습니다.";
 "feedbackkit.error.title" = "콘텐츠를 사용할 수 없습니다";
+"feedbackkit.error.service.temporarily.unavailable" = "피드백 서비스를 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도해 주세요.";
 "feedbackkit.export" = "내보내기";
 "feedbackkit.feedback.title" = "피드백";
 "feedbackkit.filter.all" = "전체";

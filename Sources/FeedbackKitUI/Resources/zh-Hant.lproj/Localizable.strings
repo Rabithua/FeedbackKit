@@ -36,6 +36,7 @@
 "feedbackkit.diagnostics.unavailable" = "尚未設定診斷功能";
 "feedbackkit.diagnostics.upload.failed" = "診斷資訊附帶失敗。";
 "feedbackkit.error.title" = "內容暫時無法使用";
+"feedbackkit.error.service.temporarily.unavailable" = "回饋服務暫時無法使用，請稍後再試";
 "feedbackkit.export" = "匯出";
 "feedbackkit.feedback.title" = "回饋";
 "feedbackkit.filter.all" = "全部";
