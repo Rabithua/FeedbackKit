@@ -1,4 +1,4 @@
-import FeedbackKitCore
+@testable import FeedbackKitCore
 import FeedbackKitTestSupport
 import Foundation
 import Testing
@@ -148,6 +148,52 @@ struct FeedbackClientTests {
             _ = try await client.ownedFeedback()
         }
         #expect(await transport.requests.isEmpty)
+    }
+
+    @Test func rejectsHTTPSAPIEndpointsWithoutAHostBeforeSendingCredentials() async {
+        let transport = FeedbackFixtureTransport { request in
+            Issue.record("Unexpected malformed request: \(request.url?.absoluteString ?? "")")
+            return (500, [:], Data())
+        }
+        let client = FeedbackClient(
+            configuration: .init(
+                baseURL: URL(string: "https:/feedback.example.com/v1/api")!,
+                productKey: "pk_test"
+            ),
+            transport: transport,
+            credentialStore: Credential()
+        )
+
+        await #expect(throws: FeedbackClientError.invalidURL) {
+            _ = try await client.ownedFeedback()
+        }
+        #expect(await transport.requests.isEmpty)
+    }
+
+    @Test func redirectPolicyRejectsInsecureOrMalformedTargets() {
+        let policy = FeedbackSecureRedirectDelegate()
+        let original = URLRequest(url: URL(string: "https://storage.example/private")!)
+
+        #expect(policy.approvedRedirectRequest(
+            URLRequest(url: URL(string: "https://storage.example:443/next")!),
+            originalRequest: original
+        ) != nil)
+        #expect(policy.approvedRedirectRequest(
+            URLRequest(url: URL(string: "https://other-storage.example/private")!),
+            originalRequest: original
+        ) == nil)
+        #expect(policy.approvedRedirectRequest(
+            URLRequest(url: URL(string: "https://storage.example:8443/private")!),
+            originalRequest: original
+        ) == nil)
+        #expect(policy.approvedRedirectRequest(
+            URLRequest(url: URL(string: "http://storage.example/private")!),
+            originalRequest: original
+        ) == nil)
+        #expect(policy.approvedRedirectRequest(
+            URLRequest(url: URL(string: "https:/storage.example/private")!),
+            originalRequest: original
+        ) == nil)
     }
 
     @Test func allowsLoopbackHTTPForLocalDevelopment() async throws {

@@ -321,15 +321,6 @@ public actor FeedbackClient {
     }
 }
 
-private extension URL {
-    var isFeedbackSecureTransportURL: Bool {
-        guard user == nil, password == nil else { return false }
-        if scheme?.lowercased() == "https" { return true }
-        guard scheme?.lowercased() == "http", let host = host?.lowercased() else { return false }
-        return host == "localhost" || host == "127.0.0.1" || host == "::1"
-    }
-}
-
 private extension Duration {
     var timeInterval: TimeInterval { TimeInterval(components.seconds) + TimeInterval(components.attoseconds) / 1e18 }
 }

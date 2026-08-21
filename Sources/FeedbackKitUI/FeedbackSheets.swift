@@ -268,28 +268,14 @@ private struct FeedbackComposer: View {
         let addTitle = model.isImporting ? localization.text("feedbackkit.loading") : localization.text("feedbackkit.attachment.add")
         let isImporting = model.isImporting
         return ScrollView(.horizontal) {
-            HStack(spacing: 10) {
+            HStack(alignment: .bottom, spacing: 10) {
                 ForEach(model.attachments) { attachment in
-                    Text(attachment.filename)
-                        .font(.caption)
-                        .lineLimit(3)
-                        .multilineTextAlignment(.center)
-                        .padding(8)
-                        .frame(width: FeedbackStyle.attachmentTileSize, height: FeedbackStyle.attachmentTileSize)
-                        .feedbackBorder(style)
-                        .overlay(alignment: .topTrailing) {
-                            FeedbackHitTargetButton {
-                                removeAttachment(id: attachment.id)
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .symbolRenderingMode(.palette)
-                                    .foregroundStyle(.white, .black.opacity(0.7))
-                                    .font(.title3)
-                            }
-                            .offset(x: 16, y: -16)
-                            .buttonStyle(.plain)
-                            .accessibilityLabel(localization.text("feedbackkit.attachment.discard"))
-                        }
+                    FeedbackAttachmentTile(
+                        filename: attachment.filename,
+                        removeLabel: localization.text("feedbackkit.attachment.discard"),
+                        style: style,
+                        remove: { removeAttachment(id: attachment.id) }
+                    )
                 }
                 PhotosPicker(selection: $selections, maxSelectionCount: max(0, model.product.attachmentLimits.count - model.attachments.count), matching: .any(of: [.images, .videos])) {
                     FeedbackAttachmentAddLabel(title: addTitle, isLoading: isImporting, style: style)

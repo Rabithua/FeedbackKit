@@ -14,7 +14,11 @@ public actor URLSessionFeedbackTransport: FeedbackTransport {
     public init(configuration: URLSessionConfiguration = .ephemeral) {
         configuration.urlCache = nil
         configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
-        session = URLSession(configuration: configuration)
+        session = URLSession(
+            configuration: configuration,
+            delegate: FeedbackSecureRedirectDelegate(),
+            delegateQueue: nil
+        )
     }
 
     public func data(for request: URLRequest) async throws -> (Data, HTTPURLResponse) {
@@ -27,6 +31,62 @@ public actor URLSessionFeedbackTransport: FeedbackTransport {
         let (_, response) = try await session.upload(for: request, from: data)
         guard let http = response as? HTTPURLResponse else { throw FeedbackClientError.invalidResponse }
         return http
+    }
+}
+
+final class FeedbackSecureRedirectDelegate: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
+    func approvedRedirectRequest(
+        _ request: URLRequest,
+        originalRequest: URLRequest?
+    ) -> URLRequest? {
+        guard let redirectURL = request.url,
+              let originalURL = originalRequest?.url,
+              redirectURL.isFeedbackSecureTransportURL,
+              redirectURL.feedbackTransportOrigin == originalURL.feedbackTransportOrigin
+        else { return nil }
+        return request
+    }
+
+    func urlSession(
+        _ session: URLSession,
+        task: URLSessionTask,
+        willPerformHTTPRedirection response: HTTPURLResponse,
+        newRequest request: URLRequest,
+        completionHandler: @escaping (URLRequest?) -> Void
+    ) {
+        completionHandler(approvedRedirectRequest(request, originalRequest: task.originalRequest))
+    }
+}
+
+private struct FeedbackTransportOrigin: Equatable {
+    let scheme: String
+    let host: String
+    let port: Int
+}
+
+extension URL {
+    var isFeedbackSecureTransportURL: Bool {
+        guard user == nil,
+              password == nil,
+              let host = host?.lowercased(),
+              host.isEmpty == false
+        else { return false }
+        if scheme?.lowercased() == "https" { return true }
+        guard scheme?.lowercased() == "http" else { return false }
+        return host == "localhost" || host == "127.0.0.1" || host == "::1"
+    }
+
+    fileprivate var feedbackTransportOrigin: FeedbackTransportOrigin? {
+        guard let scheme = scheme?.lowercased(),
+              let host = host?.lowercased()
+        else { return nil }
+        let defaultPort: Int
+        switch scheme {
+        case "https": defaultPort = 443
+        case "http": defaultPort = 80
+        default: return nil
+        }
+        return FeedbackTransportOrigin(scheme: scheme, host: host, port: port ?? defaultPort)
     }
 }
 
