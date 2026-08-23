@@ -160,8 +160,10 @@ enum AppFeedbackRuntime {
 
 Keep the collector alive with the client. When implementing a custom source, override
 `diagnosticSnapshotData(maxBytes:)` and stop reading once that byte budget is reached. FeedbackKit
-passes the Product's current server limit into collection, validates the final payload again, and
-uses the same resolved locale for diagnostic metadata as for the feedback submission.
+shares the Product's current server limit across custom snapshot reads, validates the final payload
+again, and uses the same resolved locale for diagnostic metadata as for the feedback submission.
+Keep custom event and breadcrumb arrays small because their source APIs are compatibility-oriented
+and do not accept a byte budget.
 
 Diagnostics are always private on FeedbackServer. The composer starts with the switch off for every
 feedback kind, and uploads only after the user turns it on for that submission.

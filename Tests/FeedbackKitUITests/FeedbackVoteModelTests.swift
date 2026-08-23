@@ -22,6 +22,7 @@ private actor ControlledVoteTransport: FeedbackTransport {
     private var firstVoteContinuation: CheckedContinuation<Void, Never>?
     private var firstVoteWaiters: [CheckedContinuation<Void, Never>] = []
     private(set) var voteRequestCount = 0
+    private(set) var activityRequestCount = 0
 
     func waitForFirstVoteRequest() async {
         guard voteRequestCount == 0 else { return }
@@ -40,6 +41,10 @@ private actor ControlledVoteTransport: FeedbackTransport {
         guard let url = request.url else { throw URLError(.badURL) }
         if url.path == "/v1/api/client/bootstrap" {
             return try response(for: request, data: Self.bootstrapEnvelope)
+        }
+        if url.path == "/v1/api/client/activity" {
+            activityRequestCount += 1
+            return try response(for: request, data: Self.activityEnvelope)
         }
         guard url.path.hasSuffix("/vote") else {
             throw URLError(.unsupportedURL)
@@ -87,6 +92,10 @@ private actor ControlledVoteTransport: FeedbackTransport {
 
     private static let bootstrapEnvelope = Data(
         #"{"code":"ok","message":"OK","data":{"product":{"slug":"app","name":"App","defaultLocale":"en","defaultFeedbackVisibility":"private","iconUrl":null,"attachmentLimits":{"count":5,"imageBytes":100,"videoBytes":200},"diagnostics":null},"activity":{"entries":[{"kind":"feedback","id":"11111111-1111-4111-8111-111111111111","pinnedAt":null,"activityAt":"2026-08-03T10:00:00.000Z","data":{"type":"bug","status":"open","title":null,"displayTitle":"Title","body":"Body","authorDisplayCode":"ABC-123","voteCount":10,"hasVoted":false,"createdAt":"2026-08-03T10:00:00.000Z"}}],"nextCursor":null},"roadmap":[],"changelog":[],"visitor":{"displayCode":"ABC-123","lastReadCursor":0},"inbox":{"events":[],"nextCursor":0,"acknowledgedCursor":0,"unreadCount":0,"hasMore":false}}}"#.utf8
+    )
+
+    private static let activityEnvelope = Data(
+        #"{"code":"ok","message":"OK","data":{"entries":[{"kind":"feedback","id":"11111111-1111-4111-8111-111111111111","pinnedAt":null,"activityAt":"2026-08-03T10:00:00.000Z","data":{"type":"bug","status":"open","title":null,"displayTitle":"Title","body":"Body","authorDisplayCode":"ABC-123","voteCount":10,"hasVoted":false,"createdAt":"2026-08-03T10:00:00.000Z"}}],"nextCursor":null}}"#.utf8
     )
 }
 
@@ -142,6 +151,27 @@ struct FeedbackVoteModelTests {
         #expect(duplicateResult == false)
         #expect(requestCount == 1)
         #expect(await firstVote.value == true)
+    }
+
+    @Test("Activity refresh preserves an in-flight optimistic vote", .tags(.networking))
+    func activityRefreshPreservesOptimisticVote() async throws {
+        let transport = ControlledVoteTransport()
+        let model = FeedbackActivityListModel(client: makeClient(transport: transport))
+        model.entries = [activityEntry(id: feedbackID, voteCount: 10)]
+
+        let voteTask = Task {
+            await model.optimisticVote(id: feedbackID, target: true)
+        }
+        await transport.waitForFirstVoteRequest()
+        await model.load(locale: Locale(identifier: "zh-Hans"))
+
+        let voteDuringRefresh = try #require(model.entries.first?.vote)
+        #expect(await transport.activityRequestCount == 1)
+        #expect(voteDuringRefresh.hasVoted)
+        #expect(voteDuringRefresh.count == 11)
+
+        await transport.releaseFirstVote()
+        #expect(await voteTask.value)
     }
 
     @Test("Hub allows only one in-flight vote per feedback", .tags(.networking))

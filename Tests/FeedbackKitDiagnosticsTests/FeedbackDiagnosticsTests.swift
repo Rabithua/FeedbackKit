@@ -21,6 +21,14 @@ private actor BudgetRecordingSource: FeedbackDiagnosticSource {
     }
 }
 
+private struct LegacyOversizedSource: FeedbackDiagnosticSource {
+    let byteCount: Int
+
+    func diagnosticSnapshotData() async throws -> Data? {
+        Data(repeating: 0x78, count: byteCount)
+    }
+}
+
 struct FeedbackDiagnosticsTests {
     @Test func redactsBeforePersistence() async throws {
         let directory = temporaryDirectory()
@@ -136,6 +144,49 @@ struct FeedbackDiagnosticsTests {
         #expect(await source.requestedMaximumBytes == maximumBytes)
         #expect(snapshot.data.count <= maximumBytes)
         #expect(object["schemaVersion"] as? Int == 1)
+    }
+
+    @Test func customSnapshotSourcesShareOneCollectionBudget() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let diagnostics = makeDiagnostics(directory: directory)
+        let sources = [BudgetRecordingSource(), BudgetRecordingSource(), BudgetRecordingSource()]
+        for (index, source) in sources.enumerated() {
+            await diagnostics.register(source: source, id: "budget-\(index)")
+        }
+
+        let maximumBytes = 96 * 1024
+        let snapshot = try await diagnostics.makeDiagnosticSnapshot(maxBytes: maximumBytes)
+        var requestedLimits: [Int] = []
+        var skippedSourceCount = 0
+        for source in sources {
+            if let requestedMaximumBytes = await source.requestedMaximumBytes {
+                requestedLimits.append(requestedMaximumBytes)
+            } else {
+                skippedSourceCount += 1
+            }
+        }
+
+        #expect(requestedLimits.sorted() == [32 * 1024, 64 * 1024])
+        #expect(skippedSourceCount == 1)
+        #expect(snapshot.data.count <= maximumBytes)
+    }
+
+    @Test func legacySourceClippingMarksTheSnapshotAsTruncated() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let diagnostics = makeDiagnostics(directory: directory)
+        await diagnostics.register(
+            source: LegacyOversizedSource(byteCount: 64 * 1024 + 1),
+            id: "legacy"
+        )
+
+        let snapshot = try await diagnostics.makeDiagnosticSnapshot(maxBytes: 128 * 1024)
+        let object = try #require(
+            JSONSerialization.jsonObject(with: snapshot.data) as? [String: Any]
+        )
+
+        #expect(object["truncated"] as? Bool == true)
     }
 
     @Test func boundedSnapshotRetainsNewestEvents() async throws {

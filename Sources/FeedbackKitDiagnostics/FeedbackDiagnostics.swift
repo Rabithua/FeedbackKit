@@ -190,19 +190,27 @@ public final class FeedbackDiagnostics: FeedbackDiagnosticsInspecting, @unchecke
         var records = try await store.records()
         var customSnapshots: [String] = []
         var sourceDataTruncated = false
+        var remainingCustomSnapshotBytes = maximumBytes
         for source in sources {
             try Task.checkCancellation()
             let sourceEvents = try await source.diagnosticEvents().map(redactor.event)
             let sourceBreadcrumbs = try await source.diagnosticBreadcrumbs().map(redactor.breadcrumb)
             records.append(contentsOf: sourceEvents.map { StoredDiagnosticRecord(kind: .event, timestamp: $0.timestamp, event: $0, breadcrumb: nil) })
             records.append(contentsOf: sourceBreadcrumbs.map { StoredDiagnosticRecord(kind: .breadcrumb, timestamp: $0.timestamp, event: nil, breadcrumb: $0) })
-            let sourceLimit = min(64 * 1024, maximumBytes)
-            if let data = try await source.diagnosticSnapshotData(maxBytes: sourceLimit) {
-                sourceDataTruncated = sourceDataTruncated || data.count > sourceLimit
+            let sourceLimit = min(64 * 1024, remainingCustomSnapshotBytes)
+            if sourceLimit > 0,
+               let data = try await source.diagnosticSnapshotData(maxBytes: sourceLimit)
+            {
+                // Legacy sources cannot distinguish an exact fit from a clipped result.
+                sourceDataTruncated = sourceDataTruncated || data.count >= sourceLimit
                 let sourceText = String(decoding: data.prefix(sourceLimit), as: UTF8.self)
-                customSnapshots.append(
-                    redactor.redact(sourceText).feedbackUTF8Prefix(maxBytes: sourceLimit)
-                )
+                let redactedSnapshot = redactor.redact(sourceText)
+                let snapshot = redactedSnapshot.feedbackUTF8Prefix(maxBytes: sourceLimit)
+                sourceDataTruncated = sourceDataTruncated || snapshot != redactedSnapshot
+                customSnapshots.append(snapshot)
+                remainingCustomSnapshotBytes -= min(data.count, sourceLimit)
+            } else if sourceLimit == 0 {
+                sourceDataTruncated = true
             }
         }
         let eventCutoff = now.addingTimeInterval(-30 * 60)
