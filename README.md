@@ -89,8 +89,9 @@ test target: [FeedbackKitIntegrationExample.swift](Tests/FeedbackKitUITests/Feed
 
 - Implement `FeedbackRouteHandler` for allow-listed host `app_route` actions.
 - Implement `FeedbackDiagnosticSource` to add an existing log source. Prefer the byte-limited
-  snapshot API so collection itself remains bounded; FeedbackKit redacts and validates source
-  output again.
+  snapshot API so each custom snapshot read shares a bounded collection budget; FeedbackKit also
+  bounds the final encoded snapshot. Event and breadcrumb arrays returned by custom sources remain
+  host-controlled and should be kept small.
 - Implement `FeedbackAppMetadataProvider` for deterministic tests or custom device context.
 - Use `FeedbackStyle` for the intentionally small set of spacing, radius, and border adjustments.
 

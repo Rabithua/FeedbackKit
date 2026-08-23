@@ -8,6 +8,7 @@ final class FeedbackDeveloperPostModel {
     var post: FeedbackDeveloperPost?
     var isLoading = false
     var error: Error?
+    @ObservationIgnored private var loadGeneration = 0
     let client: FeedbackClient
     let id: String
 
@@ -17,14 +18,22 @@ final class FeedbackDeveloperPostModel {
     }
 
     func load(locale: Locale) async {
-        guard isLoading == false else { return }
+        loadGeneration &+= 1
+        let generation = loadGeneration
         isLoading = true
-        defer { isLoading = false }
+        defer {
+            if generation == loadGeneration {
+                isLoading = false
+            }
+        }
         do {
-            post = try await client.developerPost(id: id, locale: locale)
+            let loadedPost = try await client.developerPost(id: id, locale: locale)
+            guard generation == loadGeneration else { return }
+            post = loadedPost
             error = nil
         } catch is CancellationError {
         } catch {
+            guard generation == loadGeneration else { return }
             self.error = error
         }
     }

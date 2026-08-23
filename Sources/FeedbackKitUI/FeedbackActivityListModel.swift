@@ -11,6 +11,7 @@ final class FeedbackActivityListModel {
     var isLoadingMore = false
     var error: Error?
     private(set) var votingFeedbackIDs: Set<String> = []
+    @ObservationIgnored private var loadGeneration = 0
     let client: FeedbackClient
 
     init(client: FeedbackClient) {
@@ -18,16 +19,27 @@ final class FeedbackActivityListModel {
     }
 
     func load(locale: Locale, refresh _: Bool = false) async {
-        if isLoading || isLoadingMore || votingFeedbackIDs.isEmpty == false { return }
+        loadGeneration &+= 1
+        let generation = loadGeneration
+        let protectedVoteIDs = votingFeedbackIDs
         isLoading = true
         error = nil
-        defer { isLoading = false }
+        defer {
+            if generation == loadGeneration {
+                isLoading = false
+            }
+        }
         do {
             let page = try await client.activity(locale: locale)
-            entries = page.entries
+            guard generation == loadGeneration else { return }
+            entries = preservingVotes(
+                for: protectedVoteIDs.union(votingFeedbackIDs),
+                in: page.entries
+            )
             nextCursor = page.nextCursor
         } catch is CancellationError {
         } catch {
+            guard generation == loadGeneration else { return }
             self.error = error
         }
     }
@@ -38,9 +50,11 @@ final class FeedbackActivityListModel {
               isLoadingMore == false
         else { return }
         isLoadingMore = true
+        let generation = loadGeneration
         defer { isLoadingMore = false }
         do {
             let page = try await client.activity(locale: locale, cursor: nextCursor)
+            guard generation == loadGeneration else { return }
             entries.append(
                 contentsOf: page.entries.filter { next in
                     entries.contains(where: { $0.id == next.id }) == false
@@ -49,6 +63,7 @@ final class FeedbackActivityListModel {
             self.nextCursor = page.nextCursor
         } catch is CancellationError {
         } catch {
+            guard generation == loadGeneration else { return }
             self.error = error
         }
     }
@@ -115,5 +130,25 @@ final class FeedbackActivityListModel {
               currentVote.count == optimistic.voteCount
         else { return }
         entries[currentIndex] = entries[currentIndex].updatingVote(original)
+    }
+
+    private func preservingVotes(
+        for feedbackIDs: Set<String>,
+        in loadedEntries: [FeedbackActivityEntry]
+    ) -> [FeedbackActivityEntry] {
+        let inFlightVotes = entries.reduce(
+            into: [String: FeedbackVoteResult]()
+        ) { result, entry in
+            guard feedbackIDs.contains(entry.id), let vote = entry.vote else { return }
+            result[entry.id] = FeedbackVoteResult(
+                feedbackId: entry.id,
+                hasVoted: vote.hasVoted,
+                voteCount: vote.count
+            )
+        }
+        return loadedEntries.map { entry in
+            guard let vote = inFlightVotes[entry.id] else { return entry }
+            return entry.updatingVote(vote)
+        }
     }
 }
