@@ -435,6 +435,22 @@ public struct FeedbackDiagnosticSnapshot: Sendable {
 
 public protocol FeedbackDiagnosticSnapshotProviding: Sendable {
     func makeDiagnosticSnapshot() async throws -> FeedbackDiagnosticSnapshot
+    func makeDiagnosticSnapshot(maxBytes: Int) async throws -> FeedbackDiagnosticSnapshot
+}
+
+public extension FeedbackDiagnosticSnapshotProviding {
+    /// Creates a snapshot that does not exceed the supplied server limit.
+    ///
+    /// The default implementation preserves compatibility with existing providers and validates
+    /// their result. Providers should override this method when they can avoid collecting or
+    /// encoding data beyond the limit in the first place.
+    func makeDiagnosticSnapshot(maxBytes: Int) async throws -> FeedbackDiagnosticSnapshot {
+        let snapshot = try await makeDiagnosticSnapshot()
+        guard maxBytes >= 0, snapshot.data.count <= maxBytes else {
+            throw FeedbackClientError.payloadTooLarge
+        }
+        return snapshot
+    }
 }
 
 public protocol FeedbackDiagnosticsProviding: FeedbackDiagnosticSnapshotProviding {

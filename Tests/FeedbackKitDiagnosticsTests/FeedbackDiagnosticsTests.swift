@@ -12,6 +12,15 @@ private actor SensitiveSource: FeedbackDiagnosticSource {
     func clearDiagnostics() async throws { cleared = true }
 }
 
+private actor BudgetRecordingSource: FeedbackDiagnosticSource {
+    private(set) var requestedMaximumBytes: Int?
+
+    func diagnosticSnapshotData(maxBytes: Int) async throws -> Data? {
+        requestedMaximumBytes = maxBytes
+        return Data(repeating: 0x20, count: maxBytes)
+    }
+}
+
 struct FeedbackDiagnosticsTests {
     @Test func redactsBeforePersistence() async throws {
         let directory = temporaryDirectory()
@@ -107,6 +116,51 @@ struct FeedbackDiagnosticsTests {
         #expect(text.contains("person@example.com") == false)
         #expect(text.contains("super-secret") == false)
         #expect(text.contains("\"truncated\":true") == true)
+    }
+
+    @Test(arguments: [512, 8 * 1024, 16 * 1024])
+    func explicitSnapshotLimitBoundsSourceCollectionAndProducesValidJSON(
+        maximumBytes: Int
+    ) async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let diagnostics = makeDiagnostics(directory: directory)
+        let source = BudgetRecordingSource()
+        await diagnostics.register(source: source, id: "budget")
+
+        let snapshot = try await diagnostics.makeDiagnosticSnapshot(maxBytes: maximumBytes)
+        let object = try #require(
+            JSONSerialization.jsonObject(with: snapshot.data) as? [String: Any]
+        )
+
+        #expect(await source.requestedMaximumBytes == maximumBytes)
+        #expect(snapshot.data.count <= maximumBytes)
+        #expect(object["schemaVersion"] as? Int == 1)
+    }
+
+    @Test func boundedSnapshotRetainsNewestEvents() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let diagnostics = makeDiagnostics(directory: directory)
+        for index in 0..<40 {
+            await diagnostics.record(.init(
+                level: .error,
+                category: "retention",
+                message: "event-\(index)-" + String(repeating: "x", count: 800)
+            ))
+        }
+
+        let snapshot = try await diagnostics.makeDiagnosticSnapshot(maxBytes: 16 * 1024)
+        let object = try #require(
+            JSONSerialization.jsonObject(with: snapshot.data) as? [String: Any]
+        )
+        let events = try #require(object["events"] as? [[String: Any]])
+        let messages = events.compactMap { $0["message"] as? String }
+
+        #expect(snapshot.data.count <= 16 * 1024)
+        #expect(messages.contains { $0.hasPrefix("event-39-") })
+        #expect(messages.contains { $0.hasPrefix("event-0-") } == false)
+        #expect(object["truncated"] as? Bool == true)
     }
 
     @Test func clearRemovesLocalAndRegisteredSourceData() async throws {

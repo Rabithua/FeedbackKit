@@ -150,17 +150,29 @@ public final class FeedbackDiagnostics: FeedbackDiagnosticsProviding, @unchecked
     }
 
     public func makeDiagnosticSnapshot() async throws -> FeedbackDiagnosticSnapshot {
+        try await makeDiagnosticSnapshot(maxBytes: configuration.maximumSnapshotBytes)
+    }
+
+    public func makeDiagnosticSnapshot(maxBytes: Int) async throws -> FeedbackDiagnosticSnapshot {
+        let maximumBytes = min(configuration.maximumSnapshotBytes, max(0, maxBytes))
         let now = Date()
         let sources = await state.sources()
         var records = try await store.records()
         var customSnapshots: [String] = []
+        var sourceDataTruncated = false
         for source in sources {
+            try Task.checkCancellation()
             let sourceEvents = try await source.diagnosticEvents().map(redactor.event)
             let sourceBreadcrumbs = try await source.diagnosticBreadcrumbs().map(redactor.breadcrumb)
             records.append(contentsOf: sourceEvents.map { StoredDiagnosticRecord(kind: .event, timestamp: $0.timestamp, event: $0, breadcrumb: nil) })
             records.append(contentsOf: sourceBreadcrumbs.map { StoredDiagnosticRecord(kind: .breadcrumb, timestamp: $0.timestamp, event: nil, breadcrumb: $0) })
-            if let data = try await source.diagnosticSnapshotData() {
-                customSnapshots.append(redactor.redact(String(decoding: data.prefix(64 * 1024), as: UTF8.self)))
+            let sourceLimit = min(64 * 1024, maximumBytes)
+            if let data = try await source.diagnosticSnapshotData(maxBytes: sourceLimit) {
+                sourceDataTruncated = sourceDataTruncated || data.count > sourceLimit
+                let sourceText = String(decoding: data.prefix(sourceLimit), as: UTF8.self)
+                customSnapshots.append(
+                    redactor.redact(sourceText).feedbackUTF8Prefix(maxBytes: sourceLimit)
+                )
             }
         }
         let eventCutoff = now.addingTimeInterval(-30 * 60)
@@ -171,41 +183,52 @@ public final class FeedbackDiagnostics: FeedbackDiagnosticsProviding, @unchecked
         let breadcrumbs = records.compactMap(\.breadcrumb)
             .sorted { $0.timestamp < $1.timestamp }
             .suffix(100)
-        let metric = await state.metricSummary(since: now.addingTimeInterval(-7 * 86_400))
-        var bundle = DiagnosticBundle(
+        let rawContext = await metadataProvider.clientContext(locale: .current)
+        let context = boundedContext(rawContext, maximumBytes: maximumBytes)
+        let rawMetric = await state.metricSummary(since: now.addingTimeInterval(-7 * 86_400))
+        let metric = rawMetric.map {
+            $0.feedbackUTF8Prefix(maxBytes: maximumBytes / 8)
+        }
+        let bundle = DiagnosticBundle(
             schemaVersion: 1,
             generatedAt: now,
-            context: await metadataProvider.clientContext(locale: .current),
+            context: context,
             events: Array(events),
             breadcrumbs: Array(breadcrumbs),
             metricKitCrashSummary: metric.map(redactor.redact),
             customSnapshots: customSnapshots,
-            truncated: false
+            truncated: sourceDataTruncated || context != rawContext || metric != rawMetric
         )
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        encoder.outputFormatting = [.sortedKeys]
-        var data = try encoder.encode(bundle)
-        while data.count > configuration.maximumSnapshotBytes, bundle.breadcrumbs.isEmpty == false {
-            bundle.breadcrumbs.removeFirst()
-            bundle.truncated = true
-            data = try encoder.encode(bundle)
-        }
-        while data.count > configuration.maximumSnapshotBytes, bundle.events.isEmpty == false {
-            bundle.events.removeFirst()
-            bundle.truncated = true
-            data = try encoder.encode(bundle)
-        }
-        while data.count > configuration.maximumSnapshotBytes, bundle.customSnapshots.isEmpty == false {
-            bundle.customSnapshots.removeFirst()
-            bundle.truncated = true
-            data = try encoder.encode(bundle)
-        }
-        guard data.count <= configuration.maximumSnapshotBytes else {
-            throw FeedbackClientError.payloadTooLarge
-        }
+        let data = try FeedbackDiagnosticSnapshotEncoder(maximumBytes: maximumBytes).encode(bundle)
         let digest = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
         return FeedbackDiagnosticSnapshot(data: data, schemaVersion: 1, sha256: digest)
+    }
+
+    private func boundedContext(
+        _ context: FeedbackClientContext,
+        maximumBytes: Int
+    ) -> FeedbackClientContext {
+        let fieldLimit = maximumBytes / 128
+        return FeedbackClientContext(
+            appVersion: context.appVersion.feedbackUTF8Prefix(maxBytes: fieldLimit),
+            buildNumber: context.buildNumber.feedbackUTF8Prefix(maxBytes: fieldLimit),
+            osVersion: context.osVersion.feedbackUTF8Prefix(maxBytes: fieldLimit),
+            deviceCategory: context.deviceCategory.feedbackUTF8Prefix(maxBytes: fieldLimit),
+            locale: context.locale.feedbackUTF8Prefix(maxBytes: fieldLimit)
+        )
+    }
+}
+
+private extension String {
+    func feedbackUTF8Prefix(maxBytes: Int) -> String {
+        guard maxBytes > 0, utf8.count > maxBytes else {
+            return maxBytes > 0 ? self : ""
+        }
+        var data = Data(utf8.prefix(maxBytes))
+        while String(data: data, encoding: .utf8) == nil, data.isEmpty == false {
+            data.removeLast()
+        }
+        return String(decoding: data, as: UTF8.self)
     }
 }
 
