@@ -1,0 +1,4 @@
+FEEDBACK_PRODUCT_KEY =
+FEEDBACK_KEYCHAIN_SERVICE =
+
+#include? "Config.local.xcconfig"

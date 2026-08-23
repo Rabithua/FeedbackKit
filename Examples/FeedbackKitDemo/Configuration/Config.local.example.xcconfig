@@ -1,0 +1,5 @@
+// Copy this file to Config.local.xcconfig to enable Live mode.
+FEEDBACK_PRODUCT_KEY = pk_example
+
+// Keep this value stable after releasing an app. The default is derived from the bundle ID.
+// FEEDBACK_KEYCHAIN_SERVICE = com.example.MyApp.feedbackkit.visitor

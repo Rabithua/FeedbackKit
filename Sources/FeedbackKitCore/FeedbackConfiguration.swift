@@ -1,57 +1,83 @@
 import Foundation
 
+/// Validated host configuration for the fixed FeedbackKit production API.
 public struct FeedbackConfiguration: Sendable {
-    public let baseURL: URL
+    /// The Info.plist key that contains the publishable Product Key.
+    public static let productKeyInfoDictionaryKey = "FeedbackProductKey"
+    /// The optional Info.plist key that preserves a host-owned Keychain service.
+    public static let keychainServiceInfoDictionaryKey = "FeedbackKeychainService"
+
+    /// The publishable key that binds requests to a FeedbackServer Product.
     public let productKey: String
+    /// The stable Keychain service used for the anonymous visitor credential.
     public let keychainService: String
 
-    public init(
-        baseURL: URL,
-        productKey: String,
-        keychainService: String = "ink.rote.FeedbackKit.visitor"
-    ) {
-        self.baseURL = baseURL
-        self.productKey = productKey
-        self.keychainService = keychainService
+    internal let apiBaseURL: URL
+
+    /// Creates configuration with an explicit, stable Keychain service.
+    public init(productKey: String, keychainService: String) throws {
+        try self.init(
+            productKey: productKey,
+            keychainService: keychainService,
+            apiBaseURL: Self.productionAPIBaseURL
+        )
     }
-}
 
-public enum FeedbackClientError: Error, Equatable, Sendable {
-    case invalidURL
-    case offline
-    case transport
-    case invalidResponse
-    case decoding
-    case unauthorized(code: String?)
-    case forbidden(code: String?)
-    case notFound
-    case payloadTooLarge
-    case validation(code: String?)
-    case rateLimited(retryAfter: TimeInterval?)
-    case server(statusCode: Int, code: String?)
-    case diagnosticsUnavailable
-    case diagnosticUploadFailed
-}
+    /// Creates configuration and derives the Keychain service from the bundle identifier.
+    public init(productKey: String, bundle: Bundle = .main) throws {
+        guard let bundleIdentifier = bundle.bundleIdentifier?.trimmingCharacters(in: .whitespacesAndNewlines),
+              bundleIdentifier.isEmpty == false
+        else {
+            throw FeedbackConfigurationError.missingBundleIdentifier
+        }
+        try self.init(
+            productKey: productKey,
+            keychainService: "\(bundleIdentifier).feedbackkit.visitor"
+        )
+    }
 
-extension FeedbackClientError: LocalizedError {
-    public var errorDescription: String? {
-        switch self {
-        case .invalidURL: "Invalid FeedbackServer URL."
-        case .offline: "You appear to be offline."
-        case .transport: "The network request failed."
-        case .invalidResponse: "FeedbackServer returned an invalid response."
-        case .decoding: "FeedbackServer returned unsupported data."
-        case .unauthorized: "The anonymous identity is not authorized."
-        case .forbidden: "This action is not permitted."
-        case .notFound: "This content is unavailable."
-        case .payloadTooLarge: "The data exceeds the server limit."
-        case .validation: "Some submitted values are invalid."
-        case .rateLimited: "Too many requests. Please try again later."
-        case let .server(statusCode, _): "FeedbackServer returned HTTP \(statusCode)."
-        case .diagnosticsUnavailable: "Diagnostics are not available for this product."
-        case .diagnosticUploadFailed: "The private diagnostic upload failed."
+    /// Loads the Product Key and optional Keychain service from a bundle's Info.plist.
+    public init(bundle: Bundle = .main) throws {
+        guard let productKey = bundle.object(
+            forInfoDictionaryKey: Self.productKeyInfoDictionaryKey
+        ) as? String else {
+            throw FeedbackConfigurationError.missingInfoDictionaryValue(
+                key: Self.productKeyInfoDictionaryKey
+            )
+        }
+
+        if let keychainService = bundle.object(
+            forInfoDictionaryKey: Self.keychainServiceInfoDictionaryKey
+        ) as? String {
+            try self.init(productKey: productKey, keychainService: keychainService)
+        } else {
+            try self.init(productKey: productKey, bundle: bundle)
         }
     }
+
+    internal init(
+        productKey: String,
+        keychainService: String,
+        apiBaseURL: URL
+    ) throws {
+        let productKey = productKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard productKey.isEmpty == false else {
+            throw FeedbackConfigurationError.emptyProductKey
+        }
+
+        let keychainService = keychainService.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard keychainService.isEmpty == false else {
+            throw FeedbackConfigurationError.emptyKeychainService
+        }
+
+        self.productKey = productKey
+        self.keychainService = keychainService
+        self.apiBaseURL = apiBaseURL
+    }
+
+    internal static let productionAPIBaseURL = URL(
+        string: "https://api.feedkit.cn/v1/api"
+    )!
 }
 
 public protocol FeedbackAppMetadataProvider: Sendable {

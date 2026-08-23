@@ -52,9 +52,9 @@ struct FeedbackCenterModelTests {
     @Test func cancellingInitialLoadClearsLoadingWithoutPresentingAnError() async {
         let transport = SuspendingFeedbackTransport()
         let client = FeedbackClient(
-            configuration: .init(
-                baseURL: URL(string: "https://example.com/v1/api")!,
-                productKey: "pk_test"
+            configuration: try! FeedbackConfiguration(
+                productKey: "pk_test",
+                keychainService: "test.feedback.visitor"
             ),
             transport: transport,
             credentialStore: Credential()
@@ -93,7 +93,7 @@ struct FeedbackCenterModelTests {
             }
         }
         let client = FeedbackClient(
-            configuration: .init(baseURL: URL(string: "https://example.com/v1/api")!, productKey: "pk_test"),
+            configuration: try! FeedbackConfiguration(productKey: "pk_test", keychainService: "test.feedback.visitor"),
             transport: transport,
             credentialStore: Credential()
         )
@@ -196,9 +196,9 @@ struct FeedbackCenterModelTests {
             expectedDiagnosticsIncluded: includesDiagnostics
         )
         let client = FeedbackClient(
-            configuration: .init(
-                baseURL: URL(string: "https://example.com/v1/api")!,
-                productKey: "pk_test"
+            configuration: try! FeedbackConfiguration(
+                productKey: "pk_test",
+                keychainService: "test.feedback.visitor"
             ),
             diagnostics: diagnostics,
             transport: transport,
@@ -237,9 +237,9 @@ struct FeedbackCenterModelTests {
             expectedDiagnosticsIncluded: true
         )
         let client = FeedbackClient(
-            configuration: .init(
-                baseURL: URL(string: "https://example.com/v1/api")!,
-                productKey: "pk_test"
+            configuration: try! FeedbackConfiguration(
+                productKey: "pk_test",
+                keychainService: "test.feedback.visitor"
             ),
             diagnostics: DiagnosticProvider(),
             transport: transport,
@@ -291,9 +291,9 @@ struct FeedbackCenterModelTests {
             uploadFailureCode: "feedback_storage_unavailable"
         )
         let client = FeedbackClient(
-            configuration: .init(
-                baseURL: URL(string: "https://example.com/v1/api")!,
-                productKey: "pk_test"
+            configuration: try! FeedbackConfiguration(
+                productKey: "pk_test",
+                keychainService: "test.feedback.visitor"
             ),
             diagnostics: DiagnosticProvider(),
             transport: transport,
@@ -347,9 +347,9 @@ struct FeedbackCenterModelTests {
             expectedDiagnosticsIncluded: false
         )
         let client = FeedbackClient(
-            configuration: .init(
-                baseURL: URL(string: "https://example.com/v1/api")!,
-                productKey: "pk_test"
+            configuration: try! FeedbackConfiguration(
+                productKey: "pk_test",
+                keychainService: "test.feedback.visitor"
             ),
             diagnostics: diagnostics,
             transport: transport,
@@ -390,10 +390,10 @@ struct FeedbackCenterModelTests {
             kind: kind,
             product: product,
             client: FeedbackClient(
-                configuration: .init(
-                    baseURL: URL(string: "https://example.com/v1/api")!,
-                    productKey: "pk_test"
-                ),
+                configuration: try! FeedbackConfiguration(
+                productKey: "pk_test",
+                keychainService: "test.feedback.visitor"
+            ),
                 diagnostics: diagnostics,
                 credentialStore: Credential()
             ),

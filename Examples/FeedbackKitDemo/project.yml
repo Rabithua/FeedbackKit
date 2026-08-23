@@ -1,0 +1,55 @@
+name: FeedbackKitDemo
+options:
+  bundleIdPrefix: cn.feedkit
+  deploymentTarget:
+    iOS: "18.0"
+  xcodeVersion: "16.0"
+configs:
+  Debug: debug
+  Release: release
+configFiles:
+  Debug: Configuration/Config.xcconfig
+  Release: Configuration/Config.xcconfig
+packages:
+  FeedbackKit:
+    path: ../..
+targets:
+  FeedbackKitDemo:
+    type: application
+    platform: iOS
+    sources:
+      - Sources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: cn.feedkit.demo
+        PRODUCT_NAME: FeedbackKit Demo
+        SWIFT_VERSION: "6.0"
+        INFOPLIST_FILE: Configuration/Info.plist
+    dependencies:
+      - package: FeedbackKit
+        product: FeedbackKitCore
+      - package: FeedbackKit
+        product: FeedbackKitDiagnostics
+      - package: FeedbackKit
+        product: FeedbackKitUI
+  FeedbackKitDemoUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - UITests
+    settings:
+      base:
+        SWIFT_VERSION: "6.0"
+    dependencies:
+      - target: FeedbackKitDemo
+schemes:
+  FeedbackKitDemo:
+    build:
+      targets:
+        FeedbackKitDemo: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - FeedbackKitDemoUITests

@@ -23,9 +23,9 @@ struct FeedbackLocalization: EnvironmentKey, Sendable {
 
     func errorMessage(for error: Error) -> String {
         guard let clientError = error as? FeedbackClientError,
-              case let .server(statusCode, code) = clientError,
-              statusCode == 503,
-              let code,
+              clientError.kind == .server,
+              clientError.context.statusCode == 503,
+              let code = clientError.context.serverCode,
               Self.temporarilyUnavailableCodes.contains(code)
         else {
             return error.localizedDescription

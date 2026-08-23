@@ -209,7 +209,7 @@ final class FeedbackComposerModel {
             )
             await completeSubmission(snapshot)
             return true
-        } catch FeedbackClientError.diagnosticUploadFailed {
+        } catch let error as FeedbackClientError where error.kind == .diagnosticUploadFailed {
             diagnosticFailure = true
             errorMessage = localization.text("feedbackkit.diagnostics.upload.failed")
             await saveDraft()

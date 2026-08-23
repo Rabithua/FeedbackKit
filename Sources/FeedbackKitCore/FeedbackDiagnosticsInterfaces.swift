@@ -30,7 +30,7 @@ public extension FeedbackDiagnosticSnapshotProviding {
     func makeDiagnosticSnapshot(maxBytes: Int) async throws -> FeedbackDiagnosticSnapshot {
         let snapshot = try await makeDiagnosticSnapshot()
         guard maxBytes >= 0, snapshot.data.count <= maxBytes else {
-            throw FeedbackClientError.payloadTooLarge
+            throw FeedbackClientError(kind: .payloadTooLarge)
         }
         return snapshot
     }

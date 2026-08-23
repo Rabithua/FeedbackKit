@@ -3,6 +3,7 @@ import Foundation
 #if canImport(FoundationNetworking)
 import FoundationNetworking
 #endif
+import Synchronization
 import Testing
 
 private extension Tag {
@@ -103,13 +104,19 @@ struct FeedbackAttachmentUploadTests {
 
     @Test("Data-backed attachment keeps the existing upload path", .tags(.attachmentNetworking))
     func dataBackedAttachmentUsesDataTransport() async throws {
+        let events = Mutex<[FeedbackClientEvent]>([])
         let source = FeedbackAttachmentSource(
             filename: "attachment.png",
             contentType: "image/png",
             data: Data("image".utf8)
         )
         let transport = AttachmentUploadTransport()
-        let client = makeClient(transport: transport)
+        let client = makeClient(
+            observer: FeedbackClientObserver { event in
+                events.withLock { $0.append(event) }
+            },
+            transport: transport
+        )
 
         _ = try await client.uploadAttachments([source])
 
@@ -117,14 +124,24 @@ struct FeedbackAttachmentUploadTests {
         #expect(source.fileURL == nil)
         #expect(await transport.dataUploadCount == 1)
         #expect(await transport.fileUploadCount == 0)
+        #expect(events.withLock { $0.map(\.operation) } == [
+            .attachmentPresign,
+            .attachmentUpload,
+            .attachmentFinalize,
+        ])
+        #expect(events.withLock { $0.allSatisfy { $0.outcome == .succeeded } })
     }
 
-    private func makeClient(transport: AttachmentUploadTransport) -> FeedbackClient {
+    private func makeClient(
+        observer: FeedbackClientObserver? = nil,
+        transport: AttachmentUploadTransport
+    ) -> FeedbackClient {
         FeedbackClient(
-            configuration: .init(
-                baseURL: URL(string: "https://example.com/v1/api")!,
-                productKey: "pk_test"
+            configuration: try! FeedbackConfiguration(
+                productKey: "pk_test",
+                keychainService: "test.feedback.visitor"
             ),
+            observer: observer,
             transport: transport,
             credentialStore: AttachmentCredential()
         )
