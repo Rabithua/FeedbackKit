@@ -74,6 +74,7 @@ public protocol FeedbackDiagnosticSource: Sendable {
     func diagnosticEvents() async throws -> [FeedbackDiagnosticEvent]
     func diagnosticBreadcrumbs() async throws -> [FeedbackBreadcrumb]
     func diagnosticSnapshotData() async throws -> Data?
+    func diagnosticSnapshotData(maxBytes: Int) async throws -> Data?
     func clearDiagnostics() async throws
 }
 
@@ -81,6 +82,14 @@ public extension FeedbackDiagnosticSource {
     func diagnosticEvents() async throws -> [FeedbackDiagnosticEvent] { [] }
     func diagnosticBreadcrumbs() async throws -> [FeedbackBreadcrumb] { [] }
     func diagnosticSnapshotData() async throws -> Data? { nil }
+    /// Collects no more than the requested number of bytes from a custom source.
+    ///
+    /// Existing sources inherit a compatibility implementation that clips their legacy result.
+    /// Sources that can read incrementally should override this method and stop at the byte limit.
+    func diagnosticSnapshotData(maxBytes: Int) async throws -> Data? {
+        guard maxBytes > 0, let data = try await diagnosticSnapshotData() else { return nil }
+        return Data(data.prefix(maxBytes))
+    }
     func clearDiagnostics() async throws {}
 }
 

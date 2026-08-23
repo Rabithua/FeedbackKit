@@ -11,6 +11,7 @@ public actor FeedbackClient {
     private let credentialStore: any FeedbackVisitorCredentialProviding
     private let metadataProvider: any FeedbackAppMetadataProvider
     private let diagnostics: (any FeedbackDiagnosticsProviding)?
+    private var latestDiagnosticsCapability: FeedbackDiagnosticsCapability?
     private static let serviceRestrictionCodes: Set<String> = [
         "feedback_feature_unavailable",
         "feedback_service_read_only",
@@ -33,7 +34,7 @@ public actor FeedbackClient {
     }
 
     public func bootstrap(locale: Locale, after: Int = 0) async throws -> FeedbackBootstrap {
-        try await get(
+        let bootstrap = try await get(
             FeedbackBootstrap.self,
             path: "bootstrap",
             query: [
@@ -41,6 +42,8 @@ public actor FeedbackClient {
                 URLQueryItem(name: "locale", value: locale.feedbackContentIdentifier),
             ]
         )
+        latestDiagnosticsCapability = bootstrap.product.diagnostics
+        return bootstrap
     }
 
     public func activity(locale: Locale, cursor: String? = nil) async throws -> FeedbackActivityPage {
@@ -111,7 +114,25 @@ public actor FeedbackClient {
         var diagnosticID: String?
         if includeDiagnostics {
             guard let diagnostics else { throw FeedbackClientError.diagnosticsUnavailable }
-            diagnosticID = try await uploadDiagnosticSnapshot(try await diagnostics.makeDiagnosticSnapshot())
+            let capability: FeedbackDiagnosticsCapability
+            if let latestDiagnosticsCapability {
+                capability = latestDiagnosticsCapability
+            } else {
+                guard let fetched = try await bootstrap(locale: locale).product.diagnostics else {
+                    throw FeedbackClientError.diagnosticsUnavailable
+                }
+                capability = fetched
+            }
+            guard capability.supportsSchemaOne else {
+                throw FeedbackClientError.diagnosticsUnavailable
+            }
+            let snapshot = try await diagnostics.makeDiagnosticSnapshot(
+                maxBytes: capability.maxBytes
+            )
+            guard snapshot.data.count <= capability.maxBytes else {
+                throw FeedbackClientError.payloadTooLarge
+            }
+            diagnosticID = try await uploadDiagnosticSnapshot(snapshot)
         }
         let context = await metadataProvider.clientContext(locale: locale)
         return try await createFeedback(

@@ -9,6 +9,32 @@ private actor Credential: FeedbackVisitorCredentialProviding {
     func deleteCredential(for productKey: String) async throws { deleted = true }
 }
 
+private actor MaximumRecordingDiagnostics: FeedbackDiagnosticsProviding {
+    private(set) var requestedMaximumBytes: Int?
+
+    func makeDiagnosticSnapshot() async throws -> FeedbackDiagnosticSnapshot {
+        .init(
+            data: Data("{}".utf8),
+            schemaVersion: 1,
+            sha256: String(repeating: "a", count: 64)
+        )
+    }
+
+    func makeDiagnosticSnapshot(maxBytes: Int) async throws -> FeedbackDiagnosticSnapshot {
+        requestedMaximumBytes = maxBytes
+        return try await makeDiagnosticSnapshot()
+    }
+
+    func recordNetwork(
+        method: String,
+        host: String,
+        path: String,
+        statusCode: Int?,
+        duration: TimeInterval,
+        errorCategory: String?
+    ) async {}
+}
+
 struct FeedbackClientTests {
     @Test func bootstrapDecodesCapabilityAndMixedActivity() async throws {
         let transport = FeedbackFixtureTransport { request in
@@ -158,6 +184,53 @@ struct FeedbackClientTests {
         )
         let id = try await client.uploadDiagnosticSnapshot(.init(data: Data("{}".utf8), schemaVersion: 1, sha256: String(repeating: "a", count: 64)))
         #expect(id == "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa")
+    }
+
+    @Test func submissionPassesTheServerDiagnosticLimitToTheProvider() async throws {
+        let diagnostics = MaximumRecordingDiagnostics()
+        let transport = FeedbackFixtureTransport { request in
+            switch (request.httpMethod, request.url?.path) {
+            case ("GET", "/v1/api/client/bootstrap"):
+                let json = #"{"code":"ok","message":"OK","data":{"product":{"slug":"app","name":"App","defaultLocale":"en","defaultFeedbackVisibility":"private","iconUrl":null,"attachmentLimits":{"count":5,"imageBytes":100,"videoBytes":200},"diagnostics":{"enabled":true,"maxBytes":16384,"schemaVersions":[1]}},"activity":{"entries":[],"nextCursor":null},"roadmap":[],"changelog":[],"visitor":{"displayCode":"ABC-123","lastReadCursor":0},"inbox":{"events":[],"nextCursor":0,"acknowledgedCursor":0,"unreadCount":0,"hasMore":false}}}"#
+                return (200, [:], Data(json.utf8))
+            case ("POST", "/v1/api/client/diagnostics/presign"):
+                let json = #"{"code":"ok","message":"OK","data":{"diagnosticArtifactId":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","uploadUrl":"https://storage.example/private","headers":{"Content-Type":"application/json","Content-Length":"2"},"expiresIn":900}}"#
+                return (200, [:], Data(json.utf8))
+            case ("PUT", "/private"):
+                return (200, [:], Data())
+            case ("POST", "/v1/api/client/diagnostics/finalize"):
+                let json = #"{"code":"ok","message":"OK","data":{"id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","filename":"diagnostics.json","contentType":"application/json","sizeBytes":2,"sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","schemaVersion":1,"finalizedAt":"2026-08-03T10:00:00.000Z"}}"#
+                return (200, [:], Data(json.utf8))
+            case ("POST", "/v1/api/client/feedback"):
+                let json = #"{"code":"ok","message":"OK","data":{"id":"11111111-1111-4111-8111-111111111111","type":"bug","title":null,"displayTitle":"Details","body":"Details","status":"open","visibility":"private","publishedAt":null,"pinnedAt":null,"lastActivityAt":"2026-08-03T10:00:00.000Z","createdAt":"2026-08-03T10:00:00.000Z","updatedAt":"2026-08-03T10:00:00.000Z","diagnosticsIncluded":true}}"#
+                return (201, [:], Data(json.utf8))
+            default:
+                Issue.record("Unexpected request: \(request.httpMethod ?? "") \(request.url?.path ?? "")")
+                return (500, [:], Data())
+            }
+        }
+        let client = FeedbackClient(
+            configuration: .init(
+                baseURL: URL(string: "https://example.com/v1/api")!,
+                productKey: "pk_test"
+            ),
+            diagnostics: diagnostics,
+            transport: transport,
+            credentialStore: Credential()
+        )
+
+        _ = try await client.bootstrap(locale: Locale(identifier: "en"))
+        _ = try await client.submitFeedback(
+            type: .bug,
+            title: nil,
+            body: "Details",
+            locale: Locale(identifier: "en"),
+            includeDiagnostics: true,
+            idempotencyKey: "diagnostic-limit"
+        )
+
+        #expect(await diagnostics.requestedMaximumBytes == 16_384)
+        #expect(await transport.requests.filter { $0.url?.path.hasSuffix("/bootstrap") == true }.count == 1)
     }
 
     @Test func diagnosticFinalizePreservesServiceRestrictionMachineCode() async {
