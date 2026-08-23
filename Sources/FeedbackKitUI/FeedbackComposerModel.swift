@@ -32,9 +32,8 @@ final class FeedbackComposerModel {
     var errorMessage: String?
     var diagnosticFailure = false
     var disclosedVisibility: FeedbackVisibility
-    private(set) var uploadedAttachmentIDs: [String]?
-    @ObservationIgnored private var pendingSubmission: FeedbackSubmissionAttempt?
-    @ObservationIgnored private var temporaryAttachmentFiles: [UUID: FeedbackTemporaryFileLease] = [:]
+    @ObservationIgnored private var submissionState = FeedbackSubmissionState()
+    @ObservationIgnored private var attachmentLeases = FeedbackAttachmentLeaseRegistry()
 
     let product: FeedbackProduct
     let client: FeedbackClient
@@ -60,6 +59,10 @@ final class FeedbackComposerModel {
     var canSubmit: Bool {
         body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
             && isSubmitting == false
+    }
+
+    var uploadedAttachmentIDs: [String]? {
+        submissionState.uploadedAttachmentIDs
     }
 
     func restore() async {
@@ -95,11 +98,10 @@ final class FeedbackComposerModel {
         isImporting = true
         defer { isImporting = false }
         var imported = false
-        for item in items.prefix(max(0, product.attachmentLimits.count - attachments.count)) {
+        let policy = FeedbackAttachmentImportPolicy(limits: product.attachmentLimits)
+        for item in items.prefix(policy.remainingCount(after: attachments.count)) {
             do {
-                guard let type = item.supportedContentTypes.first(where: {
-                          Self.allowedTypes.contains($0.identifier)
-                      }),
+                guard let type = policy.supportedType(in: item.supportedContentTypes),
                       let mime = type.preferredMIMEType
                 else {
                     errorMessage = localization.text("feedbackkit.attachment.unsupported")
@@ -120,9 +122,7 @@ final class FeedbackComposerModel {
                     contentType: mime,
                     fileURL: importedFile.lease.url
                 )
-                let limit = mime.hasPrefix("video/")
-                    ? product.attachmentLimits.videoBytes
-                    : product.attachmentLimits.imageBytes
+                let limit = policy.byteLimit(forMIMEType: mime)
                 guard source.byteCount <= limit else {
                     errorMessage = localization.text("feedbackkit.attachment.too.large")
                     continue
@@ -180,18 +180,22 @@ final class FeedbackComposerModel {
             }
             let includeDiagnostics = (diagnosticsOverride ?? snapshot.includesDiagnostics)
                 && refreshedDiagnosticsAvailable
-            var attempt = submissionAttempt(
+            var attempt = submissionState.attempt(
                 for: snapshot,
                 includesDiagnostics: includeDiagnostics,
-                localeIdentifier: locale.identifier
+                localeIdentifier: locale.identifier,
+                currentSnapshot: submissionSnapshot
             )
             let ids: [String]
             if let uploadedAttachmentIDs = attempt.uploadedAttachmentIDs {
                 ids = uploadedAttachmentIDs
             } else {
                 ids = try await client.uploadAttachments(snapshot.attachments)
-                attempt.uploadedAttachmentIDs = ids
-                retainPendingSubmissionIfCurrent(attempt)
+                attempt = submissionState.recordingUploadedAttachmentIDs(
+                    ids,
+                    in: attempt,
+                    currentSnapshot: submissionSnapshot
+                )
             }
             try Task.checkCancellation()
             _ = try await client.submitFeedback(
@@ -232,42 +236,8 @@ final class FeedbackComposerModel {
         )
     }
 
-    private func submissionAttempt(
-        for snapshot: FeedbackSubmissionSnapshot,
-        includesDiagnostics: Bool,
-        localeIdentifier: String
-    ) -> FeedbackSubmissionAttempt {
-        if let pendingSubmission,
-           pendingSubmission.matches(
-               snapshot: snapshot,
-               includesDiagnostics: includesDiagnostics,
-               localeIdentifier: localeIdentifier
-           )
-        {
-            return pendingSubmission
-        }
-        let reusableAttachmentIDs = pendingSubmission?.snapshot == snapshot
-            ? pendingSubmission?.uploadedAttachmentIDs
-            : nil
-        let attempt = FeedbackSubmissionAttempt(
-            snapshot: snapshot,
-            includesDiagnostics: includesDiagnostics,
-            localeIdentifier: localeIdentifier,
-            uploadedAttachmentIDs: reusableAttachmentIDs
-        )
-        retainPendingSubmissionIfCurrent(attempt)
-        return attempt
-    }
-
-    private func retainPendingSubmissionIfCurrent(_ attempt: FeedbackSubmissionAttempt) {
-        guard submissionSnapshot == attempt.snapshot else { return }
-        pendingSubmission = attempt
-        uploadedAttachmentIDs = attempt.uploadedAttachmentIDs
-    }
-
     private func completeSubmission(_ snapshot: FeedbackSubmissionSnapshot) async {
-        pendingSubmission = nil
-        uploadedAttachmentIDs = nil
+        submissionState.invalidate()
         if submissionSnapshot == snapshot {
             resetAfterSubmission()
             try? await draftStore.remove(productSlug: product.slug)
@@ -281,45 +251,30 @@ final class FeedbackComposerModel {
         body = ""
         includesDiagnostics = false
         attachments.removeAll()
-        temporaryAttachmentFiles.removeAll()
-        pendingSubmission = nil
-        uploadedAttachmentIDs = nil
+        attachmentLeases.removeAll()
+        submissionState.invalidate()
     }
 
     func removeAttachment(id: UUID) {
         guard isSubmitting == false else { return }
         attachments.removeAll { $0.id == id }
-        temporaryAttachmentFiles[id] = nil
+        attachmentLeases.release(id: id)
     }
 
     func addImportedAttachment(
         _ source: FeedbackAttachmentSource,
         lease: FeedbackTemporaryFileLease
     ) {
-        guard isSubmitting == false, source.fileURL == lease.url else { return }
+        guard isSubmitting == false, attachmentLeases.retain(lease, for: source) else { return }
         attachments.append(source)
-        temporaryAttachmentFiles[source.id] = lease
     }
 
     private func submissionInputDidChange() {
-        pendingSubmission = nil
-        uploadedAttachmentIDs = nil
+        submissionState.invalidate()
     }
 
     private func pruneTemporaryAttachmentFiles() {
         let retainedIDs = Set(attachments.map(\.id))
-        temporaryAttachmentFiles = temporaryAttachmentFiles.filter {
-            retainedIDs.contains($0.key)
-        }
+        attachmentLeases.retainOnly(ids: retainedIDs)
     }
-
-    private static let allowedTypes: Set<String> = [
-        "public.jpeg",
-        "public.png",
-        "public.heic",
-        "org.webmproject.webp",
-        "com.compuserve.gif",
-        "public.mpeg-4",
-        "com.apple.quicktime-movie",
-    ]
 }
