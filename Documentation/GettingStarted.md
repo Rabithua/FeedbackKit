@@ -25,7 +25,7 @@ Neither is required for client bootstrap or feedback submission.
 ## 2. Add the Swift package
 
 Add `https://github.com/Rabithua/FeedbackKit.git` in Xcode with **Up to Next Minor Version**, starting
-at `0.1.31`.
+at `0.2.0`.
 
 Link `FeedbackKitCore` and `FeedbackKitUI` to the app target. Link `FeedbackKitDiagnostics` only when
 the app will offer opt-in diagnostic upload. Add `FeedbackKitTestSupport` only to test targets.
@@ -34,62 +34,49 @@ FeedbackKit requires iOS 18 or macOS 15 and Swift 6 language mode.
 
 ## 3. Configure each build environment
 
-Define host-owned build settings in an xcconfig file. In xcconfig syntax, `$()` prevents the `//` in
-the URL from being parsed as a comment:
+Define the publishable Product Key in a host-owned xcconfig file:
 
 ```text
-FEEDBACK_SERVER_BASE_URL = https:/$()/api.feedkit.cn/v1/api
 FEEDBACK_PRODUCT_KEY = pk_example
 ```
 
-Expose them through the app's Info.plist:
+Expose it through the app's Info.plist:
 
 ```xml
-<key>FeedbackServerBaseURL</key>
-<string>$(FEEDBACK_SERVER_BASE_URL)</string>
 <key>FeedbackProductKey</key>
 <string>$(FEEDBACK_PRODUCT_KEY)</string>
 ```
 
-The base URL must end in `/v1/api`. Use a stable, app-specific Keychain service such as
-`com.example.MyApp.feedback.visitor`. Changing it after release creates a new anonymous identity on
-that device, which loses access to the previous identity's private feedback history.
+FeedbackKit always uses `https://api.feedkit.cn/v1/api`; the host does not configure a server or API
+path. By default, the Keychain service is derived as `<bundle-id>.feedbackkit.visitor`. To override
+it, add the optional `FeedbackKeychainService` Info.plist key. Changing the service after release
+creates a new anonymous identity on that device and loses access to the previous identity's private
+feedback history.
 
 ## 4. Own one client for the app lifetime
 
-Create the client once in the app's dependency container or runtime singleton:
+Create the client once in the app's dependency container or runtime object:
 
 ```swift
 import FeedbackKitCore
+import Foundation
 
-enum AppFeedbackRuntime {
-    static let client: FeedbackClient = {
-        guard
-            let rawURL = Bundle.main.object(
-                forInfoDictionaryKey: "FeedbackServerBaseURL"
-            ) as? String,
-            let baseURL = URL(string: rawURL),
-            let productKey = Bundle.main.object(
-                forInfoDictionaryKey: "FeedbackProductKey"
-            ) as? String,
-            productKey.isEmpty == false
-        else {
-            preconditionFailure("FeedbackServer build settings are missing")
-        }
+@MainActor
+final class AppFeedbackRuntime {
+    let client: FeedbackClient
 
-        return FeedbackClient(
-            configuration: .init(
-                baseURL: baseURL,
-                productKey: productKey,
-                keychainService: "com.example.MyApp.feedback.visitor"
-            )
+    init(bundle: Bundle = .main) throws {
+        client = FeedbackClient(
+            configuration: try FeedbackConfiguration(bundle: bundle)
         )
-    }()
+    }
 }
 ```
 
-Present `FeedbackCenterView(client: AppFeedbackRuntime.client)` from a sheet or full-screen cover.
-`FeedbackCenterToolbarButton` provides a ready-made 44-point toolbar entry.
+Configuration initialization is throwing and side-effect free. In production code, surface a
+`FeedbackConfigurationError` in the app's integration or diagnostics screen when build settings
+may be absent. Present `FeedbackCenterView(client: runtime.client)` from a sheet or full-screen
+cover. `FeedbackCenterToolbarButton` provides a ready-made 44-point toolbar entry.
 
 ### Choose the feedback language policy
 
@@ -102,7 +89,7 @@ list only `zh-Hans` in `CFBundleLocalizations`, and present:
 
 ```swift
 FeedbackCenterView(
-    client: AppFeedbackRuntime.client,
+    client: runtime.client,
     languagePolicy: .fixed(Locale(identifier: "zh-Hans"))
 )
 ```
@@ -112,7 +99,26 @@ server's deterministic content fallback, while the language policy represents th
 should see. FeedbackKit applies the resolved policy consistently to package strings, content loads,
 submissions, and refreshes.
 
-## 5. Add only the host integrations you need
+## 5. Verify the integration explicitly
+
+Use the normal feedback UI directly in production. During development, or before enabling a live
+entry point, call the opt-in preflight:
+
+```swift
+do {
+    let summary = try await runtime.client.verifyIntegration(locale: .current)
+    print(summary.product.name)
+    print(summary.diagnostics)
+} catch let error as FeedbackClientError {
+    print(error.kind, error.context.requestID as Any)
+}
+```
+
+The call verifies Keychain access, networking, Product binding, and diagnostics readiness using the
+normal bootstrap path. It creates or reuses the anonymous visitor identity, so call it only from an
+explicit user or developer action. Constructing the client does not perform this request.
+
+## 6. Add only the host integrations you need
 
 For server-authored `app_route` actions, implement `FeedbackRouteHandler` with an allow-list. Return
 `false` for every unrecognized value; never execute arbitrary URLs or reflected route strings.
@@ -146,16 +152,12 @@ content in logs. The package privacy manifest does not replace those disclosures
 import FeedbackKitCore
 import FeedbackKitDiagnostics
 
-enum AppFeedbackRuntime {
-    static let diagnostics = FeedbackDiagnostics()
-
-    static func makeClient(configuration: FeedbackConfiguration) -> FeedbackClient {
-        FeedbackClient(
-            configuration: configuration,
-            diagnostics: diagnostics
-        )
-    }
-}
+let diagnostics = FeedbackDiagnostics()
+let configuration = try FeedbackConfiguration(bundle: .main)
+let client = FeedbackClient(
+    configuration: configuration,
+    diagnostics: diagnostics
+)
 ```
 
 Keep the collector alive with the client. When implementing a custom source, override
@@ -168,7 +170,23 @@ and do not accept a byte budget.
 Diagnostics are always private on FeedbackServer. The composer starts with the switch off for every
 feedback kind, and uploads only after the user turns it on for that submission.
 
-## 6. Seed optional hub content
+### Add developer telemetry only when needed
+
+`FeedbackClient` is silent by default. To observe sanitized operation completions, pass an explicit
+observer:
+
+```swift
+let client = FeedbackClient(
+    configuration: try FeedbackConfiguration(bundle: .main),
+    observer: .osLog(subsystem: "com.example.MyApp")
+)
+```
+
+This observer is independent from user-authorized diagnostics and does not collect request bodies,
+credentials, URLs, query parameters, resource IDs, or presigned upload URLs. A custom synchronous
+`FeedbackClientObserver` handler should return promptly and must not alter request behavior.
+
+## 7. Seed optional hub content
 
 An empty Product can submit and display private feedback immediately. The other sections remain
 empty until the administrator publishes matching content:
@@ -180,9 +198,10 @@ empty until the administrator publishes matching content:
 Prepare at least one supported translation for each user-facing catalog entry. App Store changelog
 import creates a draft and does not publish automatically.
 
-## 7. Acceptance checklist
+## 8. Acceptance checklist
 
 - Install a fresh build and open the feedback center without an existing visitor credential.
+- Trigger `verifyIntegration` and confirm the expected Product and diagnostics readiness are shown.
 - With a fixed language policy, test on a device whose preferred language differs and confirm the
   feedback UI, server-authored content, and submitted diagnostic locale remain in the fixed
   language.

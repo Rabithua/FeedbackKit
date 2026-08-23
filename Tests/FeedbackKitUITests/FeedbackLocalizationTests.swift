@@ -62,12 +62,24 @@ struct FeedbackLocalizationTests {
 
         #expect(
             localization.errorMessage(
-                for: FeedbackClientError.server(statusCode: 503, code: code)
+                for: FeedbackClientError(
+                    kind: .server,
+                    context: FeedbackFailureContext(
+                        statusCode: 503,
+                        serverCode: code
+                    )
+                )
             ) == "反馈服务暂时不可用，请稍后再试"
         )
         #expect(
             localization.errorMessage(
-                for: FeedbackClientError.server(statusCode: 503, code: "maintenance")
+                for: FeedbackClientError(
+                    kind: .server,
+                    context: FeedbackFailureContext(
+                        statusCode: 503,
+                        serverCode: "maintenance"
+                    )
+                )
             ) == "FeedbackServer returned HTTP 503."
         )
     }

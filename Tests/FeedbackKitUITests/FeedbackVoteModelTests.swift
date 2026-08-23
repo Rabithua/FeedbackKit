@@ -223,9 +223,9 @@ struct FeedbackVoteModelTests {
 
     private func makeClient(transport: ControlledVoteTransport) -> FeedbackClient {
         FeedbackClient(
-            configuration: .init(
-                baseURL: URL(string: "https://example.com/v1/api")!,
-                productKey: "pk_test"
+            configuration: try! FeedbackConfiguration(
+                productKey: "pk_test",
+                keychainService: "test.feedback.visitor"
             ),
             transport: transport,
             credentialStore: VoteCredential()

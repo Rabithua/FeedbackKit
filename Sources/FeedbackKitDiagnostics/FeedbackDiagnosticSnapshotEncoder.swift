@@ -14,7 +14,9 @@ struct FeedbackDiagnosticSnapshotEncoder {
     }
 
     func encode(_ bundle: DiagnosticBundle) throws -> Data {
-        guard maximumBytes >= 0 else { throw FeedbackClientError.payloadTooLarge }
+        guard maximumBytes >= 0 else {
+            throw FeedbackClientError(kind: .payloadTooLarge)
+        }
 
         let context = try encoder.encode(bundle.context)
         let generatedAt = try encoder.encode(bundle.generatedAt)
@@ -26,7 +28,9 @@ struct FeedbackDiagnosticSnapshotEncoder {
             + metricKitCrashSummary.count
             + schemaVersion.count
             + Self.falseValue.count
-        guard baseSize <= maximumBytes else { throw FeedbackClientError.payloadTooLarge }
+        guard baseSize <= maximumBytes else {
+            throw FeedbackClientError(kind: .payloadTooLarge)
+        }
 
         var remainingBytes = maximumBytes - baseSize
         var truncated = bundle.truncated
@@ -117,7 +121,7 @@ private struct BoundedDataWriter {
 
     mutating func append(_ fragment: Data) throws {
         guard fragment.count <= maximumBytes - data.count else {
-            throw FeedbackClientError.payloadTooLarge
+            throw FeedbackClientError(kind: .payloadTooLarge)
         }
         data.append(fragment)
     }

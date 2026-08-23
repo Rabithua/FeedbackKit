@@ -27,3 +27,11 @@ jobs:
           -destination 'generic/platform=iOS'
           CODE_SIGNING_ALLOWED=NO
           build
+      - name: Build Fixture Demo
+        run: >-
+          xcodebuild
+          -project Examples/FeedbackKitDemo/FeedbackKitDemo.xcodeproj
+          -scheme FeedbackKitDemo
+          -destination 'generic/platform=iOS'
+          CODE_SIGNING_ALLOWED=NO
+          build

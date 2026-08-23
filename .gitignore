@@ -3,3 +3,4 @@
 /.swiftpm/xcode/package.xcworkspace/xcuserdata
 xcuserdata
 DerivedData
+/Examples/FeedbackKitDemo/Configuration/Config.local.xcconfig

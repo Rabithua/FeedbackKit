@@ -22,7 +22,7 @@ public actor FeedbackVisitorCredentialStore: FeedbackVisitorCredentialProviding 
             guard let address = bytes.baseAddress else { return errSecParam }
             return SecRandomCopyBytes(kSecRandomDefault, 32, address)
         }
-        guard status == errSecSuccess else { throw FeedbackClientError.transport }
+        guard status == errSecSuccess else { throw keychainError(status) }
         try save(data, account: account)
         return base64URL(data)
     }
@@ -30,7 +30,7 @@ public actor FeedbackVisitorCredentialStore: FeedbackVisitorCredentialProviding 
     public func deleteCredential(for productKey: String) throws {
         let status = SecItemDelete(query(accountName(productKey)) as CFDictionary)
         guard status == errSecSuccess || status == errSecItemNotFound else {
-            throw FeedbackClientError.transport
+            throw keychainError(status)
         }
     }
 
@@ -54,7 +54,7 @@ public actor FeedbackVisitorCredentialStore: FeedbackVisitorCredentialProviding 
         let status = SecItemCopyMatching(attributes as CFDictionary, &result)
         if status == errSecItemNotFound { return nil }
         guard status == errSecSuccess, let data = result as? Data else {
-            throw FeedbackClientError.transport
+            throw keychainError(status)
         }
         if data.count != 32 {
             _ = SecItemDelete(query(account) as CFDictionary)
@@ -68,8 +68,9 @@ public actor FeedbackVisitorCredentialStore: FeedbackVisitorCredentialProviding 
         attributes[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
         attributes[kSecAttrSynchronizable as String] = false
         attributes[kSecValueData as String] = data
-        guard SecItemAdd(attributes as CFDictionary, nil) == errSecSuccess else {
-            throw FeedbackClientError.transport
+        let status = SecItemAdd(attributes as CFDictionary, nil)
+        guard status == errSecSuccess else {
+            throw keychainError(status)
         }
     }
 
@@ -78,5 +79,14 @@ public actor FeedbackVisitorCredentialStore: FeedbackVisitorCredentialProviding 
             .replacingOccurrences(of: "+", with: "-")
             .replacingOccurrences(of: "/", with: "_")
             .replacingOccurrences(of: "=", with: "")
+    }
+
+    private func keychainError(_ status: OSStatus) -> FeedbackClientError {
+        FeedbackClientError(
+            kind: .transport,
+            context: FeedbackFailureContext(
+                debugDescription: "Keychain status \(status)"
+            )
+        )
     }
 }

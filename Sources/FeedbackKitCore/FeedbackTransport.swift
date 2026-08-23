@@ -34,20 +34,24 @@ public actor URLSessionFeedbackTransport: FeedbackTransport {
 
     public func data(for request: URLRequest) async throws -> (Data, HTTPURLResponse) {
         let (data, response) = try await session.data(for: request)
-        guard let http = response as? HTTPURLResponse else { throw FeedbackClientError.invalidResponse }
+        guard let http = response as? HTTPURLResponse else {
+            throw FeedbackClientError(kind: .invalidResponse)
+        }
         return (data, http)
     }
 
     public func upload(for request: URLRequest, data: Data) async throws -> HTTPURLResponse {
         let (_, response) = try await session.upload(for: request, from: data)
-        guard let http = response as? HTTPURLResponse else { throw FeedbackClientError.invalidResponse }
+        guard let http = response as? HTTPURLResponse else {
+            throw FeedbackClientError(kind: .invalidResponse)
+        }
         return http
     }
 
     public func upload(for request: URLRequest, fromFile fileURL: URL) async throws -> HTTPURLResponse {
         let (_, response) = try await session.upload(for: request, fromFile: fileURL)
         guard let http = response as? HTTPURLResponse else {
-            throw FeedbackClientError.invalidResponse
+            throw FeedbackClientError(kind: .invalidResponse)
         }
         return http
     }

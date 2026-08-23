@@ -5,8 +5,7 @@ import SwiftUI
 /// This compile-only fixture mirrors the minimal host integration in the README.
 struct FeedbackKitIntegrationExample: View {
     private static let client = FeedbackClient(
-        configuration: .init(
-            baseURL: URL(string: "https://api.feedkit.cn/v1/api")!,
+        configuration: try! FeedbackConfiguration(
             productKey: "pk_example",
             keychainService: "com.example.MyApp.feedback.visitor"
         )

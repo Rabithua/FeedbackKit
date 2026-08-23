@@ -1,6 +1,7 @@
 @testable import FeedbackKitCore
 import FeedbackKitTestSupport
 import Foundation
+import Synchronization
 import Testing
 
 private actor Credential: FeedbackVisitorCredentialProviding {
@@ -54,7 +55,7 @@ struct FeedbackClientTests {
             return (200, [:], Data(json.utf8))
         }
         let client = FeedbackClient(
-            configuration: .init(baseURL: URL(string: "https://example.com/v1/api")!, productKey: "pk_test"),
+            configuration: try! FeedbackConfiguration(productKey: "pk_test", keychainService: "test.feedback.visitor"),
             transport: transport,
             credentialStore: Credential()
         )
@@ -70,7 +71,7 @@ struct FeedbackClientTests {
             return (200, [:], Data(json.utf8))
         }
         let client = FeedbackClient(
-            configuration: .init(baseURL: URL(string: "https://example.com/v1/api")!, productKey: "pk_test"),
+            configuration: try! FeedbackConfiguration(productKey: "pk_test", keychainService: "test.feedback.visitor"),
             transport: transport,
             credentialStore: Credential()
         )
@@ -90,11 +91,16 @@ struct FeedbackClientTests {
             (422, [:], try FeedbackFixtureTransport.error(code: code, message: "Invalid"))
         }
         let client = FeedbackClient(
-            configuration: .init(baseURL: URL(string: "https://example.com/v1/api")!, productKey: "pk_test"),
+            configuration: try! FeedbackConfiguration(productKey: "pk_test", keychainService: "test.feedback.visitor"),
             transport: transport,
             credentialStore: Credential()
         )
-        await #expect(throws: FeedbackClientError.validation(code: code)) {
+        await expectClientError(
+            kind: .validation,
+            operation: .ownedFeedback,
+            statusCode: 422,
+            serverCode: code
+        ) {
             _ = try await client.ownedFeedback()
         }
     }
@@ -111,16 +117,19 @@ struct FeedbackClientTests {
             (503, [:], try FeedbackFixtureTransport.error(code: code, message: "Unavailable"))
         }
         let client = FeedbackClient(
-            configuration: .init(
-                baseURL: URL(string: "https://example.com/v1/api")!,
-                productKey: "pk_test"
+            configuration: try! FeedbackConfiguration(
+                productKey: "pk_test",
+                keychainService: "test.feedback.visitor"
             ),
             transport: transport,
             credentialStore: Credential()
         )
 
-        await #expect(
-            throws: FeedbackClientError.server(statusCode: 503, code: code)
+        await expectClientError(
+            kind: .server,
+            operation: .ownedFeedback,
+            statusCode: 503,
+            serverCode: code
         ) {
             _ = try await client.ownedFeedback()
         }
@@ -153,7 +162,7 @@ struct FeedbackClientTests {
             return (200, [:], try JSONSerialization.data(withJSONObject: object))
         }
         let client = FeedbackClient(
-            configuration: .init(baseURL: URL(string: "https://example.com/v1/api")!, productKey: "pk_test"),
+            configuration: try! FeedbackConfiguration(productKey: "pk_test", keychainService: "test.feedback.visitor"),
             transport: transport,
             credentialStore: Credential()
         )
@@ -167,6 +176,7 @@ struct FeedbackClientTests {
     }
 
     @Test func diagnosticUploadUsesSeparateEndpointsAndExactHeaders() async throws {
+        let events = Mutex<[FeedbackClientEvent]>([])
         let uploadURL = URL(string: "https://storage.example/private?signature=secret")!
         let transport = FeedbackFixtureTransport { request in
             switch (request.httpMethod, request.url?.path) {
@@ -188,12 +198,24 @@ struct FeedbackClientTests {
             }
         }
         let client = FeedbackClient(
-            configuration: .init(baseURL: URL(string: "https://example.com/v1/api")!, productKey: "pk_test"),
+            configuration: try! FeedbackConfiguration(productKey: "pk_test", keychainService: "test.feedback.visitor"),
+            observer: FeedbackClientObserver { event in
+                events.withLock { $0.append(event) }
+            },
             transport: transport,
             credentialStore: Credential()
         )
         let id = try await client.uploadDiagnosticSnapshot(.init(data: Data("{}".utf8), schemaVersion: 1, sha256: String(repeating: "a", count: 64)))
         #expect(id == "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa")
+        #expect(events.withLock { $0.map(\.operation) } == [
+            .diagnosticPresign,
+            .diagnosticUpload,
+            .diagnosticFinalize,
+        ])
+        #expect(events.withLock { $0.allSatisfy { $0.outcome == .succeeded } })
+        let eventDescription = events.withLock { String(reflecting: $0) }
+        #expect(eventDescription.contains("signature=secret") == false)
+        #expect(eventDescription.contains("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa") == false)
     }
 
     @Test func submissionPassesTheServerDiagnosticLimitToTheProvider() async throws {
@@ -220,9 +242,9 @@ struct FeedbackClientTests {
             }
         }
         let client = FeedbackClient(
-            configuration: .init(
-                baseURL: URL(string: "https://example.com/v1/api")!,
-                productKey: "pk_test"
+            configuration: try! FeedbackConfiguration(
+                productKey: "pk_test",
+                keychainService: "test.feedback.visitor"
             ),
             diagnostics: diagnostics,
             transport: transport,
@@ -271,16 +293,19 @@ struct FeedbackClientTests {
             }
         }
         let client = FeedbackClient(
-            configuration: .init(
-                baseURL: URL(string: "https://example.com/v1/api")!,
-                productKey: "pk_test"
+            configuration: try! FeedbackConfiguration(
+                productKey: "pk_test",
+                keychainService: "test.feedback.visitor"
             ),
             transport: transport,
             credentialStore: Credential()
         )
 
-        await #expect(
-            throws: FeedbackClientError.server(statusCode: 503, code: code)
+        await expectClientError(
+            kind: .server,
+            operation: .diagnosticFinalize,
+            statusCode: 503,
+            serverCode: code
         ) {
             _ = try await client.uploadDiagnosticSnapshot(
                 .init(
@@ -308,15 +333,19 @@ struct FeedbackClientTests {
             }
         }
         let client = FeedbackClient(
-            configuration: .init(
-                baseURL: URL(string: "https://example.com/v1/api")!,
-                productKey: "pk_test"
+            configuration: try! FeedbackConfiguration(
+                productKey: "pk_test",
+                keychainService: "test.feedback.visitor"
             ),
             transport: transport,
             credentialStore: Credential()
         )
 
-        await #expect(throws: FeedbackClientError.diagnosticUploadFailed) {
+        await expectClientError(
+            kind: .diagnosticUploadFailed,
+            operation: .diagnosticUpload,
+            statusCode: 503
+        ) {
             _ = try await client.uploadDiagnosticSnapshot(
                 .init(
                     data: Data("{}".utf8),
@@ -333,12 +362,19 @@ struct FeedbackClientTests {
             return (500, [:], Data())
         }
         let client = FeedbackClient(
-            configuration: .init(baseURL: URL(string: "http://feedback.example.com/v1/api")!, productKey: "pk_test"),
+            configuration: try! FeedbackConfiguration(
+                productKey: "pk_test",
+                keychainService: "test.feedback.visitor",
+                apiBaseURL: URL(string: "http://feedback.example.com/v1/api")!
+            ),
             transport: transport,
             credentialStore: Credential()
         )
 
-        await #expect(throws: FeedbackClientError.invalidURL) {
+        await expectClientError(
+            kind: .invalidURL,
+            operation: .ownedFeedback
+        ) {
             _ = try await client.ownedFeedback()
         }
         #expect(await transport.requests.isEmpty)
@@ -350,15 +386,19 @@ struct FeedbackClientTests {
             return (500, [:], Data())
         }
         let client = FeedbackClient(
-            configuration: .init(
-                baseURL: URL(string: "https:/feedback.example.com/v1/api")!,
-                productKey: "pk_test"
+            configuration: try! FeedbackConfiguration(
+                productKey: "pk_test",
+                keychainService: "test.feedback.visitor",
+                apiBaseURL: URL(string: "https:/feedback.example.com/v1/api")!
             ),
             transport: transport,
             credentialStore: Credential()
         )
 
-        await #expect(throws: FeedbackClientError.invalidURL) {
+        await expectClientError(
+            kind: .invalidURL,
+            operation: .ownedFeedback
+        ) {
             _ = try await client.ownedFeedback()
         }
         #expect(await transport.requests.isEmpty)
@@ -396,7 +436,11 @@ struct FeedbackClientTests {
             return (200, [:], Data(#"{"code":"ok","message":"OK","data":{"feedback":[],"nextCursor":null}}"#.utf8))
         }
         let client = FeedbackClient(
-            configuration: .init(baseURL: URL(string: "http://127.0.0.1:3000/v1/api")!, productKey: "pk_test"),
+            configuration: try! FeedbackConfiguration(
+                productKey: "pk_test",
+                keychainService: "test.feedback.visitor",
+                apiBaseURL: URL(string: "http://127.0.0.1:3000/v1/api")!
+            ),
             transport: transport,
             credentialStore: Credential()
         )
@@ -415,12 +459,15 @@ struct FeedbackClientTests {
             return (500, [:], Data())
         }
         let client = FeedbackClient(
-            configuration: .init(baseURL: URL(string: "https://example.com/v1/api")!, productKey: "pk_test"),
+            configuration: try! FeedbackConfiguration(productKey: "pk_test", keychainService: "test.feedback.visitor"),
             transport: transport,
             credentialStore: Credential()
         )
 
-        await #expect(throws: FeedbackClientError.diagnosticUploadFailed) {
+        await expectClientError(
+            kind: .diagnosticUploadFailed,
+            operation: .diagnosticUpload
+        ) {
             _ = try await client.uploadDiagnosticSnapshot(
                 .init(data: Data("{}".utf8), schemaVersion: 1, sha256: String(repeating: "a", count: 64))
             )
@@ -439,7 +486,7 @@ struct FeedbackClientTests {
             return (201, ["Idempotency-Replayed": "false"], Data(json.utf8))
         }
         let client = FeedbackClient(
-            configuration: .init(baseURL: URL(string: "https://example.com/v1/api")!, productKey: "pk_test"),
+            configuration: try! FeedbackConfiguration(productKey: "pk_test", keychainService: "test.feedback.visitor"),
             transport: transport,
             credentialStore: Credential()
         )
@@ -466,5 +513,25 @@ struct FeedbackClientTests {
         #expect(restored.includesDiagnostics == false)
         try await store.remove(productSlug: "app")
         #expect(await store.load(productSlug: "app") == nil)
+    }
+}
+
+private func expectClientError(
+    kind: FeedbackClientError.Kind,
+    operation: FeedbackClientOperation,
+    statusCode: Int? = nil,
+    serverCode: String? = nil,
+    performing operationBody: () async throws -> Void
+) async {
+    do {
+        try await operationBody()
+        Issue.record("Expected FeedbackClientError.\(kind.rawValue)")
+    } catch let error as FeedbackClientError {
+        #expect(error.kind == kind)
+        #expect(error.context.operation == operation)
+        #expect(error.context.statusCode == statusCode)
+        #expect(error.context.serverCode == serverCode)
+    } catch {
+        Issue.record("Unexpected error: \(error)")
     }
 }
