@@ -1,38 +1,5 @@
-import FeedbackKitDiagnostics
-import Observation
+import FeedbackKitCore
 import SwiftUI
-
-@MainActor @Observable
-private final class FeedbackDiagnosticsModel {
-    enum Filter: String, CaseIterable, Identifiable { case all; case warning; case error; case critical; var id: Self { self } }
-    var events: [FeedbackDiagnosticEvent] = []
-    var filter: Filter = .all
-    var exportText = ""
-    var isLoading = false
-    var error: Error?
-    let diagnostics: FeedbackDiagnostics
-    init(diagnostics: FeedbackDiagnostics) { self.diagnostics = diagnostics }
-
-    var filtered: [FeedbackDiagnosticEvent] {
-        switch filter {
-        case .all: events
-        case .warning: events.filter { $0.level == .warning }
-        case .error: events.filter { $0.level == .error }
-        case .critical: events.filter { $0.level == .critical }
-        }
-    }
-    func load() async { isLoading = true; defer { isLoading = false }; do { events = try await diagnostics.events().sorted { $0.timestamp > $1.timestamp }; exportText = try await diagnostics.exportText(); error = nil } catch { self.error = error } }
-    func clear() async -> Bool {
-        do {
-            try await diagnostics.clear()
-            await load()
-            return true
-        } catch {
-            self.error = error
-            return false
-        }
-    }
-}
 
 struct FeedbackDiagnosticsView: View {
     @State private var model: FeedbackDiagnosticsModel
@@ -42,7 +9,10 @@ struct FeedbackDiagnosticsView: View {
     @Environment(\.feedbackHaptics) private var haptics
     @Environment(\.locale) private var locale
     @Environment(\.feedbackLocalization) private var localization
-    init(diagnostics: FeedbackDiagnostics, style: FeedbackStyle) { _model = State(initialValue: FeedbackDiagnosticsModel(diagnostics: diagnostics)); self.style = style }
+    init(diagnostics: any FeedbackDiagnosticsInspecting, style: FeedbackStyle) {
+        _model = State(initialValue: FeedbackDiagnosticsModel(diagnostics: diagnostics))
+        self.style = style
+    }
 
     var body: some View {
         Group {

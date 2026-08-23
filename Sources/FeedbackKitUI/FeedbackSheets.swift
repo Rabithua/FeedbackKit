@@ -511,21 +511,13 @@ private struct FeedbackDetailSheet: View {
     }
 }
 
-@MainActor @Observable
-private final class DeveloperPostModel {
-    var post: FeedbackDeveloperPost?; var isLoading = false; var error: Error?
-    let client: FeedbackClient; let id: String
-    init(id: String, client: FeedbackClient) { self.id = id; self.client = client }
-    func load(locale: Locale) async { isLoading = true; defer { isLoading = false }; do { post = try await client.developerPost(id: id, locale: locale); error = nil } catch { self.error = error } }
-}
-
 private struct FeedbackDeveloperPostSheet: View {
-    @State private var model: DeveloperPostModel
+    @State private var model: FeedbackDeveloperPostModel
     let style: FeedbackStyle; let activate: (FeedbackDeveloperPostAction) -> Void; let close: () -> Void
     @Environment(\.locale) private var locale
     @Environment(\.feedbackLocalization) private var localization
     init(id: String, client: FeedbackClient, style: FeedbackStyle, activate: @escaping (FeedbackDeveloperPostAction) -> Void, close: @escaping () -> Void) {
-        _model = State(initialValue: DeveloperPostModel(id: id, client: client)); self.style = style; self.activate = activate; self.close = close
+        _model = State(initialValue: FeedbackDeveloperPostModel(id: id, client: client)); self.style = style; self.activate = activate; self.close = close
     }
     var body: some View {
         VStack(spacing: 0) {
@@ -555,10 +547,28 @@ private struct FeedbackDeveloperPostSheet: View {
 }
 
 struct FeedbackIdentityView: View {
-    let client: FeedbackClient; let visitor: FeedbackVisitor?; let productSlug: String?; let deleted: () -> Void
-    @State private var confirm = false; @State private var finalConfirm = false; @State private var isDeleting = false; @State private var error: Error?
+    @State private var model: FeedbackIdentityModel
+    let visitor: FeedbackVisitor?
+    let deleted: () -> Void
+    @State private var confirm = false
+    @State private var finalConfirm = false
     @Environment(\.feedbackHaptics) private var haptics
     @Environment(\.feedbackLocalization) private var localization
+
+    init(
+        client: FeedbackClient,
+        visitor: FeedbackVisitor?,
+        productSlug: String?,
+        deleted: @escaping () -> Void
+    ) {
+        _model = State(initialValue: FeedbackIdentityModel(
+            client: client,
+            productSlug: productSlug
+        ))
+        self.visitor = visitor
+        self.deleted = deleted
+    }
+
     var body: some View {
         Form {
             Section(localization.text("feedbackkit.identity.yours")) { LabeledContent(localization.text("feedbackkit.identity.code"), value: visitor?.displayCode ?? "—"); Text(localization.text("feedbackkit.identity.independent")).foregroundStyle(.secondary) }
@@ -568,24 +578,21 @@ struct FeedbackIdentityView: View {
                     haptics.trigger(.warning)
                     confirm = true
                 }
-                .disabled(isDeleting)
+                .disabled(model.isDeleting)
             }
-            if let error { Text(localization.errorMessage(for: error)).foregroundStyle(.red) }
+            if let error = model.error {
+                Text(localization.errorMessage(for: error)).foregroundStyle(.red)
+            }
         }
         .navigationTitle(localization.text("feedbackkit.identity.title")).feedbackInlineNavigationTitle()
         .alert(localization.text("feedbackkit.identity.delete"), isPresented: $confirm) { Button(localization.text("feedbackkit.continue"), role: .destructive) { finalConfirm = true }; Button(localization.text("feedbackkit.cancel"), role: .cancel) {} }
         .alert(localization.text("feedbackkit.identity.delete.final"), isPresented: $finalConfirm) { Button(localization.text("feedbackkit.identity.delete"), role: .destructive) { Task { await remove() } }; Button(localization.text("feedbackkit.cancel"), role: .cancel) {} }
     }
     private func remove() async {
-        isDeleting = true
-        defer { isDeleting = false }
-        do {
-            try await client.deleteVisitor()
-            if let productSlug { try? await FeedbackDraftStore().remove(productSlug: productSlug) }
+        if await model.remove() {
             haptics.trigger(.success)
             deleted()
-        } catch {
-            self.error = error
+        } else if Task.isCancelled == false {
             haptics.trigger(.error)
         }
     }
