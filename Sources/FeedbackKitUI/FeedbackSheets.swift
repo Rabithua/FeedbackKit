@@ -94,6 +94,7 @@ private struct FeedbackKindPicker: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(localization.kind(kind))
+                    .accessibilityHint(kindDescription(kind))
                 }
             }
             Spacer(minLength: 4)
@@ -542,7 +543,11 @@ private struct FeedbackDeveloperPostSheet: View {
                 else if let error = model.error { FeedbackErrorView(error: error) { Task { await model.load(locale: locale) } } }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }.presentationDetents([.medium]).task { await model.load(locale: locale) }
+        }
+        .presentationDetents([.medium])
+        .task(id: locale.identifier) {
+            await model.load(locale: locale)
+        }
     }
 }
 

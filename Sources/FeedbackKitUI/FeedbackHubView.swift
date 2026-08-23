@@ -81,6 +81,8 @@ struct FeedbackHubView: View {
             .feedbackBorder(style)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(title)
+        .accessibilityValue(badge > 0 ? String(badge) : "")
         .accessibilityIdentifier(identifier)
     }
 
@@ -167,6 +169,7 @@ struct FeedbackActivityRow: View {
                 .buttonStyle(.plain)
                 .disabled(isVoting)
                 .accessibilityLabel(localization.text(voteState.hasVoted ? "feedbackkit.vote.remove" : "feedbackkit.vote"))
+                .accessibilityValue(String(voteState.count))
             } else if case let .developerPost(_, data) = entry, let action = data.action {
                 Button { activatePost(action) } label: {
                     Image(systemName: "arrow.up.right")
@@ -176,6 +179,9 @@ struct FeedbackActivityRow: View {
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.primary)
+                .accessibilityLabel(
+                    action.label ?? localization.text("feedbackkit.open.link")
+                )
             }
         }
         .overlay(alignment: .topTrailing) {

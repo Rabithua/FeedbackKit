@@ -127,7 +127,8 @@ public actor FeedbackClient {
                 throw FeedbackClientError.diagnosticsUnavailable
             }
             let snapshot = try await diagnostics.makeDiagnosticSnapshot(
-                maxBytes: capability.maxBytes
+                maxBytes: capability.maxBytes,
+                locale: locale
             )
             guard snapshot.data.count <= capability.maxBytes else {
                 throw FeedbackClientError.payloadTooLarge

@@ -163,6 +163,26 @@ struct FeedbackDiagnosticsTests {
         #expect(object["truncated"] as? Bool == true)
     }
 
+    @Test func snapshotMetadataUsesTheSubmissionLocale() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let diagnostics = FeedbackDiagnostics(
+            configuration: .init(directory: directory),
+            metadataProvider: DefaultFeedbackAppMetadataProvider()
+        )
+
+        let snapshot = try await diagnostics.makeDiagnosticSnapshot(
+            maxBytes: 16 * 1024,
+            locale: Locale(identifier: "zh_Hant_TW")
+        )
+        let object = try #require(
+            JSONSerialization.jsonObject(with: snapshot.data) as? [String: Any]
+        )
+        let context = try #require(object["context"] as? [String: Any])
+
+        #expect(context["locale"] as? String == "zh-Hant-TW")
+    }
+
     @Test func clearRemovesLocalAndRegisteredSourceData() async throws {
         let directory = temporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }

@@ -53,7 +53,9 @@ struct FeedbackActivityListView: View {
         .background(FeedbackSystemBackground())
         .navigationTitle(localization.text("feedbackkit.activity.title"))
         .feedbackInlineNavigationTitle()
-        .task { if model.entries.isEmpty { await model.load(locale: locale) } }
+        .task(id: locale.identifier) {
+            await model.load(locale: locale)
+        }
     }
 
 }

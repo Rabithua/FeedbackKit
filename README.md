@@ -19,6 +19,8 @@ Minor Version** rule starting at `0.1.31`. Link these products to the app target
 - `FeedbackKitDiagnostics` only when the app offers diagnostic upload
 
 `FeedbackKitTestSupport` is intended for test targets only.
+`FeedbackKitUI` depends only on `FeedbackKitCore`; adding the default interface does not link the
+diagnostic collector unless the app selects that product.
 
 ## Minimal integration
 
@@ -55,6 +57,29 @@ The package never uploads diagnostics automatically. New feedback always starts 
 sharing disabled. A private snapshot is generated only after the server and host both support the
 feature and the user explicitly enables the switch for that submission.
 
+When diagnostics are enabled, keep one collector alongside the client:
+
+```swift
+import FeedbackKitCore
+import FeedbackKitDiagnostics
+import Foundation
+
+let configuration = FeedbackConfiguration(
+    baseURL: URL(string: "https://api.feedkit.cn/v1/api")!,
+    productKey: "<publishable-product-key>"
+)
+let diagnostics = FeedbackDiagnostics()
+let client = FeedbackClient(
+    configuration: configuration,
+    diagnostics: diagnostics
+)
+```
+
+The server's current `maxBytes` capability and the resolved feedback locale are passed into
+snapshot generation. Custom sources should override
+`diagnosticSnapshotData(maxBytes:)` and stop reading at that limit; the compatibility
+implementation clips legacy `diagnosticSnapshotData()` results.
+
 Follow the complete [new app onboarding guide](Documentation/GettingStarted.md) for Product setup,
 xcconfig/Info.plist configuration, diagnostics and privacy decisions, route handling, catalog
 seeding, and acceptance checks. The package also compiles a minimal host example as part of its
@@ -63,9 +88,15 @@ test target: [FeedbackKitIntegrationExample.swift](Tests/FeedbackKitUITests/Feed
 ## Host extension points
 
 - Implement `FeedbackRouteHandler` for allow-listed host `app_route` actions.
-- Implement `FeedbackDiagnosticSource` to add an existing log source. FeedbackKit redacts and size-limits all source output again.
+- Implement `FeedbackDiagnosticSource` to add an existing log source. Prefer the byte-limited
+  snapshot API so collection itself remains bounded; FeedbackKit redacts and validates source
+  output again.
 - Implement `FeedbackAppMetadataProvider` for deterministic tests or custom device context.
 - Use `FeedbackStyle` for the intentionally small set of spacing, radius, and border adjustments.
+
+For custom attachment workflows, `FeedbackAttachmentSource(fileURL:)` keeps uploads file-backed.
+The caller owns that file and must keep it available until `uploadAttachments` returns. Use
+`loadData()` only when explicit materialization is required.
 
 The package ships English, Simplified Chinese, Traditional Chinese, Japanese, and Korean
 localizations. Its UI strings, localized FeedbackServer content, submissions, and refreshes all use
