@@ -15,6 +15,10 @@ public struct FeedbackDiagnosticSnapshot: Sendable {
 public protocol FeedbackDiagnosticSnapshotProviding: Sendable {
     func makeDiagnosticSnapshot() async throws -> FeedbackDiagnosticSnapshot
     func makeDiagnosticSnapshot(maxBytes: Int) async throws -> FeedbackDiagnosticSnapshot
+    func makeDiagnosticSnapshot(
+        maxBytes: Int,
+        locale: Locale
+    ) async throws -> FeedbackDiagnosticSnapshot
 }
 
 public extension FeedbackDiagnosticSnapshotProviding {
@@ -30,6 +34,17 @@ public extension FeedbackDiagnosticSnapshotProviding {
         }
         return snapshot
     }
+
+    /// Creates a bounded snapshot using the same locale as the feedback submission.
+    ///
+    /// Existing providers inherit a compatibility implementation that delegates to the
+    /// byte-limited API. Providers that include localized metadata should override this method.
+    func makeDiagnosticSnapshot(
+        maxBytes: Int,
+        locale: Locale
+    ) async throws -> FeedbackDiagnosticSnapshot {
+        try await makeDiagnosticSnapshot(maxBytes: maxBytes)
+    }
 }
 
 public protocol FeedbackDiagnosticsProviding: FeedbackDiagnosticSnapshotProviding {
@@ -43,6 +58,7 @@ public protocol FeedbackDiagnosticsProviding: FeedbackDiagnosticSnapshotProvidin
     ) async
 }
 
+/// Severity used by optional diagnostic inspection interfaces.
 public enum FeedbackDiagnosticDisplayLevel: String, Sendable {
     case debug
     case info
@@ -51,6 +67,7 @@ public enum FeedbackDiagnosticDisplayLevel: String, Sendable {
     case critical
 }
 
+/// A presentation-safe diagnostic event exposed without coupling UI to the diagnostics module.
 public struct FeedbackDiagnosticDisplayEvent: Identifiable, Sendable {
     public let id: UUID
     public let timestamp: Date

@@ -25,7 +25,7 @@ Neither is required for client bootstrap or feedback submission.
 ## 2. Add the Swift package
 
 Add `https://github.com/Rabithua/FeedbackKit.git` in Xcode with **Up to Next Minor Version**, starting
-at `0.1.29`.
+at `0.1.31`.
 
 Link `FeedbackKitCore` and `FeedbackKitUI` to the app target. Link `FeedbackKitDiagnostics` only when
 the app will offer opt-in diagnostic upload. Add `FeedbackKitTestSupport` only to test targets.
@@ -61,7 +61,6 @@ Create the client once in the app's dependency container or runtime singleton:
 
 ```swift
 import FeedbackKitCore
-import FeedbackKitDiagnostics
 
 enum AppFeedbackRuntime {
     static let client: FeedbackClient = {
@@ -143,6 +142,27 @@ registered through `FeedbackDiagnosticSource`. FeedbackKit redacts and size-limi
 but the host remains responsible for its App Store privacy answers and for avoiding secrets or user
 content in logs. The package privacy manifest does not replace those disclosures.
 
+```swift
+import FeedbackKitCore
+import FeedbackKitDiagnostics
+
+enum AppFeedbackRuntime {
+    static let diagnostics = FeedbackDiagnostics()
+
+    static func makeClient(configuration: FeedbackConfiguration) -> FeedbackClient {
+        FeedbackClient(
+            configuration: configuration,
+            diagnostics: diagnostics
+        )
+    }
+}
+```
+
+Keep the collector alive with the client. When implementing a custom source, override
+`diagnosticSnapshotData(maxBytes:)` and stop reading once that byte budget is reached. FeedbackKit
+passes the Product's current server limit into collection, validates the final payload again, and
+uses the same resolved locale for diagnostic metadata as for the feedback submission.
+
 Diagnostics are always private on FeedbackServer. The composer starts with the switch off for every
 feedback kind, and uploads only after the user turns it on for that submission.
 
@@ -162,9 +182,12 @@ import creates a draft and does not publish automatically.
 
 - Install a fresh build and open the feedback center without an existing visitor credential.
 - With a fixed language policy, test on a device whose preferred language differs and confirm the
-  feedback UI and server-authored content remain in the fixed language.
+  feedback UI, server-authored content, and submitted diagnostic locale remain in the fixed
+  language.
 - Confirm Activity, My Feedback, Roadmap, and Changelog load without errors when empty.
 - Confirm the entire hub card surface is tappable, not only its text.
+- With VoiceOver, confirm feedback-kind descriptions, vote counts, unread counts, and developer
+  post actions are announced, and verify the layout at an accessibility Dynamic Type size.
 - Submit one private feedback item and verify it appears under My Feedback.
 - Reply as the administrator, refresh the app, and verify the unread badge increases.
 - Open that feedback detail, return to the hub, and verify the badge is acknowledged immediately.

@@ -11,6 +11,7 @@ private actor Credential: FeedbackVisitorCredentialProviding {
 
 private actor MaximumRecordingDiagnostics: FeedbackDiagnosticsProviding {
     private(set) var requestedMaximumBytes: Int?
+    private(set) var requestedLocaleIdentifier: String?
 
     func makeDiagnosticSnapshot() async throws -> FeedbackDiagnosticSnapshot {
         .init(
@@ -22,6 +23,15 @@ private actor MaximumRecordingDiagnostics: FeedbackDiagnosticsProviding {
 
     func makeDiagnosticSnapshot(maxBytes: Int) async throws -> FeedbackDiagnosticSnapshot {
         requestedMaximumBytes = maxBytes
+        return try await makeDiagnosticSnapshot()
+    }
+
+    func makeDiagnosticSnapshot(
+        maxBytes: Int,
+        locale: Locale
+    ) async throws -> FeedbackDiagnosticSnapshot {
+        requestedMaximumBytes = maxBytes
+        requestedLocaleIdentifier = locale.identifier
         return try await makeDiagnosticSnapshot()
     }
 
@@ -219,17 +229,19 @@ struct FeedbackClientTests {
             credentialStore: Credential()
         )
 
-        _ = try await client.bootstrap(locale: Locale(identifier: "en"))
+        let submissionLocale = Locale(identifier: "zh_Hant_TW")
+        _ = try await client.bootstrap(locale: submissionLocale)
         _ = try await client.submitFeedback(
             type: .bug,
             title: nil,
             body: "Details",
-            locale: Locale(identifier: "en"),
+            locale: submissionLocale,
             includeDiagnostics: true,
             idempotencyKey: "diagnostic-limit"
         )
 
         #expect(await diagnostics.requestedMaximumBytes == 16_384)
+        #expect(await diagnostics.requestedLocaleIdentifier == submissionLocale.identifier)
         #expect(await transport.requests.filter { $0.url?.path.hasSuffix("/bootstrap") == true }.count == 1)
     }
 

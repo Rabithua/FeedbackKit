@@ -170,10 +170,20 @@ public final class FeedbackDiagnostics: FeedbackDiagnosticsInspecting, @unchecke
     }
 
     public func makeDiagnosticSnapshot() async throws -> FeedbackDiagnosticSnapshot {
-        try await makeDiagnosticSnapshot(maxBytes: configuration.maximumSnapshotBytes)
+        try await makeDiagnosticSnapshot(
+            maxBytes: configuration.maximumSnapshotBytes,
+            locale: .current
+        )
     }
 
     public func makeDiagnosticSnapshot(maxBytes: Int) async throws -> FeedbackDiagnosticSnapshot {
+        try await makeDiagnosticSnapshot(maxBytes: maxBytes, locale: .current)
+    }
+
+    public func makeDiagnosticSnapshot(
+        maxBytes: Int,
+        locale: Locale
+    ) async throws -> FeedbackDiagnosticSnapshot {
         let maximumBytes = min(configuration.maximumSnapshotBytes, max(0, maxBytes))
         let now = Date()
         let sources = await state.sources()
@@ -203,7 +213,7 @@ public final class FeedbackDiagnostics: FeedbackDiagnosticsInspecting, @unchecke
         let breadcrumbs = records.compactMap(\.breadcrumb)
             .sorted { $0.timestamp < $1.timestamp }
             .suffix(100)
-        let rawContext = await metadataProvider.clientContext(locale: .current)
+        let rawContext = await metadataProvider.clientContext(locale: locale)
         let context = boundedContext(rawContext, maximumBytes: maximumBytes)
         let rawMetric = await state.metricSummary(since: now.addingTimeInterval(-7 * 86_400))
         let metric = rawMetric.map {
