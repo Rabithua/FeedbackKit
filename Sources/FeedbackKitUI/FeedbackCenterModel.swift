@@ -8,6 +8,7 @@ final class FeedbackCenterModel {
     private(set) var bootstrap: FeedbackBootstrap?
     private(set) var isLoading = false
     private(set) var error: Error?
+    private(set) var votingFeedbackIDs: Set<String> = []
     var path: [FeedbackCenterPage] = []
     var sheet: FeedbackCenterSheet?
 
@@ -18,7 +19,12 @@ final class FeedbackCenterModel {
     }
 
     func load(locale: Locale, force: Bool = false) async {
-        if isLoading || (!force && bootstrap != nil) { return }
+        if isLoading
+            || votingFeedbackIDs.isEmpty == false
+            || (!force && bootstrap != nil)
+        {
+            return
+        }
         isLoading = true
         error = nil
         defer { isLoading = false }
@@ -53,44 +59,46 @@ final class FeedbackCenterModel {
     }
 
     func updateVote(feedbackID: String, target: Bool) async -> Bool {
-        guard var current = bootstrap else { return false }
-        current = FeedbackBootstrap(
-            product: current.product,
-            activity: FeedbackActivityPage(
-                entries: current.activity.entries.map { entry in
-                    guard entry.id == feedbackID, let vote = entry.vote else { return entry }
-                    return entry.updatingVote(
-                        FeedbackVoteResult(
-                            feedbackId: feedbackID,
-                            hasVoted: target,
-                            voteCount: max(0, vote.count + (target ? 1 : -1))
-                        )
-                    )
-                },
-                nextCursor: current.activity.nextCursor
-            ),
-            roadmap: current.roadmap,
-            changelog: current.changelog,
-            visitor: current.visitor,
-            inbox: current.inbox
+        guard isLoading == false,
+              votingFeedbackIDs.contains(feedbackID) == false,
+              let vote = bootstrap?.activity.entries.first(where: { $0.id == feedbackID })?.vote,
+              vote.hasVoted != target
+        else { return false }
+        let original = FeedbackVoteResult(
+            feedbackId: feedbackID,
+            hasVoted: vote.hasVoted,
+            voteCount: vote.count
         )
-        bootstrap = current
+        let optimistic = FeedbackVoteResult(
+            feedbackId: feedbackID,
+            hasVoted: target,
+            voteCount: max(0, vote.count + (target ? 1 : -1))
+        )
+
+        votingFeedbackIDs.insert(feedbackID)
+        defer { votingFeedbackIDs.remove(feedbackID) }
+        synchronizeVote(optimistic)
         do {
             let result = try await client.setVote(feedbackID: feedbackID, voted: target)
             synchronizeVote(result)
             return true
+        } catch is CancellationError {
+            rollbackVote(
+                original,
+                optimistic: optimistic
+            )
+            return false
         } catch {
-            if let vote = bootstrap?.activity.entries.first(where: { $0.id == feedbackID })?.vote {
-                synchronizeVote(
-                    FeedbackVoteResult(
-                        feedbackId: feedbackID,
-                        hasVoted: !target,
-                        voteCount: max(0, vote.count + (target ? -1 : 1))
-                    )
-                )
-            }
+            rollbackVote(
+                original,
+                optimistic: optimistic
+            )
             return false
         }
+    }
+
+    func isVoting(feedbackID: String) -> Bool {
+        isLoading || votingFeedbackIDs.contains(feedbackID)
     }
 
     func synchronizeVote(_ result: FeedbackVoteResult) {
@@ -106,6 +114,18 @@ final class FeedbackCenterModel {
             visitor: current.visitor,
             inbox: current.inbox
         )
+    }
+
+    private func rollbackVote(
+        _ original: FeedbackVoteResult,
+        optimistic: FeedbackVoteResult
+    ) {
+        guard let currentVote = bootstrap?.activity.entries
+                  .first(where: { $0.id == original.feedbackId })?.vote,
+              currentVote.hasVoted == optimistic.hasVoted,
+              currentVote.count == optimistic.voteCount
+        else { return }
+        synchronizeVote(original)
     }
 
     @discardableResult

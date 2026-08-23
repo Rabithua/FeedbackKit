@@ -75,6 +75,9 @@
 "feedbackkit.send" = "보내기";
 "feedbackkit.send.public" = "공개로 보내기";
 "feedbackkit.speak" = "할 말이 있어요";
+"feedbackkit.submission.cancel" = "제출 취소";
+"feedbackkit.submission.cancel.message" = "피드백은 임시 저장됩니다.";
+"feedbackkit.submission.cancel.title" = "제출을 취소할까요?";
 "feedbackkit.stage.later" = "나중";
 "feedbackkit.stage.undecided" = "아직\n미정";
 "feedbackkit.stage.urgent" = "지금";

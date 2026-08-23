@@ -1,5 +1,4 @@
 import FeedbackKitCore
-import Observation
 import PhotosUI
 import SwiftUI
 
@@ -145,7 +144,10 @@ private struct FeedbackComposer: View {
     @State private var model: FeedbackComposerModel
     @State private var selections: [PhotosPickerItem] = []
     @State private var confirmClose = false
+    @State private var confirmCancelSubmission = false
     @State private var showsDisclosure = false
+    @State private var importTask: Task<Void, Never>?
+    @State private var submissionTask: Task<Void, Never>?
     @FocusState private var focused: Field?
     let style: FeedbackStyle
     let submitted: () -> Void
@@ -215,20 +217,46 @@ private struct FeedbackComposer: View {
                     }
                     .buttonStyle(.plain)
                     .disabled(model.canSubmit == false)
-                }.padding(.horizontal, style.pagePadding).padding(.bottom, 20)
+                }
+                .disabled(model.isSubmitting)
+                .padding(.horizontal, style.pagePadding)
+                .padding(.bottom, 20)
             }
         }
         .presentationDetents([.medium])
+        .interactiveDismissDisabled(model.isSubmitting)
         .task { await model.restore() }
         .onChange(of: selections) { _, items in
-            guard items.isEmpty == false else { return }
-            Task {
+            guard items.isEmpty == false, importTask == nil else { return }
+            importTask = Task {
                 let imported = await model.importItems(items, localization: localization)
+                let wasCancelled = Task.isCancelled
                 selections.removeAll()
+                importTask = nil
+                guard wasCancelled == false else { return }
                 haptics.trigger(imported ? .success : .error)
             }
         }
-        .onDisappear { Task { await model.saveDraft() } }
+        .onDisappear {
+            importTask?.cancel()
+            importTask = nil
+            submissionTask?.cancel()
+            submissionTask = nil
+            Task { await model.saveDraft() }
+        }
+        .confirmationDialog(
+            localization.text("feedbackkit.submission.cancel.title"),
+            isPresented: $confirmCancelSubmission
+        ) {
+            Button(
+                localization.text("feedbackkit.submission.cancel"),
+                role: .destructive,
+                action: cancelSubmission
+            )
+            Button(localization.text("feedbackkit.cancel"), role: .cancel) {}
+        } message: {
+            Text(localization.text("feedbackkit.submission.cancel.message"))
+        }
         .confirmationDialog(localization.text("feedbackkit.attachment.discard.title"), isPresented: $confirmClose) {
             Button(localization.text("feedbackkit.attachment.discard"), role: .destructive) {
                 haptics.trigger(.warning)
@@ -286,7 +314,21 @@ private struct FeedbackComposer: View {
         }.scrollIndicators(.hidden)
     }
 
-    private func requestClose() { if model.attachments.isEmpty { close() } else { confirmClose = true } }
+    private func requestClose() {
+        if submissionTask != nil || model.isSubmitting {
+            confirmCancelSubmission = true
+        } else if model.attachments.isEmpty {
+            close()
+        } else {
+            confirmClose = true
+        }
+    }
+
+    private func cancelSubmission() {
+        haptics.trigger(.warning)
+        submissionTask?.cancel()
+        close()
+    }
 
     private func showDisclosure() {
         haptics.trigger(.navigation)
@@ -315,13 +357,17 @@ private struct FeedbackComposer: View {
     }
 
     private func submit(diagnosticsOverride: Bool? = nil) {
+        guard submissionTask == nil else { return }
         focused = nil
-        Task {
+        submissionTask = Task {
             let didSubmit = await model.submit(
                 locale: locale,
                 localization: localization,
                 diagnosticsOverride: diagnosticsOverride
             )
+            let wasCancelled = Task.isCancelled
+            submissionTask = nil
+            guard wasCancelled == false else { return }
             haptics.trigger(didSubmit ? .success : .error)
             if didSubmit { submitted() }
         }
@@ -349,71 +395,6 @@ private struct FeedbackAttachmentAddLabel: View {
             .frame(width: FeedbackStyle.attachmentTileSize, height: FeedbackStyle.attachmentTileSize)
             .contentShape(.interaction, FeedbackComponentShape(cornerRadius: style.cardCornerRadius))
             .feedbackBorder(style)
-    }
-}
-
-@MainActor @Observable
-private final class FeedbackDetailModel {
-    var detail: FeedbackDetail?
-    var isLoading = false
-    var replyBody = ""
-    var isReplying = false
-    var replyError: String?
-    var error: Error?
-    private var pendingReply: (body: String, key: String)?
-    let client: FeedbackClient
-    let id: String
-    let voteChanged: (FeedbackVoteResult) -> Void
-    init(id: String, client: FeedbackClient, voteChanged: @escaping (FeedbackVoteResult) -> Void) { self.id = id; self.client = client; self.voteChanged = voteChanged }
-    func load() async -> Bool {
-        isLoading = true
-        defer { isLoading = false }
-        do {
-            detail = try await client.feedback(id: id)
-            error = nil
-            return true
-        } catch {
-            self.error = error
-            return false
-        }
-    }
-    func vote() async -> Bool {
-        guard var current = detail, current.isPublic else { return false }
-        let original = (current.hasVoted, current.voteCount)
-        current.hasVoted.toggle(); current.voteCount = max(0, current.voteCount + (current.hasVoted ? 1 : -1)); detail = current
-        do {
-            let result = try await client.setVote(feedbackID: id, voted: current.hasVoted)
-            current.hasVoted = result.hasVoted; current.voteCount = result.voteCount; detail = current; voteChanged(result)
-            return true
-        } catch {
-            current.hasVoted = original.0; current.voteCount = original.1; detail = current
-            return false
-        }
-    }
-
-    func reply(localization: FeedbackLocalization) async -> Bool {
-        let body = replyBody.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard body.isEmpty == false, body.count <= 20_000, detail?.isOwner == true, detail?.status == .open else { return false }
-        isReplying = true
-        replyError = nil
-        defer { isReplying = false }
-        let attempt: (body: String, key: String)
-        if let pendingReply, pendingReply.body == body {
-            attempt = pendingReply
-        } else {
-            attempt = (body, UUID().uuidString)
-            pendingReply = attempt
-        }
-        do {
-            _ = try await client.addVisitorMessage(feedbackID: id, body: body, idempotencyKey: attempt.key)
-            replyBody = ""
-            pendingReply = nil
-            detail = try await client.feedback(id: id)
-            return true
-        } catch {
-            replyError = localization.errorMessage(for: error)
-            return false
-        }
     }
 }
 
@@ -453,7 +434,9 @@ private struct FeedbackDetailSheet: View {
                         Text("+\(detail.voteCount)")
                             .font(.system(size: 22, weight: .black, design: .rounded))
                             .foregroundStyle(detail.hasVoted ? Color.accentColor : Color.primary)
-                    }.buttonStyle(.plain)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(model.isVoting || model.isLoading)
                 }
             } close: { close() }
             .padding(.horizontal, style.pagePadding).padding(.top, 14).padding(.bottom, 8)

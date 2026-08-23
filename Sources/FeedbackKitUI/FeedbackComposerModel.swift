@@ -7,18 +7,28 @@ import UniformTypeIdentifiers
 
 @MainActor @Observable
 final class FeedbackComposerModel {
-    var kind: FeedbackKind
-    var title = ""
-    var body = ""
-    var includesDiagnostics = false
-    var attachments: [FeedbackAttachmentSource] = []
+    var kind: FeedbackKind {
+        didSet { submissionInputDidChange() }
+    }
+    var title = "" {
+        didSet { submissionInputDidChange() }
+    }
+    var body = "" {
+        didSet { submissionInputDidChange() }
+    }
+    var includesDiagnostics = false {
+        didSet { submissionInputDidChange() }
+    }
+    var attachments: [FeedbackAttachmentSource] = [] {
+        didSet { submissionInputDidChange() }
+    }
     var isImporting = false
     var isSubmitting = false
     var errorMessage: String?
     var diagnosticFailure = false
     var disclosedVisibility: FeedbackVisibility
-    let idempotencyKey = UUID().uuidString
     private(set) var uploadedAttachmentIDs: [String]?
+    @ObservationIgnored private var pendingSubmission: FeedbackSubmissionAttempt?
 
     let product: FeedbackProduct
     let client: FeedbackClient
@@ -72,7 +82,10 @@ final class FeedbackComposerModel {
         _ items: [PhotosPickerItem],
         localization: FeedbackLocalization
     ) async -> Bool {
-        guard items.isEmpty == false, isImporting == false else { return false }
+        guard items.isEmpty == false,
+              isImporting == false,
+              isSubmitting == false
+        else { return false }
         isImporting = true
         defer { isImporting = false }
         var imported = false
@@ -111,13 +124,13 @@ final class FeedbackComposerModel {
         localization: FeedbackLocalization,
         diagnosticsOverride: Bool? = nil
     ) async -> Bool {
-        let trimmedBody = body.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmedBody.isEmpty == false else {
+        guard isSubmitting == false else { return false }
+        var snapshot = submissionSnapshot
+        guard snapshot.trimmedBody.isEmpty == false else {
             errorMessage = localization.text("feedbackkit.composer.body.required")
             return false
         }
-        guard trimmedTitle.count <= 240, trimmedBody.count <= 20_000 else {
+        guard snapshot.trimmedTitle.count <= 240, snapshot.trimmedBody.count <= 20_000 else {
             errorMessage = localization.text("feedbackkit.composer.too.long")
             return false
         }
@@ -127,40 +140,57 @@ final class FeedbackComposerModel {
         defer { isSubmitting = false }
         do {
             let refreshed = try await client.bootstrap(locale: locale).product
+            try Task.checkCancellation()
             if refreshed.defaultFeedbackVisibility != disclosedVisibility {
                 disclosedVisibility = refreshed.defaultFeedbackVisibility
+                submissionInputDidChange()
                 errorMessage = localization.text("feedbackkit.composer.visibility.changed")
+                await saveDraft()
                 return false
             }
             let refreshedDiagnosticsAvailable = refreshed.diagnostics?.supportsSchemaOne == true
                 && client.diagnosticsProvider != nil
             if refreshedDiagnosticsAvailable == false {
-                includesDiagnostics = false
+                if includesDiagnostics {
+                    includesDiagnostics = false
+                }
+                snapshot = snapshot.withIncludesDiagnostics(false)
             }
-            let includeDiagnostics = (diagnosticsOverride ?? includesDiagnostics)
+            let includeDiagnostics = (diagnosticsOverride ?? snapshot.includesDiagnostics)
                 && refreshedDiagnosticsAvailable
+            var attempt = submissionAttempt(
+                for: snapshot,
+                includesDiagnostics: includeDiagnostics,
+                localeIdentifier: locale.identifier
+            )
             let ids: [String]
-            if let uploadedAttachmentIDs {
+            if let uploadedAttachmentIDs = attempt.uploadedAttachmentIDs {
                 ids = uploadedAttachmentIDs
             } else {
-                ids = try await client.uploadAttachments(attachments)
-                uploadedAttachmentIDs = ids
+                ids = try await client.uploadAttachments(snapshot.attachments)
+                attempt.uploadedAttachmentIDs = ids
+                retainPendingSubmissionIfCurrent(attempt)
             }
+            try Task.checkCancellation()
             _ = try await client.submitFeedback(
-                type: kind,
-                title: trimmedTitle.isEmpty ? nil : trimmedTitle,
-                body: trimmedBody,
+                type: snapshot.kind,
+                title: snapshot.trimmedTitle.isEmpty ? nil : snapshot.trimmedTitle,
+                body: snapshot.trimmedBody,
                 locale: locale,
                 attachmentIds: ids,
                 includeDiagnostics: includeDiagnostics,
-                idempotencyKey: idempotencyKey
+                idempotencyKey: attempt.idempotencyKey
             )
-            resetAfterSubmission()
-            try? await draftStore.remove(productSlug: product.slug)
+            await completeSubmission(snapshot)
             return true
         } catch FeedbackClientError.diagnosticUploadFailed {
             diagnosticFailure = true
             errorMessage = localization.text("feedbackkit.diagnostics.upload.failed")
+            await saveDraft()
+            return false
+        } catch is CancellationError {
+            errorMessage = nil
+            diagnosticFailure = false
             await saveDraft()
             return false
         } catch {
@@ -170,11 +200,71 @@ final class FeedbackComposerModel {
         }
     }
 
+    private var submissionSnapshot: FeedbackSubmissionSnapshot {
+        FeedbackSubmissionSnapshot(
+            kind: kind,
+            title: title,
+            body: body,
+            includesDiagnostics: includesDiagnostics,
+            attachments: attachments
+        )
+    }
+
+    private func submissionAttempt(
+        for snapshot: FeedbackSubmissionSnapshot,
+        includesDiagnostics: Bool,
+        localeIdentifier: String
+    ) -> FeedbackSubmissionAttempt {
+        if let pendingSubmission,
+           pendingSubmission.matches(
+               snapshot: snapshot,
+               includesDiagnostics: includesDiagnostics,
+               localeIdentifier: localeIdentifier
+           )
+        {
+            return pendingSubmission
+        }
+        let reusableAttachmentIDs = pendingSubmission?.snapshot == snapshot
+            ? pendingSubmission?.uploadedAttachmentIDs
+            : nil
+        let attempt = FeedbackSubmissionAttempt(
+            snapshot: snapshot,
+            includesDiagnostics: includesDiagnostics,
+            localeIdentifier: localeIdentifier,
+            uploadedAttachmentIDs: reusableAttachmentIDs
+        )
+        retainPendingSubmissionIfCurrent(attempt)
+        return attempt
+    }
+
+    private func retainPendingSubmissionIfCurrent(_ attempt: FeedbackSubmissionAttempt) {
+        guard submissionSnapshot == attempt.snapshot else { return }
+        pendingSubmission = attempt
+        uploadedAttachmentIDs = attempt.uploadedAttachmentIDs
+    }
+
+    private func completeSubmission(_ snapshot: FeedbackSubmissionSnapshot) async {
+        pendingSubmission = nil
+        uploadedAttachmentIDs = nil
+        if submissionSnapshot == snapshot {
+            resetAfterSubmission()
+            try? await draftStore.remove(productSlug: product.slug)
+        } else {
+            await saveDraft()
+        }
+    }
+
     private func resetAfterSubmission() {
         title = ""
         body = ""
         includesDiagnostics = false
         attachments.removeAll()
+        pendingSubmission = nil
+        uploadedAttachmentIDs = nil
+    }
+
+    private func submissionInputDidChange() {
+        pendingSubmission = nil
         uploadedAttachmentIDs = nil
     }
 

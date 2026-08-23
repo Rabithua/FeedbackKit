@@ -7,6 +7,7 @@ struct FeedbackHubView: View {
     let openPage: (FeedbackCenterPage) -> Void
     let openSheet: (FeedbackCenterSheet) -> Void
     let vote: (String, Bool) -> Void
+    let isVoting: (String) -> Bool
     let refresh: () async -> Void
     let activatePost: (FeedbackDeveloperPostAction) -> Void
 
@@ -107,6 +108,7 @@ struct FeedbackHubView: View {
                             }
                         },
                         vote: vote,
+                        isVoting: isVoting(entry.id),
                         activatePost: activatePost
                     )
                     .feedbackEntrance(isVisible: isContentVisible, order: 5 + index, reduceMotion: reduceMotion)
@@ -132,6 +134,7 @@ struct FeedbackActivityRow: View {
     let style: FeedbackStyle
     let open: () -> Void
     let vote: (String, Bool) -> Void
+    let isVoting: Bool
     let activatePost: (FeedbackDeveloperPostAction) -> Void
     @Environment(\.feedbackLocalization) private var localization
 
@@ -162,6 +165,7 @@ struct FeedbackActivityRow: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .disabled(isVoting)
                 .accessibilityLabel(localization.text(voteState.hasVoted ? "feedbackkit.vote.remove" : "feedbackkit.vote"))
             } else if case let .developerPost(_, data) = entry, let action = data.action {
                 Button { activatePost(action) } label: {

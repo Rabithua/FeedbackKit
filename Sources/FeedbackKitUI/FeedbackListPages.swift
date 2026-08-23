@@ -1,54 +1,8 @@
 import FeedbackKitCore
-import Observation
 import SwiftUI
 
-@MainActor @Observable
-private final class ActivityListModel {
-    var entries: [FeedbackActivityEntry] = []
-    var nextCursor: String?
-    var isLoading = false
-    var isLoadingMore = false
-    var error: Error?
-    let client: FeedbackClient
-
-    init(client: FeedbackClient) { self.client = client }
-
-    func load(locale: Locale, refresh: Bool = false) async {
-        if isLoading { return }
-        isLoading = true; error = nil
-        defer { isLoading = false }
-        do {
-            let page = try await client.activity(locale: locale, cursor: refresh ? nil : nil)
-            entries = page.entries; nextCursor = page.nextCursor
-        } catch is CancellationError {} catch { self.error = error }
-    }
-
-    func more(locale: Locale) async {
-        guard let nextCursor, isLoadingMore == false else { return }
-        isLoadingMore = true
-        defer { isLoadingMore = false }
-        do {
-            let page = try await client.activity(locale: locale, cursor: nextCursor)
-            entries.append(contentsOf: page.entries.filter { next in entries.contains(where: { $0.id == next.id }) == false })
-            self.nextCursor = page.nextCursor
-        } catch { self.error = error }
-    }
-
-    func optimisticVote(id: String, target: Bool) async -> Bool {
-        guard let index = entries.firstIndex(where: { $0.id == id }), let vote = entries[index].vote else { return false }
-        entries[index] = entries[index].updatingVote(.init(feedbackId: id, hasVoted: target, voteCount: max(0, vote.count + (target ? 1 : -1))))
-        do {
-            entries[index] = entries[index].updatingVote(try await client.setVote(feedbackID: id, voted: target))
-            return true
-        } catch {
-            entries[index] = entries[index].updatingVote(.init(feedbackId: id, hasVoted: !target, voteCount: vote.count))
-            return false
-        }
-    }
-}
-
 struct FeedbackActivityListView: View {
-    @State private var model: ActivityListModel
+    @State private var model: FeedbackActivityListModel
     let style: FeedbackStyle
     let open: (FeedbackCenterSheet) -> Void
     let activatePost: (FeedbackDeveloperPostAction) -> Void
@@ -58,7 +12,7 @@ struct FeedbackActivityListView: View {
     @Environment(\.feedbackLocalization) private var localization
 
     init(client: FeedbackClient, style: FeedbackStyle, open: @escaping (FeedbackCenterSheet) -> Void, activatePost: @escaping (FeedbackDeveloperPostAction) -> Void) {
-        _model = State(initialValue: ActivityListModel(client: client)); self.style = style; self.open = open; self.activatePost = activatePost
+        _model = State(initialValue: FeedbackActivityListModel(client: client)); self.style = style; self.open = open; self.activatePost = activatePost
     }
 
     var body: some View {
@@ -82,9 +36,14 @@ struct FeedbackActivityListView: View {
                                         }
                                     }
                                 },
+                                isVoting: model.isVoting(feedbackID: entry.id),
                                 activatePost: activatePost
                             )
-                            .onAppear { if entry.id == model.entries.last?.id { Task { await model.more(locale: locale) } } }
+                            .task {
+                                if entry.id == model.entries.last?.id {
+                                    await model.more(locale: locale)
+                                }
+                            }
                         }
                         if model.isLoadingMore { ProgressView().padding() }
                     }.padding(style.pagePadding)
@@ -118,21 +77,27 @@ private final class MyFeedbackModel {
     let client: FeedbackClient
     init(client: FeedbackClient) { self.client = client }
 
-    func load(refresh: Bool = false) async {
-        guard isLoading == false else { return }
+    func load(refresh _: Bool = false) async {
+        guard isLoading == false, isLoadingMore == false else { return }
         isLoading = true; error = nil; defer { isLoading = false }
         do { let page = try await client.ownedFeedback(); items = page.feedback; nextCursor = page.nextCursor }
         catch is CancellationError {} catch { self.error = error }
     }
 
     func more() async {
-        guard let nextCursor, isLoadingMore == false else { return }
+        guard let nextCursor,
+              isLoading == false,
+              isLoadingMore == false
+        else { return }
         isLoadingMore = true; defer { isLoadingMore = false }
         do {
             let page = try await client.ownedFeedback(cursor: nextCursor)
             items.append(contentsOf: page.feedback.filter { next in items.contains(where: { $0.id == next.id }) == false })
             self.nextCursor = page.nextCursor
-        } catch { self.error = error }
+        } catch is CancellationError {
+        } catch {
+            self.error = error
+        }
     }
 }
 
@@ -181,7 +146,11 @@ struct MyFeedbackView: View {
                                 .feedbackBorder(style)
                             }
                             .buttonStyle(.plain)
-                            .onAppear { if feedback.id == model.items.last?.id { Task { await model.more() } } }
+                            .task {
+                                if feedback.id == model.items.last?.id {
+                                    await model.more()
+                                }
+                            }
                         }
                         if model.isLoadingMore { ProgressView().padding() }
                     }.padding(style.pagePadding)
