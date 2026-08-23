@@ -39,6 +39,7 @@ targets:
       - UITests
     settings:
       base:
+        GENERATE_INFOPLIST_FILE: YES
         SWIFT_VERSION: "6.0"
     dependencies:
       - target: FeedbackKitDemo

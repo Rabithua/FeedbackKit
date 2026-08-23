@@ -16,10 +16,12 @@ struct DemoLiveVerificationSection: View {
                 )
             }
             .disabled(clientAvailable == false || isVerifying)
+            .accessibilityIdentifier("demo.live.verify")
 
             if let error {
                 Text(error)
                     .foregroundStyle(.red)
+                    .accessibilityIdentifier("demo.live.verification.error")
             }
         } footer: {
             Text("Verification creates or reuses the anonymous visitor identity used by FeedbackKit.")

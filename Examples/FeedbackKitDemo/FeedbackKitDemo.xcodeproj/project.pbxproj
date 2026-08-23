@@ -26,6 +26,7 @@
 		EAE9C8C336171558FA97636B /* DemoLiveConfigurationSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86D6FB86EF32EBE05D7ED0B9 /* DemoLiveConfigurationSection.swift */; };
 		EECF9EB4FB6566CC1925D6C7 /* DemoLiveLauncherView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2D945D4A9C6FDE024CAE375 /* DemoLiveLauncherView.swift */; };
 		F3655F8502D569293386CCFE /* DemoFullWidthButtonLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D451A7DA5963AADDEE26C556 /* DemoFullWidthButtonLabel.swift */; };
+		F9D26A3D8FA97197501F4AAE /* DemoLiveIntegrationUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91A0219F65CB869616D96851 /* DemoLiveIntegrationUITests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -53,6 +54,7 @@
 		76359ED7711B5811B942E091 /* DemoFixturePayloads.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoFixturePayloads.swift; sourceTree = "<group>"; };
 		86D6FB86EF32EBE05D7ED0B9 /* DemoLiveConfigurationSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoLiveConfigurationSection.swift; sourceTree = "<group>"; };
 		8AC2670AE17093F6659007A2 /* FeedbackKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = FeedbackKit; path = ../..; sourceTree = SOURCE_ROOT; };
+		91A0219F65CB869616D96851 /* DemoLiveIntegrationUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoLiveIntegrationUITests.swift; sourceTree = "<group>"; };
 		C10CB117F5ABBDBED7C337C9 /* DemoLauncherView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoLauncherView.swift; sourceTree = "<group>"; };
 		D451A7DA5963AADDEE26C556 /* DemoFullWidthButtonLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoFullWidthButtonLabel.swift; sourceTree = "<group>"; };
 		E2D945D4A9C6FDE024CAE375 /* DemoLiveLauncherView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoLiveLauncherView.swift; sourceTree = "<group>"; };
@@ -109,6 +111,7 @@
 			isa = PBXGroup;
 			children = (
 				E653C9DE961146B4D7D3F126 /* DemoHitTargetUITests.swift */,
+				91A0219F65CB869616D96851 /* DemoLiveIntegrationUITests.swift */,
 			);
 			path = UITests;
 			sourceTree = "<group>";
@@ -226,6 +229,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A2D5C4BEF074B93A29CABD80 /* DemoHitTargetUITests.swift in Sources */,
+				F9D26A3D8FA97197501F4AAE /* DemoLiveIntegrationUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -330,6 +334,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -347,6 +352,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

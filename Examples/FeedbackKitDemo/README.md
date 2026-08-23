@@ -19,8 +19,13 @@ To use Live mode:
 The local configuration file is ignored by Git. Without a Product Key, Live mode shows the repair
 instructions instead of crashing.
 
-The Demo scheme also contains a UI test that taps both visible outer corners of the shared
-full-width action label and waits for Fixture bootstrap to complete:
+Use normal Xcode simulator signing when running the app. `CODE_SIGNING_ALLOWED=NO` is only suitable
+for non-running generic CI builds; an unsigned simulator app cannot exercise the Keychain-backed
+visitor identity required by Live mode.
+
+The Demo scheme contains UI tests for the shared full-width action hit area and Live verification.
+The Live test is skipped when the local Product Key is absent; when configured, it performs the
+same integration preflight as the button without submitting feedback:
 
 ```bash
 xcodebuild -project FeedbackKitDemo.xcodeproj -scheme FeedbackKitDemo \
