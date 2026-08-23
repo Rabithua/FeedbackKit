@@ -421,26 +421,6 @@ public struct FeedbackSignedAttachmentURL: Codable, Equatable, Sendable {
     public let posterUrl: URL?
 }
 
-public struct FeedbackAttachmentSource: Identifiable, Sendable {
-    public let id: UUID
-    public let filename: String
-    public let contentType: String
-    public let data: Data
-    public let width: Int?
-    public let height: Int?
-    public let durationMs: Int?
-
-    public init(id: UUID = UUID(), filename: String, contentType: String, data: Data, width: Int? = nil, height: Int? = nil, durationMs: Int? = nil) {
-        self.id = id
-        self.filename = filename
-        self.contentType = contentType
-        self.data = data
-        self.width = width
-        self.height = height
-        self.durationMs = durationMs
-    }
-}
-
 public struct FeedbackDiagnosticSnapshot: Sendable {
     public let data: Data
     public let schemaVersion: Int

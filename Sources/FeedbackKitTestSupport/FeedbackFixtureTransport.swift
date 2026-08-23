@@ -34,6 +34,13 @@ public actor FeedbackFixtureTransport: FeedbackTransport {
         return http
     }
 
+    public func upload(for request: URLRequest, fromFile fileURL: URL) async throws -> HTTPURLResponse {
+        try await upload(
+            for: request,
+            data: Data(contentsOf: fileURL, options: .mappedIfSafe)
+        )
+    }
+
     public static func envelope<T: Encodable>(_ value: T, code: String = "ok", message: String = "OK") throws -> Data {
         try JSONEncoder.feedbackFixture.encode(FixtureEnvelope(code: code, message: message, data: value))
     }
