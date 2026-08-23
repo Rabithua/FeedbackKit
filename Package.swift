@@ -23,7 +23,7 @@ let package = Package(
         ),
         .target(
             name: "FeedbackKitUI",
-            dependencies: ["FeedbackKitCore", "FeedbackKitDiagnostics"],
+            dependencies: ["FeedbackKitCore"],
             resources: [.process("Resources")]
         ),
         .target(

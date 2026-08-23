@@ -1,5 +1,4 @@
 import FeedbackKitCore
-import FeedbackKitDiagnostics
 import SwiftUI
 
 public struct FeedbackCenterView: View {
@@ -121,7 +120,7 @@ public struct FeedbackCenterView: View {
         case .releases:
             FeedbackReleaseView(client: model.client, initial: model.bootstrap?.changelog ?? [], style: style)
         case .diagnostics:
-            if let diagnostics = model.client.diagnosticsProvider as? FeedbackDiagnostics {
+            if let diagnostics = model.client.diagnosticsProvider as? any FeedbackDiagnosticsInspecting {
                 FeedbackDiagnosticsView(diagnostics: diagnostics, style: style)
             } else {
                 ContentUnavailableView(feedbackLocalization.text("feedbackkit.diagnostics.unavailable"), systemImage: "doc.text.magnifyingglass")

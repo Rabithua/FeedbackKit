@@ -58,7 +58,7 @@ public struct FeedbackLogger: Sendable {
     }
 }
 
-public final class FeedbackDiagnostics: FeedbackDiagnosticsProviding, @unchecked Sendable {
+public final class FeedbackDiagnostics: FeedbackDiagnosticsInspecting, @unchecked Sendable {
     public let logger: FeedbackLogger
 
     private let configuration: FeedbackDiagnosticsConfiguration
@@ -140,6 +140,26 @@ public final class FeedbackDiagnostics: FeedbackDiagnosticsProviding, @unchecked
 
     public func exportText() async throws -> String {
         try await store.exportText()
+    }
+
+    public func diagnosticDisplayEvents() async throws -> [FeedbackDiagnosticDisplayEvent] {
+        try await events().map {
+            FeedbackDiagnosticDisplayEvent(
+                id: $0.id,
+                timestamp: $0.timestamp,
+                level: FeedbackDiagnosticDisplayLevel(rawValue: $0.level.rawValue) ?? .info,
+                category: $0.category,
+                message: $0.message
+            )
+        }
+    }
+
+    public func exportDiagnosticsText() async throws -> String {
+        try await exportText()
+    }
+
+    public func clearDiagnostics() async throws {
+        try await clear()
     }
 
     public func clear() async throws {

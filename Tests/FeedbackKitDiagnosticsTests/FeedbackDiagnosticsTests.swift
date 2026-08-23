@@ -175,6 +175,27 @@ struct FeedbackDiagnosticsTests {
         #expect(await source.cleared == true)
     }
 
+    @Test func inspectionCapabilityMapsExportsAndClearsDiagnostics() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let diagnostics = makeDiagnostics(directory: directory)
+        let inspector: any FeedbackDiagnosticsInspecting = diagnostics
+        await diagnostics.record(.init(
+            level: .warning,
+            category: "inspection",
+            message: "Visible warning"
+        ))
+
+        let event = try #require(await inspector.diagnosticDisplayEvents().first)
+
+        #expect(event.level == .warning)
+        #expect(event.category == "inspection")
+        #expect(event.message == "Visible warning")
+        #expect(try await inspector.exportDiagnosticsText().contains("Visible warning"))
+        try await inspector.clearDiagnostics()
+        #expect(try await inspector.diagnosticDisplayEvents().isEmpty)
+    }
+
     private func makeDiagnostics(directory: URL, snapshotBytes: Int = 256 * 1024) -> FeedbackDiagnostics {
         FeedbackDiagnostics(
             configuration: .init(retentionDays: 7, maximumEventCount: 500, maximumDiskBytes: 2 * 1024 * 1024, maximumSnapshotBytes: snapshotBytes, directory: directory),
