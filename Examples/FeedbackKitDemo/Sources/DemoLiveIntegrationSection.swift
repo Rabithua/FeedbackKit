@@ -18,6 +18,7 @@ struct DemoLiveIntegrationSection: View {
                 )
             }
             .buttonStyle(.borderedProminent)
+            .accessibilityIdentifier("demo.live.open")
         }
     }
 

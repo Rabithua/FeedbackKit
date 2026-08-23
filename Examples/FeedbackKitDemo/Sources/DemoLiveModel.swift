@@ -43,6 +43,7 @@ final class DemoLiveModel {
             return error.localizedDescription
         }
         let requestID = clientError.context.requestID.map { " Request ID: \($0)." } ?? ""
-        return "\(clientError.localizedDescription)\(requestID)"
+        let details = clientError.context.debugDescription.map { "\nTechnical details: \($0)" } ?? ""
+        return "\(clientError.localizedDescription)\(requestID)\(details)"
     }
 }
