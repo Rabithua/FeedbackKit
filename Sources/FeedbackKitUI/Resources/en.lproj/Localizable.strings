@@ -75,6 +75,9 @@
 "feedbackkit.send" = "Send";
 "feedbackkit.send.public" = "Send Publicly";
 "feedbackkit.speak" = "Say Something";
+"feedbackkit.submission.cancel" = "Cancel Submission";
+"feedbackkit.submission.cancel.message" = "Your feedback will remain as a draft.";
+"feedbackkit.submission.cancel.title" = "Cancel submission?";
 "feedbackkit.stage.later" = "Later";
 "feedbackkit.stage.undecided" = "Not\nSure Yet";
 "feedbackkit.stage.urgent" = "Now";

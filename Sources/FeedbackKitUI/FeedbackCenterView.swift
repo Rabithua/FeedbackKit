@@ -60,6 +60,7 @@ public struct FeedbackCenterView: View {
                                     }
                                 }
                             },
+                            isVoting: model.isVoting,
                             refresh: { await model.load(locale: locale, force: true) },
                             activatePost: activatePost
                         )

@@ -75,6 +75,9 @@
 "feedbackkit.send" = "发送";
 "feedbackkit.send.public" = "发送并公开";
 "feedbackkit.speak" = "有话要说";
+"feedbackkit.submission.cancel" = "取消提交";
+"feedbackkit.submission.cancel.message" = "反馈内容会保留为草稿。";
+"feedbackkit.submission.cancel.title" = "要取消提交吗？";
 "feedbackkit.stage.later" = "缓";
 "feedbackkit.stage.undecided" = "还没\n想好";
 "feedbackkit.stage.urgent" = "急";

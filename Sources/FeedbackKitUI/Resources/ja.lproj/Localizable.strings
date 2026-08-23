@@ -75,6 +75,9 @@
 "feedbackkit.send" = "送信";
 "feedbackkit.send.public" = "公開して送信";
 "feedbackkit.speak" = "伝えたいこと";
+"feedbackkit.submission.cancel" = "送信をキャンセル";
+"feedbackkit.submission.cancel.message" = "フィードバックは下書きとして保存されます。";
+"feedbackkit.submission.cancel.title" = "送信をキャンセルしますか？";
 "feedbackkit.stage.later" = "後";
 "feedbackkit.stage.undecided" = "まだ\n未定";
 "feedbackkit.stage.urgent" = "今";
