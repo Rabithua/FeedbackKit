@@ -6,6 +6,17 @@ import FoundationNetworking
 public protocol FeedbackTransport: Sendable {
     func data(for request: URLRequest) async throws -> (Data, HTTPURLResponse)
     func upload(for request: URLRequest, data: Data) async throws -> HTTPURLResponse
+    func upload(for request: URLRequest, fromFile fileURL: URL) async throws -> HTTPURLResponse
+}
+
+public extension FeedbackTransport {
+    func upload(for request: URLRequest, fromFile fileURL: URL) async throws -> HTTPURLResponse {
+        try Task.checkCancellation()
+        return try await upload(
+            for: request,
+            data: Data(contentsOf: fileURL, options: .mappedIfSafe)
+        )
+    }
 }
 
 public actor URLSessionFeedbackTransport: FeedbackTransport {
@@ -30,6 +41,14 @@ public actor URLSessionFeedbackTransport: FeedbackTransport {
     public func upload(for request: URLRequest, data: Data) async throws -> HTTPURLResponse {
         let (_, response) = try await session.upload(for: request, from: data)
         guard let http = response as? HTTPURLResponse else { throw FeedbackClientError.invalidResponse }
+        return http
+    }
+
+    public func upload(for request: URLRequest, fromFile fileURL: URL) async throws -> HTTPURLResponse {
+        let (_, response) = try await session.upload(for: request, fromFile: fileURL)
+        guard let http = response as? HTTPURLResponse else {
+            throw FeedbackClientError.invalidResponse
+        }
         return http
     }
 }

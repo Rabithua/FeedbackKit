@@ -38,12 +38,6 @@ struct FeedbackSubmissionSnapshot: Equatable, Sendable {
         _ lhs: FeedbackAttachmentSource,
         _ rhs: FeedbackAttachmentSource
     ) -> Bool {
-        lhs.id == rhs.id
-            && lhs.filename == rhs.filename
-            && lhs.contentType == rhs.contentType
-            && lhs.data == rhs.data
-            && lhs.width == rhs.width
-            && lhs.height == rhs.height
-            && lhs.durationMs == rhs.durationMs
+        lhs == rhs
     }
 }

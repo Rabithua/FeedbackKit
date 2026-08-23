@@ -337,7 +337,7 @@ private struct FeedbackComposer: View {
 
     private func removeAttachment(id: UUID) {
         haptics.trigger(.selection)
-        model.attachments.removeAll { $0.id == id }
+        model.removeAttachment(id: id)
     }
 
     private var disclosureText: String {

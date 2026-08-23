@@ -142,7 +142,11 @@ public actor FeedbackClient {
     public func uploadAttachments(_ sources: [FeedbackAttachmentSource]) async throws -> [String] {
         guard sources.isEmpty == false else { return [] }
         let declarations = sources.map {
-            UploadDeclaration(filename: $0.filename, contentType: $0.contentType, size: $0.data.count)
+            UploadDeclaration(
+                filename: $0.filename,
+                contentType: $0.contentType,
+                size: $0.byteCount
+            )
         }
         let presigned = try await send(
             [PresignedUpload].self,
@@ -155,10 +159,26 @@ public actor FeedbackClient {
         try await withThrowingTaskGroup(of: Void.self) { group in
             var iterator = pairs.makeIterator()
             for _ in 0..<min(2, pairs.count) {
-                if let pair = iterator.next() { group.addTask { try await self.upload(pair.1.data, to: pair.0.uploadUrl, headers: pair.0.headers) } }
+                if let pair = iterator.next() {
+                    group.addTask {
+                        try await self.upload(
+                            pair.1,
+                            to: pair.0.uploadUrl,
+                            headers: pair.0.headers
+                        )
+                    }
+                }
             }
             while try await group.next() != nil {
-                if let pair = iterator.next() { group.addTask { try await self.upload(pair.1.data, to: pair.0.uploadUrl, headers: pair.0.headers) } }
+                if let pair = iterator.next() {
+                    group.addTask {
+                        try await self.upload(
+                            pair.1,
+                            to: pair.0.uploadUrl,
+                            headers: pair.0.headers
+                        )
+                    }
+                }
             }
         }
         let finalized = try await send(
@@ -281,6 +301,28 @@ public actor FeedbackClient {
     }
 
     private func upload(_ data: Data, to url: URL, headers: RequiredHeaders) async throws {
+        let request = try uploadRequest(to: url, headers: headers)
+        let response = try await transport.upload(for: request, data: data)
+        try validateUploadResponse(response)
+    }
+
+    private func upload(
+        _ source: FeedbackAttachmentSource,
+        to url: URL,
+        headers: RequiredHeaders
+    ) async throws {
+        let request = try uploadRequest(to: url, headers: headers)
+        let response: HTTPURLResponse
+        switch source.storage {
+        case let .data(data):
+            response = try await transport.upload(for: request, data: data)
+        case let .file(fileURL):
+            response = try await transport.upload(for: request, fromFile: fileURL)
+        }
+        try validateUploadResponse(response)
+    }
+
+    private func uploadRequest(to url: URL, headers: RequiredHeaders) throws -> URLRequest {
         guard url.isFeedbackSecureTransportURL else { throw FeedbackClientError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "PUT"
@@ -289,7 +331,10 @@ public actor FeedbackClient {
         if let checksumSHA256 = headers.checksumSHA256 {
             request.setValue(checksumSHA256, forHTTPHeaderField: "X-Amz-Checksum-Sha256")
         }
-        let response = try await transport.upload(for: request, data: data)
+        return request
+    }
+
+    private func validateUploadResponse(_ response: HTTPURLResponse) throws {
         guard (200...299).contains(response.statusCode) else {
             throw FeedbackClientError.server(statusCode: response.statusCode, code: nil)
         }
