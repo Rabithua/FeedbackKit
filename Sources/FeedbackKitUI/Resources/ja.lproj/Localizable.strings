@@ -1,5 +1,7 @@
 "feedbackkit.activity.empty" = "最近のアクティビティはありません";
 "feedbackkit.activity.title" = "最近のアクティビティ";
+"feedbackkit.attribution.hint" = "FeedKit のウェブサイトを開きます";
+"feedbackkit.attribution.label" = "FeedKit.cn により提供";
 "feedbackkit.all" = "すべて表示";
 "feedbackkit.attachment.add" = "添付";
 "feedbackkit.attachment.discard" = "添付を破棄";

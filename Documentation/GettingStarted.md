@@ -78,6 +78,9 @@ Configuration initialization is throwing and side-effect free. In production cod
 may be absent. Present `FeedbackCenterView(client: runtime.client)` from a sheet or full-screen
 cover. `FeedbackCenterToolbarButton` provides a ready-made 44-point toolbar entry.
 
+The main hub ends with a centered `Powered by FeedKit.cn` attribution. Activating it opens
+`https://feedkit.cn/`; displaying the attribution does not make an additional network request.
+
 ### Choose the feedback language policy
 
 FeedbackKit follows the host view's effective SwiftUI locale by default. This keeps the package UI

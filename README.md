@@ -72,6 +72,9 @@ print(summary.product.name, summary.diagnostics)
 This preflight uses the normal bootstrap flow and may create the anonymous visitor identity. It is
 never run automatically.
 
+The default UI includes a centered `Powered by FeedKit.cn` attribution at the end of the main hub.
+It opens `https://feedkit.cn/` only after the user activates it.
+
 The package never uploads diagnostics automatically. New feedback always starts with diagnostic
 sharing disabled. A private snapshot is generated only after the server and host both support the
 feature and the user explicitly enables the switch for that submission.

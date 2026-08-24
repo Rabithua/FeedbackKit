@@ -1,5 +1,7 @@
 "feedbackkit.activity.empty" = "최근 활동이 없습니다";
 "feedbackkit.activity.title" = "최근 활동";
+"feedbackkit.attribution.hint" = "FeedKit 웹사이트 열기";
+"feedbackkit.attribution.label" = "FeedKit.cn 제공";
 "feedbackkit.all" = "모두 보기";
 "feedbackkit.attachment.add" = "첨부";
 "feedbackkit.attachment.discard" = "첨부 파일 버리기";
