@@ -1,5 +1,7 @@
 "feedbackkit.activity.empty" = "还没有近期事务";
 "feedbackkit.activity.title" = "近期事务";
+"feedbackkit.attribution.hint" = "打开 FeedKit 网站";
+"feedbackkit.attribution.label" = "由 FeedKit.cn 提供支持";
 "feedbackkit.all" = "查看全部";
 "feedbackkit.attachment.add" = "附件";
 "feedbackkit.attachment.discard" = "丢弃附件";

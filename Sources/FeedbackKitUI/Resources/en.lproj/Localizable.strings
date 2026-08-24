@@ -1,5 +1,7 @@
 "feedbackkit.activity.empty" = "No recent activity yet";
 "feedbackkit.activity.title" = "Recent Activity";
+"feedbackkit.attribution.hint" = "Opens the FeedKit website";
+"feedbackkit.attribution.label" = "Powered by FeedKit.cn";
 "feedbackkit.all" = "View All";
 "feedbackkit.attachment.add" = "Attachment";
 "feedbackkit.attachment.discard" = "Discard Attachments";

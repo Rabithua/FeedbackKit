@@ -1,5 +1,7 @@
 "feedbackkit.activity.empty" = "還沒有近期事務";
 "feedbackkit.activity.title" = "近期事務";
+"feedbackkit.attribution.hint" = "開啟 FeedKit 網站";
+"feedbackkit.attribution.label" = "由 FeedKit.cn 提供支援";
 "feedbackkit.all" = "查看全部";
 "feedbackkit.attachment.add" = "附件";
 "feedbackkit.attachment.discard" = "捨棄附件";

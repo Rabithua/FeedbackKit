@@ -23,9 +23,10 @@ Use normal Xcode simulator signing when running the app. `CODE_SIGNING_ALLOWED=N
 for non-running generic CI builds; an unsigned simulator app cannot exercise the Keychain-backed
 visitor identity required by Live mode.
 
-The Demo scheme contains UI tests for the shared full-width action hit area and Live verification.
-The Live test is skipped when the local Product Key is absent; when configured, it performs the
-same integration preflight as the button without submitting feedback:
+The Demo scheme contains UI tests for the shared full-width action hit area, the centered FeedKit
+attribution, and Live verification. The Live test is skipped when the local Product Key is absent;
+when configured, it performs the same integration preflight as the button without submitting
+feedback:
 
 ```bash
 xcodebuild -project FeedbackKitDemo.xcodeproj -scheme FeedbackKitDemo \

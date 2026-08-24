@@ -20,6 +20,12 @@ struct FeedbackHubView: View {
             LazyVStack(alignment: .leading, spacing: style.sectionSpacing) {
                 cards
                 activity
+                FeedbackAttributionLink()
+                    .feedbackEntrance(
+                        isVisible: isContentVisible,
+                        order: 10,
+                        reduceMotion: reduceMotion
+                    )
             }
             .padding(.horizontal, style.pagePadding)
             .padding(.bottom, 20)
@@ -39,7 +45,7 @@ struct FeedbackHubView: View {
             .padding(.horizontal, style.pagePadding)
             .padding(.vertical, 8)
             .background(FeedbackSystemBackground())
-            .feedbackEntrance(isVisible: isContentVisible, order: 10, reduceMotion: reduceMotion)
+            .feedbackEntrance(isVisible: isContentVisible, order: 11, reduceMotion: reduceMotion)
         }
         .accessibilityIdentifier("developerCommunity.hub")
         .task { await revealContent() }
