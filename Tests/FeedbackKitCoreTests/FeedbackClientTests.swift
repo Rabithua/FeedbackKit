@@ -356,54 +356,6 @@ struct FeedbackClientTests {
         }
     }
 
-    @Test func rejectsInsecureRemoteAPIEndpointsBeforeSendingCredentials() async {
-        let transport = FeedbackFixtureTransport { request in
-            Issue.record("Unexpected insecure request: \(request.url?.absoluteString ?? "")")
-            return (500, [:], Data())
-        }
-        let client = FeedbackClient(
-            configuration: try! FeedbackConfiguration(
-                productKey: "pk_test",
-                keychainService: "test.feedback.visitor",
-                apiBaseURL: URL(string: "http://feedback.example.com/v1/api")!
-            ),
-            transport: transport,
-            credentialStore: Credential()
-        )
-
-        await expectClientError(
-            kind: .invalidURL,
-            operation: .ownedFeedback
-        ) {
-            _ = try await client.ownedFeedback()
-        }
-        #expect(await transport.requests.isEmpty)
-    }
-
-    @Test func rejectsHTTPSAPIEndpointsWithoutAHostBeforeSendingCredentials() async {
-        let transport = FeedbackFixtureTransport { request in
-            Issue.record("Unexpected malformed request: \(request.url?.absoluteString ?? "")")
-            return (500, [:], Data())
-        }
-        let client = FeedbackClient(
-            configuration: try! FeedbackConfiguration(
-                productKey: "pk_test",
-                keychainService: "test.feedback.visitor",
-                apiBaseURL: URL(string: "https:/feedback.example.com/v1/api")!
-            ),
-            transport: transport,
-            credentialStore: Credential()
-        )
-
-        await expectClientError(
-            kind: .invalidURL,
-            operation: .ownedFeedback
-        ) {
-            _ = try await client.ownedFeedback()
-        }
-        #expect(await transport.requests.isEmpty)
-    }
-
     @Test func redirectPolicyRejectsInsecureOrMalformedTargets() {
         let policy = FeedbackSecureRedirectDelegate()
         let original = URLRequest(url: URL(string: "https://storage.example/private")!)

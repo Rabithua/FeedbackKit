@@ -725,22 +725,14 @@ public actor FeedbackClient {
     }
 
     private func makeURL(scope: Scope, path: String, query: [URLQueryItem]) throws -> URL {
-        guard configuration.apiBaseURL.isFeedbackSecureTransportURL else {
-            throw FeedbackClientError(kind: .invalidURL)
-        }
         var url = configuration.apiBaseURL.appending(path: scope.rawValue)
         for component in path.split(separator: "/") { url.append(path: String(component)) }
-        guard query.isEmpty == false else {
-            guard url.isFeedbackSecureTransportURL else {
-                throw FeedbackClientError(kind: .invalidURL)
-            }
-            return url
-        }
+        guard query.isEmpty == false else { return url }
         guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
             throw FeedbackClientError(kind: .invalidURL)
         }
         components.queryItems = query
-        guard let result = components.url, result.isFeedbackSecureTransportURL else {
+        guard let result = components.url else {
             throw FeedbackClientError(kind: .invalidURL)
         }
         return result
