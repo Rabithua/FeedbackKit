@@ -65,7 +65,7 @@ final class FeedbackSecureRedirectDelegate: NSObject, URLSessionTaskDelegate, @u
         guard let redirectURL = request.url,
               let originalURL = originalRequest?.url,
               redirectURL.isFeedbackSecureTransportURL,
-              redirectURL.feedbackTransportOrigin == originalURL.feedbackTransportOrigin
+              redirectURL.hasSameFeedbackTransportOrigin(as: originalURL)
         else { return nil }
         return request
     }
@@ -81,12 +81,6 @@ final class FeedbackSecureRedirectDelegate: NSObject, URLSessionTaskDelegate, @u
     }
 }
 
-private struct FeedbackTransportOrigin: Equatable {
-    let scheme: String
-    let host: String
-    let port: Int
-}
-
 extension URL {
     var isFeedbackSecureTransportURL: Bool {
         guard user == nil,
@@ -99,17 +93,26 @@ extension URL {
         return host == "localhost" || host == "127.0.0.1" || host == "::1"
     }
 
-    fileprivate var feedbackTransportOrigin: FeedbackTransportOrigin? {
+    fileprivate func hasSameFeedbackTransportOrigin(as other: URL) -> Bool {
         guard let scheme = scheme?.lowercased(),
-              let host = host?.lowercased()
+              let host = host?.lowercased(),
+              let port = feedbackTransportEffectivePort,
+              let otherScheme = other.scheme?.lowercased(),
+              let otherHost = other.host?.lowercased(),
+              let otherPort = other.feedbackTransportEffectivePort
+        else { return false }
+        return scheme == otherScheme && host == otherHost && port == otherPort
+    }
+
+    private var feedbackTransportEffectivePort: Int? {
+        if let port { return port }
+        guard let scheme = scheme?.lowercased()
         else { return nil }
-        let defaultPort: Int
         switch scheme {
-        case "https": defaultPort = 443
-        case "http": defaultPort = 80
+        case "https": return 443
+        case "http": return 80
         default: return nil
         }
-        return FeedbackTransportOrigin(scheme: scheme, host: host, port: port ?? defaultPort)
     }
 }
 

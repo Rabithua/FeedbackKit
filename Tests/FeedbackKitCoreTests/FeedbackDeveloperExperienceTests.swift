@@ -31,6 +31,24 @@ struct FeedbackDeveloperExperienceTests {
         }
     }
 
+    @Test(
+        arguments: [
+            "http://feedback.example.com/v1/api",
+            "https:/feedback.example.com/v1/api",
+        ]
+    )
+    func configurationRejectsUnsafeAPIBaseURL(_ value: String) throws {
+        let apiBaseURL = try #require(URL(string: value))
+
+        #expect(throws: FeedbackClientError(kind: .invalidURL)) {
+            _ = try FeedbackConfiguration(
+                productKey: "pk_test",
+                keychainService: "test.feedback.visitor",
+                apiBaseURL: apiBaseURL
+            )
+        }
+    }
+
     @Test func bundleConfigurationDerivesAStableKeychainService() throws {
         let bundle = try makeBundle(info: [
             "CFBundleIdentifier": "com.example.HostApp",

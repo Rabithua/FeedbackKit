@@ -69,6 +69,9 @@ public struct FeedbackConfiguration: Sendable {
         guard keychainService.isEmpty == false else {
             throw FeedbackConfigurationError.emptyKeychainService
         }
+        guard apiBaseURL.isFeedbackSecureTransportURL else {
+            throw FeedbackClientError(kind: .invalidURL)
+        }
 
         self.productKey = productKey
         self.keychainService = keychainService
