@@ -14,20 +14,17 @@ struct FeedbackAttributionLink: View {
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: 4) {
                         Text(verbatim: "Powered by")
-                            .foregroundStyle(.secondary)
                         Text(verbatim: "FeedKit.cn")
                             .bold()
-                            .foregroundStyle(brandColor)
                     }
                     VStack(spacing: 0) {
                         Text(verbatim: "Powered by")
-                            .foregroundStyle(.secondary)
                         Text(verbatim: "FeedKit.cn")
                             .bold()
-                            .foregroundStyle(brandColor)
                     }
                 }
                 .font(.footnote)
+                .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 8)
                 .frame(minHeight: 44)
@@ -44,9 +41,5 @@ struct FeedbackAttributionLink: View {
 
     private func openWebsite() {
         openURL(Self.destination)
-    }
-
-    private var brandColor: Color {
-        Color("FeedbackKitBrandBlue", bundle: .module)
     }
 }
