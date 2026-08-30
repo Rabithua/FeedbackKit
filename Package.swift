@@ -11,6 +11,7 @@ let package = Package(
     products: [
         .library(name: "FeedbackKitCore", targets: ["FeedbackKitCore"]),
         .library(name: "FeedbackKitDiagnostics", targets: ["FeedbackKitDiagnostics"]),
+        .library(name: "FeedbackKitJourney", targets: ["FeedbackKitJourney"]),
         .library(name: "FeedbackKitUI", targets: ["FeedbackKitUI"]),
         .library(name: "FeedbackKitTestSupport", targets: ["FeedbackKitTestSupport"]),
     ],
@@ -20,6 +21,10 @@ let package = Package(
             name: "FeedbackKitDiagnostics",
             dependencies: ["FeedbackKitCore"],
             resources: [.process("Resources")]
+        ),
+        .target(
+            name: "FeedbackKitJourney",
+            dependencies: ["FeedbackKitCore"]
         ),
         .target(
             name: "FeedbackKitUI",
@@ -32,6 +37,10 @@ let package = Package(
         ),
         .testTarget(name: "FeedbackKitCoreTests", dependencies: ["FeedbackKitCore", "FeedbackKitTestSupport"]),
         .testTarget(name: "FeedbackKitDiagnosticsTests", dependencies: ["FeedbackKitDiagnostics"]),
+        .testTarget(
+            name: "FeedbackKitJourneyTests",
+            dependencies: ["FeedbackKitJourney", "FeedbackKitCore", "FeedbackKitTestSupport"]
+        ),
         .testTarget(
             name: "FeedbackKitUITests",
             dependencies: ["FeedbackKitUI", "FeedbackKitCore", "FeedbackKitTestSupport"]
