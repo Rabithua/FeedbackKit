@@ -9,6 +9,26 @@ extension UserJourneySessionKind {
     fileprivate static let onboarding = UserJourneySessionKind(rawValue: "onboarding")
 }
 
+private final class FilteringSession: UserJourneySession, @unchecked Sendable {
+    override func prepare(_ event: UserJourneyEvent) -> UserJourneyEvent? {
+        guard event.name != "cart.polled" else { return nil }
+        var payload = event.payload
+        payload["source"] = .string(kind.rawValue)
+        return UserJourneyEvent(
+            target: event.target,
+            name: event.name,
+            payload: payload,
+            occurredAt: event.occurredAt
+        )
+    }
+}
+
+private final class ClosingSession: UserJourneySession, @unchecked Sendable {
+    override func sessionDidEnd(at date: Date) {
+        append(UserJourneyEvent(target: .all, name: "checkout.closed", occurredAt: date))
+    }
+}
+
 private actor StubCredentialStore: FeedbackVisitorCredentialProviding {
     func credential(for productKey: String) async throws -> String { "visitor-credential" }
     func deleteCredential(for productKey: String) async throws {}
@@ -130,6 +150,30 @@ struct UserJourneyManagerTests {
         await manager.record(UserJourneyEvent(target: .all, name: "third"))
 
         #expect(session.events.map(\.name) == ["first", "second", "third"])
+    }
+
+    @Test func recordRoutesThroughTheSessionsOwnOverrides() async throws {
+        let filtered = FilteringSession(kind: .checkout)
+        let plain = UserJourneySession(kind: .checkout)
+        let (manager, _) = try makeManager(withSessions: [filtered, plain])
+
+        await manager.record(UserJourneyEvent(target: .all, name: "cart.opened"))
+        await manager.record(UserJourneyEvent(target: .all, name: "cart.polled"))
+
+        #expect(filtered.events.map(\.name) == ["cart.opened"])
+        #expect(filtered.events.first?.payload["source"] == .string("checkout"))
+        #expect(plain.events.map(\.name) == ["cart.opened", "cart.polled"])
+    }
+
+    @Test func unregisterLetsTheSessionRecordAClosingEvent() async throws {
+        let session = ClosingSession(kind: .checkout)
+        let (manager, _) = try makeManager(withSessions: [session])
+
+        await manager.record(UserJourneyEvent(target: .all, name: "cart.opened"))
+        await manager.unregister(session)
+
+        #expect(session.events.map(\.name) == ["cart.opened", "checkout.closed"])
+        #expect(await manager.pendingSessions.map(\.id) == [session.id])
     }
 
     @Test func recordDropsEventsViolatingTheLimits() async throws {

@@ -44,33 +44,28 @@ public actor UserJourneyManager: Sendable {
     /// Ends the session and moves it to the pending-submission queue.
     public func unregister(_ session: UserJourneySession, endedAt: Date = .now) {
         lock.withLock {
-            session.markEnded(at: endedAt)
             _sessions.removeAll { $0.id == session.id }
             if _pendingSubmission.contains(where: { $0.id == session.id }) == false {
                 _pendingSubmission.append(session)
             }
         }
+        // Outside the lock: the session may run subclass code while ending.
+        session.markEnded(at: endedAt)
     }
 
     // MARK: - Event recording
 
-    /// Fans the event into every matching active session.
+    /// Offers the event to every active session; each one decides whether it
+    /// belongs and how to store it (see ``UserJourneySession/append(_:)``).
     /// Returns `false` when the event violates ``UserJourneyLimits`` and was dropped.
     @discardableResult
     public func record(_ event: UserJourneyEvent) -> Bool {
         guard UserJourneyEventValidation.isSubmittable(event) else { return false }
-        lock.withLock {
-            for session in _sessions {
-                guard session.events.count < UserJourneyLimits.maxEventsPerSession else { continue }
-                switch event.target {
-                case .all:
-                    session.append(event)
-                case .kinds(let kinds):
-                    if kinds.contains(session.kind) {
-                        session.append(event)
-                    }
-                }
-            }
+        // Sessions guard their own state, so their subclass hooks run outside
+        // this lock and cannot deadlock against it.
+        let sessions = lock.withLock { _sessions }
+        for session in sessions {
+            session.append(event)
         }
         return true
     }
@@ -80,7 +75,7 @@ public actor UserJourneyManager: Sendable {
     /// Submits one ended session to `POST /v1/api/client/journey/sessions`.
     /// Replays are safe: the server dedupes on the session's client-generated UUID.
     public func submit(_ session: UserJourneySession) async throws {
-        let snapshot = lock.withLock { (events: session.events, endedAt: session.endedAt) }
+        let snapshot = session.snapshot()
         guard let endedAt = snapshot.endedAt else { throw UserJourneyError.sessionStillActive }
         let kind = session.kind.rawValue
         guard kind == UserJourneyTaxonomy.defaultKindKey
