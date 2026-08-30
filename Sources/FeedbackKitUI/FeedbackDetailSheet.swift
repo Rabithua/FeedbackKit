@@ -90,8 +90,8 @@ struct FeedbackDetailSheet: View {
                         .font(.title3)
                 }
 
-                Text(detail.body)
-                    .textSelection(.enabled)
+                FeedbackSelectableText(detail.body)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
                 if detail.attachments.isEmpty == false {
                     Text(localization.text("feedbackkit.attachments"))
@@ -109,8 +109,8 @@ struct FeedbackDetailSheet: View {
 
                 ForEach(detail.messages.sorted { $0.createdAt < $1.createdAt }) { message in
                     Divider()
-                    Text(message.body)
-                        .textSelection(.enabled)
+                    FeedbackSelectableText(message.body)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     HStack {
                         Text(
                             message.actor == "visitor"

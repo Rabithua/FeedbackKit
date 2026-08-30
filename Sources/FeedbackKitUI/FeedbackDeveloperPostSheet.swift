@@ -38,8 +38,8 @@ struct FeedbackDeveloperPostSheet: View {
                         VStack(alignment: .leading, spacing: 16) {
                             Text(post.title)
                                 .font(.title2.bold())
-                            Text(post.body)
-                                .textSelection(.enabled)
+                            FeedbackSelectableText(post.body)
+                                .frame(maxWidth: .infinity, alignment: .leading)
 
                             if let action = post.action {
                                 Button {
