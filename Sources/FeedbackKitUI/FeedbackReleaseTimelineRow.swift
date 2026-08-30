@@ -22,14 +22,10 @@ struct FeedbackReleaseTimelineRow: View {
             }
 
             if release.body.isEmpty == false {
-                Text(verbatim: release.body)
-                    .font(.body)
-                    .foregroundStyle(.secondary)
+                FeedbackSelectableText(release.body, style: .secondaryBody)
                     .multilineTextAlignment(.leading)
-                    .lineLimit(nil)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .layoutPriority(1)
-                    .textSelection(.enabled)
             }
 
             ForEach(release.items) { item in
@@ -51,6 +47,10 @@ struct FeedbackReleaseTimelineRow: View {
                 .frame(maxWidth: .infinity, alignment: .trailing)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(
+            children: FeedbackTextLinkDetector.links(in: release.body).isEmpty
+                ? .combine
+                : .contain
+        )
     }
 }
