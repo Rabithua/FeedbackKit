@@ -78,6 +78,15 @@ struct UserJourneySessionTests {
         #expect(session.endedAt == end)
     }
 
+    @Test func appendRejectsEventsAfterTheSessionEnds() {
+        let session = UserJourneySession(kind: .checkout)
+
+        session.markEnded(at: Date(timeIntervalSince1970: 2_000))
+
+        #expect(session.append(UserJourneyEvent(target: .all, name: "too.late")) == false)
+        #expect(session.events.isEmpty)
+    }
+
     @Test func appendReportsWhetherTheEventWasStored() {
         let session = UserJourneySession(kind: .checkout)
 
@@ -187,6 +196,7 @@ struct UserJourneySessionSubclassTests {
         #expect(session.endCount == 1)
         #expect(session.endedAt == end)
         #expect(session.events.map(\.name) == ["checkout.closed"])
+        #expect(session.append(UserJourneyEvent(target: .all, name: "too.late")) == false)
     }
 
     @Test func defaultFactoryPreservesTheSubclassType() {

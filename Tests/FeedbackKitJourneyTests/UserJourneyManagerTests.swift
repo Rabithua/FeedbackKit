@@ -85,6 +85,16 @@ struct UserJourneyManagerTests {
         #expect(await manager.pendingSessions.isEmpty)
     }
 
+    @Test func initDropsDuplicateAndEndedSessions() async throws {
+        let active = UserJourneySession(kind: .checkout)
+        let ended = UserJourneySession(kind: .onboarding)
+        ended.markEnded(at: .now)
+
+        let (manager, _) = try makeManager(withSessions: [active, active, ended])
+
+        #expect(await manager.activeSessions.map(\.id) == [active.id])
+    }
+
     @Test func withDefaultSessionRegistersASingleDefaultKindSession() async throws {
         let transport = FeedbackFixtureTransport { _ in (500, [:], Data()) }
         let client = FeedbackClient(
@@ -113,6 +123,21 @@ struct UserJourneyManagerTests {
         #expect(recorded == true)
         #expect(await manager.activeSessions.map(\.id) == [session.id])
         #expect(session.events.map(\.name) == ["step"])
+    }
+
+    @Test func registerIsIdempotentAndRejectsEndedSessions() async throws {
+        let (manager, _) = try makeManager()
+        let session = UserJourneySession(kind: .checkout)
+
+        #expect(await manager.register(session))
+        #expect(await manager.register(session) == false)
+        await manager.record(UserJourneyEvent(target: .all, name: "step"))
+        #expect(session.events.map(\.name) == ["step"])
+
+        #expect(await manager.unregister(session))
+        #expect(await manager.register(session) == false)
+        #expect(await manager.unregister(session) == false)
+        #expect(await manager.pendingSessions.map(\.id) == [session.id])
     }
 
     @Test func recordDeliversToAllSessionsForTheAllTarget() async throws {
@@ -293,12 +318,50 @@ struct UserJourneyManagerTests {
             try await manager.submit(session)
         }
         #expect(await transport.requests.isEmpty)
+        #expect(await manager.pendingSessions.isEmpty)
+        #expect(await manager.rejectedSessions.map(\.id) == [session.id])
+    }
+
+    @Test(arguments: [-1.0, UserJourneyLimits.maxSessionDuration + 1])
+    func submitRejectsAndIsolatesInvalidSessionWindows(duration: TimeInterval) async throws {
+        let start = Date(timeIntervalSince1970: 1_000)
+        let session = UserJourneySession(kind: .checkout, startedAt: start)
+        let (manager, transport) = try makeManager(withSessions: [session])
+        await manager.unregister(session, endedAt: start.addingTimeInterval(duration))
+
+        await #expect(throws: UserJourneyError.invalidSessionWindow) {
+            try await manager.submit(session)
+        }
+
+        #expect(await transport.requests.isEmpty)
+        #expect(await manager.pendingSessions.isEmpty)
+        #expect(await manager.rejectedSessions.map(\.id) == [session.id])
+        #expect(await manager.discardRejected(session))
+        #expect(await manager.rejectedSessions.isEmpty)
+    }
+
+    @Test func submitAcceptsTheMaximumSessionDuration() async throws {
+        let start = Date(timeIntervalSince1970: 1_000)
+        let session = UserJourneySession(kind: .checkout, startedAt: start)
+        let (manager, transport) = try makeManager(withSessions: [session]) { _ in
+            (201, [:], receiptJSON(clientSessionId: session.id))
+        }
+        await manager.unregister(
+            session,
+            endedAt: start.addingTimeInterval(UserJourneyLimits.maxSessionDuration)
+        )
+
+        try await manager.submit(session)
+
+        #expect(await transport.requests.count == 1)
+        #expect(await manager.pendingSessions.isEmpty)
     }
 
     @Test func submitSendsTheWireFormatAndClearsPending() async throws {
+        let start = Date(timeIntervalSince1970: 1_000)
         let session = UserJourneySession(
             kind: .checkout,
-            startedAt: Date(timeIntervalSince1970: 1_000)
+            startedAt: start
         )
         let (manager, transport) = try makeManager(withSessions: [session]) { request in
             #expect(request.url?.absoluteString == "https://api.feedkit.cn/v1/api/client/journey/sessions")
@@ -346,7 +409,7 @@ struct UserJourneyManagerTests {
                 payload: ["tags": .array([.string("new")]), "done": .bool(false)]
             )
         )
-        await manager.unregister(session)
+        await manager.unregister(session, endedAt: start.addingTimeInterval(1))
         try await manager.submit(session)
 
         #expect(await transport.requests.count == 1)
@@ -395,6 +458,57 @@ struct UserJourneyManagerTests {
         }
 
         #expect(await manager.pendingSessions.map(\.id) == [session.id])
+        #expect(await manager.rejectedSessions.isEmpty)
+    }
+
+    @Test func submitAllIsolatesServerValidationFailuresAndContinues() async throws {
+        let rejected = UserJourneySession(kind: .checkout)
+        let accepted = UserJourneySession(kind: .onboarding)
+        let (manager, transport) = try makeManager(withSessions: [rejected, accepted]) { request in
+            let body = try JSONSerialization.jsonObject(with: request.httpBody ?? Data()) as? [String: Any]
+            let sessionJSON = body?["session"] as? [String: Any]
+            let id = try #require(UUID(uuidString: sessionJSON?["id"] as? String ?? ""))
+            if id == rejected.id {
+                return (
+                    422,
+                    [:],
+                    Data(#"{"code":"validation_failed","message":"invalid session"}"#.utf8)
+                )
+            }
+            return (201, [:], receiptJSON(clientSessionId: id))
+        }
+
+        await manager.unregister(rejected)
+        await manager.unregister(accepted)
+        await #expect(throws: FeedbackClientError.self) {
+            try await manager.submitAll()
+        }
+
+        #expect(await transport.requests.count == 2)
+        #expect(await manager.pendingSessions.isEmpty)
+        #expect(await manager.rejectedSessions.map(\.id) == [rejected.id])
+    }
+
+    @Test func submitAllIsolatesLocalValidationFailuresAndContinues() async throws {
+        let start = Date(timeIntervalSince1970: 1_000)
+        let rejected = UserJourneySession(kind: .checkout, startedAt: start)
+        let accepted = UserJourneySession(kind: .onboarding, startedAt: start)
+        let (manager, transport) = try makeManager(withSessions: [rejected, accepted]) { _ in
+            (201, [:], receiptJSON(clientSessionId: accepted.id))
+        }
+
+        await manager.unregister(
+            rejected,
+            endedAt: start.addingTimeInterval(UserJourneyLimits.maxSessionDuration + 1)
+        )
+        await manager.unregister(accepted, endedAt: start.addingTimeInterval(1))
+        await #expect(throws: UserJourneyError.invalidSessionWindow) {
+            try await manager.submitAll()
+        }
+
+        #expect(await transport.requests.count == 1)
+        #expect(await manager.pendingSessions.isEmpty)
+        #expect(await manager.rejectedSessions.map(\.id) == [rejected.id])
     }
 
     @Test func submitAllDrainsEveryPendingSession() async throws {

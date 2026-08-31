@@ -14,13 +14,34 @@ open class UserJourneySession: Identifiable, @unchecked Sendable {
 
     private let lock = NSLock()
     private var _events: [UserJourneyEvent] = []
-    private var _endedAt: Date?
+    private var state: State = .active
+
+    private enum State {
+        case active
+        case ending(at: Date, on: ObjectIdentifier)
+        case ended(at: Date)
+    }
 
     /// The events stored so far, in the order they were recorded.
     public var events: [UserJourneyEvent] { lock.withLock { _events } }
 
     /// When the session ended, or `nil` while it is still recording.
-    public var endedAt: Date? { lock.withLock { _endedAt } }
+    public var endedAt: Date? {
+        lock.withLock {
+            switch state {
+            case .active: nil
+            case .ending(let date, _), .ended(let date): date
+            }
+        }
+    }
+
+    /// Whether the session can still be registered to receive events.
+    internal var isActive: Bool {
+        lock.withLock {
+            guard case .active = state else { return false }
+            return true
+        }
+    }
 
     public required init(
         kind: UserJourneySessionKind,
@@ -88,19 +109,23 @@ open class UserJourneySession: Identifiable, @unchecked Sendable {
     ///
     /// Returns `false` when the session ignored the event: it was not accepted,
     /// ``prepare(_:)`` dropped it, the prepared event violates
-    /// ``UserJourneyLimits``, or the session is already holding
+    /// ``UserJourneyLimits``, the session has ended, or the session is already holding
     /// ``UserJourneyLimits/maxEventsPerSession`` events.
     ///
     /// ``UserJourneyManager`` serializes its calls to this method; call it
     /// directly only from a context that is itself serialized.
     @discardableResult
     public func append(_ event: UserJourneyEvent) -> Bool {
-        guard accepts(event.target),
+        let currentThread = ObjectIdentifier(Thread.current)
+        guard lock.withLock({ canAppend(from: currentThread) }),
+              accepts(event.target),
               let prepared = prepare(event),
               UserJourneyEventValidation.isSubmittable(prepared)
         else { return false }
         return lock.withLock {
-            guard _events.count < UserJourneyLimits.maxEventsPerSession else { return false }
+            guard canAppend(from: currentThread),
+                  _events.count < UserJourneyLimits.maxEventsPerSession
+            else { return false }
             _events.append(prepared)
             return true
         }
@@ -108,17 +133,43 @@ open class UserJourneySession: Identifiable, @unchecked Sendable {
 
     /// Ends the session, notifying ``sessionDidEnd(at:)`` on the first call only.
     internal func markEnded(at date: Date) {
+        let currentThread = ObjectIdentifier(Thread.current)
         let didEnd = lock.withLock {
-            guard _endedAt == nil else { return false }
-            _endedAt = date
+            guard case .active = state else { return false }
+            state = .ending(at: date, on: currentThread)
             return true
         }
         guard didEnd else { return }
         sessionDidEnd(at: date)
+        lock.withLock {
+            guard case .ending(let endingDate, let thread) = state,
+                  thread == currentThread
+            else { return }
+            state = .ended(at: endingDate)
+        }
     }
 
     /// Consistent snapshot of the events and the end date, for submission.
     internal func snapshot() -> (events: [UserJourneyEvent], endedAt: Date?) {
-        lock.withLock { (_events, _endedAt) }
+        lock.withLock {
+            let endedAt: Date?
+            switch state {
+            case .active: endedAt = nil
+            case .ending(let date, _), .ended(let date): endedAt = date
+            }
+            return (_events, endedAt)
+        }
+    }
+
+    /// Closing events are accepted only from the synchronous end hook.
+    private func canAppend(from currentThread: ObjectIdentifier) -> Bool {
+        switch state {
+        case .active:
+            true
+        case .ending(_, let endingThread):
+            endingThread == currentThread
+        case .ended:
+            false
+        }
     }
 }

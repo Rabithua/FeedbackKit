@@ -25,8 +25,11 @@ public struct UserJourneyObjectHash: Hashable, Sendable, CustomStringConvertible
     /// Adopts a digest computed earlier, or fails when it is not 64-char hex.
     public init?(hexDigest: String) {
         let normalized = hexDigest.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard normalized.count == 64,
-              normalized.allSatisfy({ $0.isHexDigit && $0.isUppercase == false })
+        guard normalized.utf8.count == 64,
+              normalized.utf8.allSatisfy({ byte in
+                  (UInt8(ascii: "0")...UInt8(ascii: "9")).contains(byte)
+                      || (UInt8(ascii: "a")...UInt8(ascii: "f")).contains(byte)
+              })
         else { return nil }
         self.hexDigest = normalized
     }

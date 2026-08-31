@@ -25,6 +25,8 @@ struct UserJourneyObjectHashTests {
         #expect(UserJourneyObjectHash(hexDigest: "chat-1138") == nil)
         #expect(UserJourneyObjectHash(hexDigest: String(Self.chatDigest.dropLast())) == nil)
         #expect(UserJourneyObjectHash(hexDigest: String(repeating: "z", count: 64)) == nil)
+        #expect(UserJourneyObjectHash(hexDigest: String(repeating: "０", count: 64)) == nil)
+        #expect(UserJourneyObjectHash(hexDigest: String(repeating: "ａ", count: 64)) == nil)
     }
 
     @Test func codesAsItsBareDigest() throws {

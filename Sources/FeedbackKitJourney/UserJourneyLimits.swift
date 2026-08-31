@@ -3,6 +3,8 @@ import Foundation
 /// Client-side mirrors of the server's journey validation bounds; events that
 /// violate them are dropped at record time instead of failing at submit time.
 public enum UserJourneyLimits {
+    /// The server rejects sessions spanning more than seven days.
+    public static let maxSessionDuration: TimeInterval = 7 * 24 * 60 * 60
     public static let maxEventsPerSession = 500
     public static let maxPayloadBytes = 4096
     public static let maxPayloadDepth = 4
