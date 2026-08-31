@@ -19,6 +19,26 @@ struct UserJourneySessionTests {
         #expect(session.events.isEmpty)
     }
 
+    @Test func initHashesTheObjectIdentifierAndTreatsBlanksAsAbsent() {
+        let digest = "8043bb21e963228d16316cf69fbdfc095633085991d0917246166227800e5aa2"
+
+        #expect(UserJourneySession(kind: .checkout).objectHash == nil)
+        #expect(UserJourneySession(kind: .checkout, objectID: "chat-1138").objectHash == digest)
+        #expect(UserJourneySession(kind: .checkout, objectID: "  chat-1138\n").objectHash == digest)
+        #expect(UserJourneySession(kind: .checkout, objectID: "   ").objectHash == nil)
+    }
+
+    @Test func equalIdentifiersShareADigestAndDifferentOnesDoNot() {
+        let first = UserJourneySession(kind: .checkout, objectID: "chat-1138")
+        let second = UserJourneySession(kind: .onboarding, objectID: "chat-1138")
+        let other = UserJourneySession(kind: .checkout, objectID: "chat-1139")
+
+        #expect(first.objectHash == second.objectHash)
+        #expect(first.objectHash != other.objectHash)
+        #expect(UserJourneySession.objectHash(for: "chat-1138") == first.objectHash)
+        #expect(UserJourneySession.objectHash(for: nil) == nil)
+    }
+
     @Test func sessionsWithTheSameKindHaveDistinctIdentifiers() {
         let first = UserJourneySession(kind: .checkout)
         let second = UserJourneySession(kind: .checkout)
@@ -33,6 +53,11 @@ struct UserJourneySessionTests {
         #expect(first.kind == .default)
         #expect(second.kind == .default)
         #expect(first.id != second.id)
+        #expect(first.objectHash == nil)
+        #expect(
+            UserJourneySession.default(objectID: "chat-1138").objectHash
+                == UserJourneySession.objectHash(for: "chat-1138")
+        )
     }
 
     @Test func appendStoresEventsInOrder() {

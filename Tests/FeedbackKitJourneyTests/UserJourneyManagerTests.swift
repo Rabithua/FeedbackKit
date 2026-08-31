@@ -291,6 +291,7 @@ struct UserJourneyManagerTests {
             let sessionJSON = body?["session"] as? [String: Any]
             #expect(sessionJSON?["id"] as? String == session.id.uuidString.lowercased())
             #expect(sessionJSON?["kind"] as? String == "checkout")
+            #expect(sessionJSON?.keys.contains("objectHash") == false)
             #expect((sessionJSON?["startedAt"] as? String)?.contains(".") == true)
             let context = sessionJSON?["clientContext"] as? [String: Any]
             #expect(context?["appVersion"] as? String == "2.4.0")
@@ -321,6 +322,24 @@ struct UserJourneyManagerTests {
 
         #expect(await transport.requests.count == 1)
         #expect(await manager.pendingSessions.isEmpty)
+    }
+
+    @Test func submitSendsOnlyTheDigestOfTheTracedObject() async throws {
+        let session = UserJourneySession(kind: .checkout, objectID: "chat-1138")
+        let (manager, transport) = try makeManager(withSessions: [session]) { request in
+            let payload = String(decoding: request.httpBody ?? Data(), as: UTF8.self)
+            #expect(payload.contains("chat-1138") == false)
+
+            let body = try JSONSerialization.jsonObject(with: request.httpBody ?? Data()) as? [String: Any]
+            let sessionJSON = body?["session"] as? [String: Any]
+            #expect(sessionJSON?["objectHash"] as? String == "8043bb21e963228d16316cf69fbdfc095633085991d0917246166227800e5aa2")
+            return (201, [:], receiptJSON(clientSessionId: session.id))
+        }
+
+        await manager.unregister(session)
+        try await manager.submit(session)
+
+        #expect(await transport.requests.count == 1)
     }
 
     @Test func replayedSubmissionCountsAsSuccess() async throws {

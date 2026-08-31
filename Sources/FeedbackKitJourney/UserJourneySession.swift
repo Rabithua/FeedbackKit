@@ -1,8 +1,12 @@
+import CryptoKit
 import Foundation
 
 open class UserJourneySession: Identifiable, @unchecked Sendable {
     public let id: UUID
     public let kind: UserJourneySessionKind
+
+    public let objectHash: String?
+
     public let startedAt: Date
 
     private let lock = NSLock()
@@ -15,15 +19,36 @@ open class UserJourneySession: Identifiable, @unchecked Sendable {
     /// When the session ended, or `nil` while it is still recording.
     public var endedAt: Date? { lock.withLock { _endedAt } }
 
-    public required init(kind: UserJourneySessionKind, startedAt: Date = .now) {
+    /// Creates a session tracing `objectID`, which is hashed on the way in.
+    public required init(
+        kind: UserJourneySessionKind,
+        objectID: String? = nil,
+        startedAt: Date = .now
+    ) {
         self.id = UUID()
         self.kind = kind
+        self.objectHash = UserJourneySession.objectHash(for: objectID)
         self.startedAt = startedAt
     }
 
     /// Returns a new session of the receiving type with the sentinel default kind.
-    public static func `default`() -> Self {
-        Self(kind: .default)
+    public static func `default`(objectID: String? = nil) -> Self {
+        Self(kind: .default, objectID: objectID)
+    }
+
+    /// The digest a session records for `objectID`, or `nil` when it is absent
+    /// or blank.
+    ///
+    /// Hand this to the journey CSV export's `objectHash` filter to pull back
+    /// every session recorded against that identifier; the raw value never has
+    /// to leave the device.
+    public static func objectHash(for objectID: String?) -> String? {
+        guard let trimmed = objectID?.trimmingCharacters(in: .whitespacesAndNewlines),
+              trimmed.isEmpty == false
+        else { return nil }
+        return SHA256.hash(data: Data(trimmed.utf8))
+            .map { String(format: "%02x", $0) }
+            .joined()
     }
 
     // MARK: - Extension points

@@ -12,6 +12,8 @@ struct UserJourneySubmissionBody: Encodable {
     struct Session: Encodable {
         let id: String
         let kind: String
+        /// Omitted from the payload when the session traces no object.
+        let objectHash: String?
         let startedAt: String
         let endedAt: String
         let clientContext: FeedbackClientContext
@@ -38,6 +40,7 @@ struct UserJourneySubmissionBody: Encodable {
         self.session = Session(
             id: session.id.uuidString.lowercased(),
             kind: session.kind.rawValue,
+            objectHash: session.objectHash,
             startedAt: Self.timestamp(session.startedAt),
             endedAt: Self.timestamp(endedAt),
             clientContext: clientContext,
