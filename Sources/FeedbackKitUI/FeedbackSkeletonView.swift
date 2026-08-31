@@ -12,6 +12,11 @@ struct FeedbackSkeletonView: View {
     let layout: Layout
     let style: FeedbackStyle
 
+    init(layout: Layout, style: FeedbackStyle) {
+        self.layout = layout
+        self.style = style
+    }
+
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.feedbackLocalization) private var localization
     @State private var isDimmed = false

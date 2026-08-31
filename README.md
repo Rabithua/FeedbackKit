@@ -6,6 +6,7 @@ FeedbackKit is an iOS and iPadOS 18+ Swift package for integrating a complete fe
 
 - `FeedbackKitCore`: FeedbackServer DTOs, client transport, visitor credentials, drafts, uploads, voting, and inbox APIs.
 - `FeedbackKitDiagnostics`: structured logs, breadcrumbs, MetricKit crash summaries, redaction, retention, and private diagnostic snapshots.
+- `FeedbackKitJourney`: opt-in user journey sessions and events, recorded in memory and submitted on session end for product analytics.
 - `FeedbackKitUI`: the localized SwiftUI feedback center.
 - `FeedbackKitTestSupport`: fixture transport, `URLProtocol`, fixed clocks, and metadata providers.
 
