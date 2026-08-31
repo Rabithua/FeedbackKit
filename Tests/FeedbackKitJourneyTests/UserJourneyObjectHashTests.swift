@@ -40,3 +40,29 @@ struct UserJourneyObjectHashTests {
         }
     }
 }
+
+/// Internal view of tracing: the public API takes identifiers, and these are
+/// the digests they turn into.
+struct UserJourneyObjectTracingTests {
+    @Test func identifiersAreHashedOnTheWayIntoEventsAndSessions() {
+        let digest = UserJourneyObjectHash("message-42")
+
+        #expect(UserJourneyEvent(target: .all, name: "cart.opened").objectHash == nil)
+        #expect(
+            UserJourneyEvent(target: .all, name: "message.sent", objectID: "message-42")
+                .objectHash == digest
+        )
+        #expect(UserJourneySession(kind: .default).objectHash == nil)
+        #expect(UserJourneySession(kind: .default, objectID: "message-42").objectHash == digest)
+        #expect(UserJourneySession(kind: .default, objectID: "  ").objectHash == nil)
+    }
+
+    /// The rewrite path a `prepare` override uses cannot drop the traced
+    /// object, which is the reason it exists.
+    @Test func replacingCarriesTheDigestAcrossARewrite() {
+        let event = UserJourneyEvent(target: .all, name: "message.sent", objectID: "message-42")
+
+        #expect(event.replacing(name: "message.redacted").objectHash == event.objectHash)
+        #expect(event.replacing(payload: ["a": .int(1)]).objectHash == event.objectHash)
+    }
+}

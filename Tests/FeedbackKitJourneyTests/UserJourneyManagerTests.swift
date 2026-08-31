@@ -14,12 +14,7 @@ private final class FilteringSession: UserJourneySession, @unchecked Sendable {
         guard event.name != "cart.polled" else { return nil }
         var payload = event.payload
         payload["source"] = .string(kind.rawValue)
-        return UserJourneyEvent(
-            target: event.target,
-            name: event.name,
-            payload: payload,
-            occurredAt: event.occurredAt
-        )
+        return event.replacing(payload: payload)
     }
 }
 
