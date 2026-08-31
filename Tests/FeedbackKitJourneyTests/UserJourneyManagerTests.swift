@@ -253,6 +253,27 @@ struct UserJourneyManagerTests {
         #expect(session.events.count == eventCount)
     }
 
+    @Test func recordRoutesByTracedObjectAcrossSessions() async throws {
+        let chat = UserJourneySession(kind: .checkout, objectID: "chat-1138")
+        let otherChat = UserJourneySession(kind: .checkout, objectID: "chat-9999")
+        let untraced = UserJourneySession(kind: .checkout)
+        let (manager, _) = try makeManager(withSessions: [chat, otherChat, untraced])
+
+        await manager.record(
+            UserJourneyEvent(target: .objectID("chat-1138"), name: "message.sent")
+        )
+        await manager.record(
+            UserJourneyEvent(
+                target: .allOf(.kinds(.checkout), .objectID("chat-9999")),
+                name: "cart.opened"
+            )
+        )
+
+        #expect(chat.events.map(\.name) == ["message.sent"])
+        #expect(otherChat.events.map(\.name) == ["cart.opened"])
+        #expect(untraced.events.isEmpty)
+    }
+
     @Test func submitRequiresAnEndedSession() async throws {
         let session = UserJourneySession(kind: .checkout)
         let (manager, transport) = try makeManager(withSessions: [session])
@@ -286,6 +307,11 @@ struct UserJourneyManagerTests {
             #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer visitor-credential")
             #expect(request.value(forHTTPHeaderField: "Content-Type") == "application/json")
 
+            #expect(
+                String(decoding: request.httpBody ?? Data(), as: UTF8.self).contains("message-42")
+                    == false
+            )
+
             let body = try JSONSerialization.jsonObject(with: request.httpBody ?? Data()) as? [String: Any]
             #expect(body?["schemaVersion"] as? Int == 1)
             let sessionJSON = body?["session"] as? [String: Any]
@@ -298,6 +324,8 @@ struct UserJourneyManagerTests {
             let events = sessionJSON?["events"] as? [[String: Any]]
             #expect(events?.count == 2)
             #expect(events?.first?["sequence"] as? Int == 0)
+            #expect(events?.first?.keys.contains("objectHash") == false)
+            #expect(events?.last?["objectHash"] as? String == "a0f23dc222845944b403379be712d8f49c0071bf94fa3cfbfe53dfa7bf0d154c")
             #expect(events?.first?["name"] as? String == "cart.opened")
             #expect((events?.first?["payload"] as? [String: Any])?["itemCount"] as? Int == 3)
             let nested = (events?.last?["payload"] as? [String: Any])?["tags"] as? [Any]
@@ -314,6 +342,7 @@ struct UserJourneyManagerTests {
             UserJourneyEvent(
                 target: .all,
                 name: "payment.selected",
+                objectID: "message-42",
                 payload: ["tags": .array([.string("new")]), "done": .bool(false)]
             )
         )

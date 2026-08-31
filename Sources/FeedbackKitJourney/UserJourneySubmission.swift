@@ -13,7 +13,7 @@ struct UserJourneySubmissionBody: Encodable {
         let id: String
         let kind: String
         /// Omitted from the payload when the session traces no object.
-        let objectHash: String?
+        let objectHash: UserJourneyObjectHash?
         let startedAt: String
         let endedAt: String
         let clientContext: FeedbackClientContext
@@ -23,6 +23,8 @@ struct UserJourneySubmissionBody: Encodable {
     struct Event: Encodable {
         let sequence: Int
         let name: String
+        /// Omitted from the payload when the event traces no object of its own.
+        let objectHash: UserJourneyObjectHash?
         let occurredAt: String
         let payload: [String: UserJourneyPayloadValue]
     }
@@ -48,6 +50,7 @@ struct UserJourneySubmissionBody: Encodable {
                 Event(
                     sequence: index,
                     name: event.name,
+                    objectHash: event.objectHash,
                     occurredAt: Self.timestamp(event.occurredAt),
                     payload: event.payload
                 )

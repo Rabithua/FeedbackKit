@@ -3,6 +3,18 @@ import Foundation
 import Testing
 
 struct UserJourneyEventTests {
+    @Test func eventsCanTraceAnObjectOfTheirOwn() {
+        let plain = UserJourneyEvent(target: .all, name: "cart.opened")
+        let traced = UserJourneyEvent(target: .all, name: "message.sent", objectID: "message-42")
+
+        #expect(plain.objectHash == nil)
+        #expect(traced.objectHash == UserJourneyObjectHash("message-42"))
+        #expect(
+            UserJourneyEvent(target: .all, name: "message.sent", objectHash: traced.objectHash)
+                .objectHash == traced.objectHash
+        )
+    }
+
     @Test func initStoresTheProvidedValues() {
         let occurredAt = Date(timeIntervalSince1970: 3_000)
         let kind = UserJourneySessionKind(rawValue: "checkout")

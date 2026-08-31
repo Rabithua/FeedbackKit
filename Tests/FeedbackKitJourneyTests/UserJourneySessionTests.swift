@@ -20,7 +20,7 @@ struct UserJourneySessionTests {
     }
 
     @Test func initHashesTheObjectIdentifierAndTreatsBlanksAsAbsent() {
-        let digest = "8043bb21e963228d16316cf69fbdfc095633085991d0917246166227800e5aa2"
+        let digest = UserJourneyObjectHash(hexDigest: "8043bb21e963228d16316cf69fbdfc095633085991d0917246166227800e5aa2")
 
         #expect(UserJourneySession(kind: .checkout).objectHash == nil)
         #expect(UserJourneySession(kind: .checkout, objectID: "chat-1138").objectHash == digest)
@@ -35,8 +35,8 @@ struct UserJourneySessionTests {
 
         #expect(first.objectHash == second.objectHash)
         #expect(first.objectHash != other.objectHash)
-        #expect(UserJourneySession.objectHash(for: "chat-1138") == first.objectHash)
-        #expect(UserJourneySession.objectHash(for: nil) == nil)
+        #expect(UserJourneyObjectHash("chat-1138") == first.objectHash)
+        #expect(UserJourneySession(kind: .checkout, objectHash: first.objectHash).objectHash == first.objectHash)
     }
 
     @Test func sessionsWithTheSameKindHaveDistinctIdentifiers() {
@@ -56,7 +56,7 @@ struct UserJourneySessionTests {
         #expect(first.objectHash == nil)
         #expect(
             UserJourneySession.default(objectID: "chat-1138").objectHash
-                == UserJourneySession.objectHash(for: "chat-1138")
+                == UserJourneyObjectHash("chat-1138")
         )
     }
 

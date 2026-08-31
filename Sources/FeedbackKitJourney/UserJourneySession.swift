@@ -1,11 +1,14 @@
-import CryptoKit
 import Foundation
 
 open class UserJourneySession: Identifiable, @unchecked Sendable {
     public let id: UUID
     public let kind: UserJourneySessionKind
 
-    public let objectHash: String?
+    /// The object this session traces, hashed, or `nil` when it traces nothing.
+    ///
+    /// Tag the session when the whole journey belongs to one object; tag single
+    /// events (``UserJourneyEvent/objectHash``) when only those steps do.
+    public let objectHash: UserJourneyObjectHash?
 
     public let startedAt: Date
 
@@ -19,53 +22,46 @@ open class UserJourneySession: Identifiable, @unchecked Sendable {
     /// When the session ended, or `nil` while it is still recording.
     public var endedAt: Date? { lock.withLock { _endedAt } }
 
-    /// Creates a session tracing `objectID`, which is hashed on the way in.
     public required init(
         kind: UserJourneySessionKind,
-        objectID: String? = nil,
+        objectHash: UserJourneyObjectHash?,
         startedAt: Date = .now
     ) {
         self.id = UUID()
         self.kind = kind
-        self.objectHash = UserJourneySession.objectHash(for: objectID)
+        self.objectHash = objectHash
         self.startedAt = startedAt
+    }
+
+    /// Creates a session tracing `objectID`, hashing it on the way in.
+    public convenience init(
+        kind: UserJourneySessionKind,
+        objectID: String? = nil,
+        startedAt: Date = .now
+    ) {
+        self.init(
+            kind: kind,
+            objectHash: objectID.flatMap { UserJourneyObjectHash($0) },
+            startedAt: startedAt
+        )
     }
 
     /// Returns a new session of the receiving type with the sentinel default kind.
     public static func `default`(objectID: String? = nil) -> Self {
-        Self(kind: .default, objectID: objectID)
-    }
-
-    /// The digest a session records for `objectID`, or `nil` when it is absent
-    /// or blank.
-    ///
-    /// Hand this to the journey CSV export's `objectHash` filter to pull back
-    /// every session recorded against that identifier; the raw value never has
-    /// to leave the device.
-    public static func objectHash(for objectID: String?) -> String? {
-        guard let trimmed = objectID?.trimmingCharacters(in: .whitespacesAndNewlines),
-              trimmed.isEmpty == false
-        else { return nil }
-        return SHA256.hash(data: Data(trimmed.utf8))
-            .map { String(format: "%02x", $0) }
-            .joined()
+        Self(kind: .default, objectHash: objectID.flatMap { UserJourneyObjectHash($0) })
     }
 
     // MARK: - Extension points
 
     /// Whether an event aimed at `target` belongs in this session.
     ///
-    /// The default routes by ``kind``: `.all` matches every session, `.kinds`
-    /// matches when the set contains this session's kind. Override to widen or
-    /// narrow routing — for example to stop accepting events after a step is
-    /// reached, or to mirror a related kind into this session.
+    /// The default asks the target (``UserJourneySessionTarget/matches(_:)``),
+    /// which routes by kind, by traced object, by a combination of those, or by
+    /// a predicate the caller supplied. Override to widen or narrow routing —
+    /// for example to stop accepting events after a step is reached, or to
+    /// mirror a related kind into this session.
     open func accepts(_ target: UserJourneySessionTarget) -> Bool {
-        switch target {
-        case .all:
-            true
-        case .kinds(let kinds):
-            kinds.contains(kind)
-        }
+        target.matches(self)
     }
 
     /// Preprocesses an accepted event immediately before it is stored.
