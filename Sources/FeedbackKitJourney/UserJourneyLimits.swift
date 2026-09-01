@@ -18,15 +18,25 @@ public enum UserJourneyLimits {
 enum UserJourneyTaxonomy {
     static let defaultKindKey = "__default__"
 
+    /// Session kinds stay a controlled vocabulary: the server normalises them
+    /// into its kind table and hands each one a kind id.
     static func isValidKey(_ value: String, maxLength: Int) -> Bool {
         guard value.isEmpty == false, value.count <= maxLength else { return false }
         return value.wholeMatch(of: #/[a-z0-9]+(?:[._-][a-z0-9]+)*/#) != nil
+    }
+
+    /// Event names are free-form labels, stored verbatim in a column of their
+    /// own. They are held only to the server's trim-and-length rule, so a name
+    /// can be neither blank nor wider than the column.
+    static func isValidEventName(_ value: String, maxLength: Int) -> Bool {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty == false && trimmed.count <= maxLength
     }
 }
 
 enum UserJourneyEventValidation {
     static func isSubmittable(_ event: UserJourneyEvent) -> Bool {
-        guard UserJourneyTaxonomy.isValidKey(
+        guard UserJourneyTaxonomy.isValidEventName(
             event.name,
             maxLength: UserJourneyLimits.maxEventNameLength
         ) else { return false }

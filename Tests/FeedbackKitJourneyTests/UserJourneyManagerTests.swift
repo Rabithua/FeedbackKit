@@ -200,7 +200,13 @@ struct UserJourneyManagerTests {
         let session = UserJourneySession(kind: .checkout)
         let (manager, _) = try makeManager(withSessions: [session])
 
-        let badName = await manager.record(UserJourneyEvent(target: .all, name: "Bad Name"))
+        let blankName = await manager.record(UserJourneyEvent(target: .all, name: "   "))
+        let overlongName = await manager.record(
+            UserJourneyEvent(
+                target: .all,
+                name: String(repeating: "x", count: UserJourneyLimits.maxEventNameLength + 1)
+            )
+        )
         let oversizedString = await manager.record(
             UserJourneyEvent(
                 target: .all,
@@ -221,11 +227,26 @@ struct UserJourneyManagerTests {
         )
         let valid = await manager.record(UserJourneyEvent(target: .all, name: "ok.event"))
 
-        #expect(badName == false)
+        #expect(blankName == false)
+        #expect(overlongName == false)
         #expect(oversizedString == false)
         #expect(tooDeep == false)
         #expect(valid == true)
         #expect(session.events.map(\.name) == ["ok.event"])
+    }
+
+    @Test func recordAcceptsFreeFormEventNames() async throws {
+        let session = UserJourneySession(kind: .checkout)
+        let (manager, _) = try makeManager(withSessions: [session])
+
+        // Event names carry no vocabulary: camelCase, spaces, punctuation and
+        // non-Latin scripts are all labels the client is free to choose.
+        let names = ["commandPaletteOpened", "Cart Polled", "结账完成", "step 3/4 — review"]
+        for name in names {
+            #expect(await manager.record(UserJourneyEvent(target: .all, name: name)) == true)
+        }
+
+        #expect(session.events.map(\.name) == names)
     }
 
     @Test func unregisterEndsTheSessionAndMovesItToPending() async throws {
@@ -523,5 +544,40 @@ struct UserJourneyManagerTests {
         #expect(await transport.requests.count == 2)
         #expect(await manager.pendingSessions.isEmpty)
         #expect(await manager.activeSessions.isEmpty)
+    }
+
+    @Test func shutdownEndsAndSubmitsActiveSessionsWithoutUnregistering() async throws {
+        let active = UserJourneySession(kind: .checkout)
+        let alreadyPending = UserJourneySession(kind: .onboarding)
+        let (manager, transport) = try makeManager(
+            withSessions: [active, alreadyPending]
+        ) { request in
+            let body = try JSONSerialization.jsonObject(with: request.httpBody ?? Data()) as? [String: Any]
+            let sessionJSON = body?["session"] as? [String: Any]
+            let id = try #require(UUID(uuidString: sessionJSON?["id"] as? String ?? ""))
+            return (201, [:], receiptJSON(clientSessionId: id))
+        }
+
+        await manager.unregister(alreadyPending)
+        try await manager.shutdown()
+
+        #expect(await transport.requests.count == 2)
+        #expect(active.endedAt != nil)
+        #expect(await manager.activeSessions.isEmpty)
+        #expect(await manager.pendingSessions.isEmpty)
+    }
+
+    @Test func shutdownRunsTheClosingHookOfEachActiveSession() async throws {
+        let closing = ClosingSession(kind: .checkout)
+        let (manager, _) = try makeManager(withSessions: [closing]) { request in
+            let body = try JSONSerialization.jsonObject(with: request.httpBody ?? Data()) as? [String: Any]
+            let sessionJSON = body?["session"] as? [String: Any]
+            let id = try #require(UUID(uuidString: sessionJSON?["id"] as? String ?? ""))
+            return (201, [:], receiptJSON(clientSessionId: id))
+        }
+
+        try await manager.shutdown()
+
+        #expect(closing.events.map(\.name) == ["checkout.closed"])
     }
 }
