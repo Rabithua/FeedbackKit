@@ -29,14 +29,26 @@ struct UserJourneySessionTargetTests {
         #expect(UserJourneySessionTarget.kinds().matches(checkoutChat) == false)
     }
 
-    @Test func objectsMatchByTracedObject() throws {
-        let chat = try #require(UserJourneyObjectHash("chat-1138"))
-        let other = try #require(UserJourneyObjectHash("chat-9999"))
+    @Test func objectIDsMatchByTracedObject() {
+        #expect(UserJourneySessionTarget.objectIDs("chat-1138").matches(checkoutChat))
+        #expect(UserJourneySessionTarget.objectIDs("chat-1138", "chat-9999").matches(checkoutOther))
+        #expect(UserJourneySessionTarget.objectIDs("chat-9999").matches(checkoutChat) == false)
+        #expect(UserJourneySessionTarget.objectIDs().matches(checkoutChat) == false)
+        // A collected list stays spellable.
+        #expect(UserJourneySessionTarget.objectIDs(["chat-1138"]).matches(checkoutChat))
+    }
 
-        #expect(UserJourneySessionTarget.objects(chat).matches(checkoutChat))
-        #expect(UserJourneySessionTarget.objects(chat, other).matches(checkoutOther))
-        #expect(UserJourneySessionTarget.objects(other).matches(checkoutChat) == false)
-        #expect(UserJourneySessionTarget.objects().matches(checkoutChat) == false)
+    /// Identifiers are compared as digests, never as the raw strings.
+    @Test func objectTargetsCompareDigests() throws {
+        let chat = try #require(UserJourneyObjectHash("chat-1138"))
+
+        #expect(checkoutChat.objectHash == chat)
+        guard case .objects(let hashes) = UserJourneySessionTarget.objectID("chat-1138").criterion
+        else {
+            Issue.record("Expected an object criterion")
+            return
+        }
+        #expect(hashes == [chat])
     }
 
     @Test func objectIDMatchesTheSessionsTracingIt() {
@@ -67,7 +79,7 @@ struct UserJourneySessionTargetTests {
         // Nesting composes: onboarding, or a checkout tracing that one chat.
         let nested = UserJourneySessionTarget.anyOf(
             .kinds(.onboarding),
-            .allOf(.kinds(.checkout), .object(UserJourneyObjectHash("chat-1138")!))
+            .allOf(.kinds(.checkout), .objectID("chat-1138"))
         )
         #expect(nested.matches(onboardingChat))
         #expect(nested.matches(checkoutChat))
@@ -86,11 +98,11 @@ struct UserJourneySessionTargetTests {
 
         #expect(UserJourneySessionTarget.allOf(criteria).matches(checkoutChat))
         #expect(UserJourneySessionTarget.allOf(criteria).matches(checkoutOther) == false)
-        guard case .allOf(let collected) = UserJourneySessionTarget.allOf(criteria),
+        guard case .allOf(let collected) = UserJourneySessionTarget.allOf(criteria).criterion,
               case .allOf(let spread) = UserJourneySessionTarget.allOf(
                   .kinds(.checkout),
                   .objectID("chat-1138")
-              )
+              ).criterion
         else {
             Issue.record("Both spellings should build the aggregate case")
             return

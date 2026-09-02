@@ -3,16 +3,31 @@ import Foundation
 import Testing
 
 struct UserJourneyEventTests {
-    @Test func eventsCanTraceAnObjectOfTheirOwn() {
-        let plain = UserJourneyEvent(target: .all, name: "cart.opened")
-        let traced = UserJourneyEvent(target: .all, name: "message.sent", objectID: "message-42")
-
-        #expect(plain.objectHash == nil)
-        #expect(traced.objectHash == UserJourneyObjectHash("message-42"))
-        #expect(
-            UserJourneyEvent(target: .all, name: "message.sent", objectHash: traced.objectHash)
-                .objectHash == traced.objectHash
+    /// The public surface names objects by the caller's own identifier; the
+    /// digest it becomes is not reachable from here.
+    @Test func replacingRewritesNameAndPayloadAndKeepsTheRest() {
+        let occurredAt = Date(timeIntervalSince1970: 3_000)
+        let event = UserJourneyEvent(
+            target: .objectID("chat-1138"),
+            name: "message.sent",
+            objectID: "message-42",
+            payload: ["length": .int(12)],
+            occurredAt: occurredAt
         )
+
+        let renamed = event.replacing(name: "message.redacted")
+        #expect(renamed.name == "message.redacted")
+        #expect(renamed.payload == event.payload)
+        #expect(renamed.occurredAt == occurredAt)
+
+        let repayloaded = event.replacing(payload: ["length": .int(0)])
+        #expect(repayloaded.name == "message.sent")
+        #expect(repayloaded.payload == ["length": .int(0)])
+
+        // The target survives a rewrite: both still route to the traced chat.
+        let chat = UserJourneySession(kind: UserJourneySessionKind(rawValue: "chat"), objectID: "chat-1138")
+        #expect(chat.accepts(renamed.target))
+        #expect(chat.accepts(repayloaded.target))
     }
 
     @Test func initStoresTheProvidedValues() {
@@ -26,11 +41,11 @@ struct UserJourneyEventTests {
             occurredAt: occurredAt
         )
 
-        guard case .kinds(let kinds) = event.target else {
-            Issue.record("Expected a kind-targeted event")
-            return
-        }
-        #expect(kinds == [kind])
+        #expect(UserJourneySession(kind: kind).accepts(event.target))
+        #expect(
+            UserJourneySession(kind: UserJourneySessionKind(rawValue: "other"))
+                .accepts(event.target) == false
+        )
         #expect(event.name == "payment.confirmed")
         #expect(event.payload == ["amount": .int(42)])
         #expect(event.occurredAt == occurredAt)

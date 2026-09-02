@@ -135,6 +135,21 @@ public actor UserJourneyManager: Sendable {
         rejectedSubmission.removeAll { $0.id == session.id }
     }
 
+    /// Ends every active session and drains the pending queue.
+    ///
+    /// The manager's lifetime is the submission boundary, so an owner holding
+    /// sessions of several kinds does not unregister each one before the final
+    /// flush. Sessions end at `endedAt` in registration order, each still
+    /// getting its synchronous ``UserJourneySession/sessionDidEnd(at:)`` hook,
+    /// and are then submitted under the ``submitAll()`` error contract.
+    public func shutdown(endedAt: Date = .now) async throws {
+        let active = sessions
+        for session in active {
+            unregister(session, endedAt: endedAt)
+        }
+        try await submitAll()
+    }
+
     /// Drains the pending queue in order.
     ///
     /// Permanent validation failures are isolated and draining continues; the

@@ -36,7 +36,6 @@ struct UserJourneySessionTests {
         #expect(first.objectHash == second.objectHash)
         #expect(first.objectHash != other.objectHash)
         #expect(UserJourneyObjectHash("chat-1138") == first.objectHash)
-        #expect(UserJourneySession(kind: .checkout, objectHash: first.objectHash).objectHash == first.objectHash)
     }
 
     @Test func sessionsWithTheSameKindHaveDistinctIdentifiers() {
@@ -117,21 +116,17 @@ private final class CheckoutSession: UserJourneySession, @unchecked Sendable {
 
     var endCount: Int { counterLock.withLock { _endCount } }
 
+    /// Narrows routing with nothing but the public surface: a checkout is two
+    /// steps long, and later events belong to whatever comes next.
     override func accepts(_ target: UserJourneySessionTarget) -> Bool {
-        guard case .all = target else { return super.accepts(target) }
-        return false
+        events.count < 2 && super.accepts(target)
     }
 
     override func prepare(_ event: UserJourneyEvent) -> UserJourneyEvent? {
         guard event.name != "cart.polled" else { return nil }
         var payload = event.payload
         payload["step"] = .int(events.count)
-        return UserJourneyEvent(
-            target: event.target,
-            name: event.name,
-            payload: payload,
-            occurredAt: event.occurredAt
-        )
+        return event.replacing(payload: payload)
     }
 
     override func sessionDidEnd(at date: Date) {
@@ -157,8 +152,15 @@ struct UserJourneySessionSubclassTests {
 
         session.append(UserJourneyEvent(target: .all, name: "app.launched"))
         session.append(UserJourneyEvent(target: .kinds([.checkout]), name: "cart.opened"))
+        // The override stops accepting once two steps are in.
+        #expect(session.append(UserJourneyEvent(target: .all, name: "cart.abandoned")) == false)
 
-        #expect(session.events.map(\.name) == ["cart.opened"])
+        #expect(session.events.map(\.name) == ["app.launched", "cart.opened"])
+        // Routing the superclass rejects is still rejected.
+        #expect(
+            CheckoutSession(kind: .checkout)
+                .append(UserJourneyEvent(target: .kinds([.onboarding]), name: "step")) == false
+        )
     }
 
     @Test func prepareRewritesAndDropsEvents() {
@@ -170,6 +172,7 @@ struct UserJourneySessionSubclassTests {
             UserJourneyEvent(
                 target: .kinds([.checkout]),
                 name: "payment.selected",
+                objectID: "cart-7",
                 payload: ["method": .string("card")]
             )
         )
@@ -177,6 +180,8 @@ struct UserJourneySessionSubclassTests {
         #expect(session.events.map(\.name) == ["cart.opened", "payment.selected"])
         #expect(session.events.map(\.payload["step"]) == [.int(0), .int(1)])
         #expect(session.events.last?.payload["method"] == .string("card"))
+        // `replacing` keeps what the override never named.
+        #expect(session.events.last?.objectHash == UserJourneyObjectHash("cart-7"))
     }
 
     @Test func preparedEventsAreRevalidatedAgainstTheLimits() {
@@ -197,13 +202,6 @@ struct UserJourneySessionSubclassTests {
         #expect(session.endedAt == end)
         #expect(session.events.map(\.name) == ["checkout.closed"])
         #expect(session.append(UserJourneyEvent(target: .all, name: "too.late")) == false)
-    }
-
-    @Test func defaultFactoryPreservesTheSubclassType() {
-        let session = CheckoutSession.default()
-
-        #expect(session.kind == .default)
-        #expect(type(of: session) == CheckoutSession.self)
     }
 }
 
