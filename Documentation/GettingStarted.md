@@ -78,6 +78,24 @@ Configuration initialization is throwing and side-effect free. In production cod
 may be absent. Present `FeedbackCenterView(client: runtime.client)` from a sheet or full-screen
 cover. `FeedbackCenterToolbarButton` provides a ready-made 44-point toolbar entry.
 
+### Optionally present administrator replies on foreground
+
+Create one `FeedbackReplyInboxController` beside the long-lived client. When the host scene becomes
+active, call `beginForegroundCycle()` in a task. When it reaches `.background`, call
+`endForegroundCycle()`. Do not end the cycle for `.inactive`; interruptions and system overlays may
+move a scene between `.active` and `.inactive` several times in one foreground session.
+
+Drive `FeedbackConversationSheet` with `.sheet(item: $controller.pendingPresentation)`. It opens the
+already-loaded conversation and acknowledges the selected reply on appearance. FeedbackKit checks
+only once per cycle, scans all inbox pages, and chooses the highest-sequence administrator reply.
+It does not acknowledge status-only events, failed detail loads, or cancelled checks. If no
+credential already exists, the check creates no identity and performs no request.
+
+Apps supplying their own feedback UI can use `FeedbackKitCore` without `FeedbackKitUI`: call
+`existingVisitorInbox()` for the first page, continue with `existingVisitorInbox(after:)`, load the
+chosen conversation with the normal client API, and call `acknowledgeInbox(cursor:)` only when the
+host considers that reply displayed.
+
 The main hub ends with a centered `Powered by FeedKit.cn` attribution. Activating it opens
 `https://feedkit.cn/`; displaying the attribution does not make an additional network request.
 

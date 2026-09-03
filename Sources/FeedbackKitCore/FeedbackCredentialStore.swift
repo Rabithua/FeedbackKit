@@ -4,7 +4,15 @@ import Security
 
 public protocol FeedbackVisitorCredentialProviding: Sendable {
     func credential(for productKey: String) async throws -> String
+    /// Returns an existing visitor credential without creating or repairing one.
+    func existingCredential(for productKey: String) async throws -> String?
     func deleteCredential(for productKey: String) async throws
+}
+
+public extension FeedbackVisitorCredentialProviding {
+    /// The conservative default keeps existing conformers source compatible and reports no
+    /// previously established identity.
+    func existingCredential(for productKey: String) async throws -> String? { nil }
 }
 
 public actor FeedbackVisitorCredentialStore: FeedbackVisitorCredentialProviding {
@@ -27,6 +35,13 @@ public actor FeedbackVisitorCredentialStore: FeedbackVisitorCredentialProviding 
         return base64URL(data)
     }
 
+    public func existingCredential(for productKey: String) throws -> String? {
+        guard let current = try loadReadOnly(accountName(productKey)), current.count == 32 else {
+            return nil
+        }
+        return base64URL(current)
+    }
+
     public func deleteCredential(for productKey: String) throws {
         let status = SecItemDelete(query(accountName(productKey)) as CFDictionary)
         guard status == errSecSuccess || status == errSecItemNotFound else {
@@ -47,6 +62,15 @@ public actor FeedbackVisitorCredentialStore: FeedbackVisitorCredentialProviding 
     }
 
     private func load(_ account: String) throws -> Data? {
+        guard let data = try loadReadOnly(account) else { return nil }
+        if data.count == 32 { return data }
+        _ = SecItemDelete(query(account) as CFDictionary)
+        return nil
+    }
+
+    /// Reads exactly what is in Keychain. This path must not mutate malformed or legacy values,
+    /// because callers use it to determine whether a background inbox check is side-effect free.
+    private func loadReadOnly(_ account: String) throws -> Data? {
         var attributes = query(account)
         attributes[kSecReturnData as String] = true
         attributes[kSecMatchLimit as String] = kSecMatchLimitOne
@@ -55,10 +79,6 @@ public actor FeedbackVisitorCredentialStore: FeedbackVisitorCredentialProviding 
         if status == errSecItemNotFound { return nil }
         guard status == errSecSuccess, let data = result as? Data else {
             throw keychainError(status)
-        }
-        if data.count != 32 {
-            _ = SecItemDelete(query(account) as CFDictionary)
-            return nil
         }
         return data
     }

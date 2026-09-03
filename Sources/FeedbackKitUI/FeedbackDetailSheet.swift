@@ -12,6 +12,7 @@ struct FeedbackDetailSheet: View {
 
     init(
         id: String,
+        initialDetail: FeedbackDetail? = nil,
         client: FeedbackClient,
         style: FeedbackStyle,
         voteChanged: @escaping (FeedbackVoteResult) -> Void,
@@ -20,6 +21,7 @@ struct FeedbackDetailSheet: View {
     ) {
         _model = State(initialValue: FeedbackDetailModel(
             id: id,
+            initialDetail: initialDetail,
             client: client,
             voteChanged: voteChanged
         ))
@@ -72,13 +74,21 @@ struct FeedbackDetailSheet: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .presentationDetents([.medium])
-        .task { await load() }
+        .task { await appear() }
         .accessibilityIdentifier("developerCommunity.feedbackDetail")
     }
 
     private func load() async {
         if await model.load() {
             await viewed()
+        }
+    }
+
+    private func appear() async {
+        if model.detail != nil {
+            await viewed()
+        } else {
+            await load()
         }
     }
 

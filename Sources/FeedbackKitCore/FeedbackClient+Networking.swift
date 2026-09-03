@@ -12,7 +12,8 @@ extension FeedbackClient {
         operation: FeedbackClientOperation,
         scope: Scope = .client,
         path: String,
-        query: [URLQueryItem] = []
+        query: [URLQueryItem] = [],
+        existingCredential: String? = nil
     ) async throws -> Value {
         try await perform(
             type,
@@ -22,7 +23,8 @@ extension FeedbackClient {
             path: path,
             query: query,
             body: nil,
-            idempotencyKey: nil
+            idempotencyKey: nil,
+            existingCredential: existingCredential
         )
     }
 
@@ -33,7 +35,8 @@ extension FeedbackClient {
         method: Method,
         path: String,
         body: Body,
-        idempotencyKey: String? = nil
+        idempotencyKey: String? = nil,
+        existingCredential: String? = nil
     ) async throws -> Value {
         try await perform(
             type,
@@ -43,7 +46,8 @@ extension FeedbackClient {
             path: path,
             query: [],
             body: FeedbackCoding.encoder().encode(body),
-            idempotencyKey: idempotencyKey
+            idempotencyKey: idempotencyKey,
+            existingCredential: existingCredential
         )
     }
 
@@ -79,7 +83,8 @@ extension FeedbackClient {
             path: path,
             query: [],
             body: nil,
-            idempotencyKey: nil
+            idempotencyKey: nil,
+            existingCredential: nil
         )
     }
 
@@ -89,7 +94,8 @@ extension FeedbackClient {
         path: String,
         query: [URLQueryItem],
         body: Data?,
-        idempotencyKey: String?
+        idempotencyKey: String?,
+        existingCredential: String?
     ) async throws -> URLRequest {
         let url = try makeURL(scope: scope, path: path, query: query)
         var request = URLRequest(url: url)
@@ -105,7 +111,12 @@ extension FeedbackClient {
             request.setValue(idempotencyKey, forHTTPHeaderField: "Idempotency-Key")
         }
         if scope == .client {
-            let credential = try await credentialStore.credential(for: configuration.productKey)
+            let credential: String
+            if let existingCredential {
+                credential = existingCredential
+            } else {
+                credential = try await credentialStore.credential(for: configuration.productKey)
+            }
             request.setValue("Bearer \(credential)", forHTTPHeaderField: "Authorization")
         }
         return request
@@ -119,7 +130,8 @@ extension FeedbackClient {
         path: String,
         query: [URLQueryItem],
         body: Data?,
-        idempotencyKey: String?
+        idempotencyKey: String?,
+        existingCredential: String?
     ) async throws -> Value {
         let started = ContinuousClock.now
         var requestURL: URL?
@@ -128,7 +140,8 @@ extension FeedbackClient {
         do {
             let request = try await apiRequest(
                 method: method, scope: scope, path: path,
-                query: query, body: body, idempotencyKey: idempotencyKey
+                query: query, body: body, idempotencyKey: idempotencyKey,
+                existingCredential: existingCredential
             )
             let url = request.url!
             requestURL = url
