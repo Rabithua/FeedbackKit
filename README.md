@@ -38,6 +38,58 @@ let client = FeedbackClient(configuration: configuration)
 FeedbackCenterView(client: client)
 ```
 
+## Show new replies on foreground
+
+`FeedbackKitUI` provides an opt-in controller and a ready-made conversation sheet. The host keeps
+ownership of app lifecycle handling; FeedbackKit does not install a global `scenePhase` observer or
+create a visitor identity just to look for replies.
+
+```swift
+import FeedbackKitCore
+import FeedbackKitUI
+import SwiftUI
+
+@MainActor
+struct AppRootView: View {
+    let client: FeedbackClient
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var replyInbox: FeedbackReplyInboxController
+
+    init(client: FeedbackClient) {
+        self.client = client
+        _replyInbox = State(initialValue: FeedbackReplyInboxController(client: client))
+    }
+
+    var body: some View {
+        AppContent()
+            .task(id: scenePhase) {
+                if scenePhase == .active {
+                    await replyInbox.beginForegroundCycle()
+                } else if scenePhase == .background {
+                    replyInbox.endForegroundCycle()
+                }
+            }
+            .sheet(item: $replyInbox.pendingPresentation) { presentation in
+                FeedbackConversationSheet(
+                    presentation: presentation,
+                    controller: replyInbox
+                )
+            }
+    }
+}
+```
+
+Call `endForegroundCycle()` only for `.background`. A temporary `.inactive` transition belongs to
+the same foreground cycle, so repeated `.active` notifications still produce only one check. The
+controller scans every unread inbox page, loads the full conversation, and prepares only the latest
+administrator reply. The sheet acknowledges that reply when it appears; discovery failures,
+cancellation, and inboxes without a reply do not advance the read cursor.
+
+For a completely custom interface, use `FeedbackKitCore` directly. The read-only entry point
+`existingVisitorInbox(after:)` returns `nil` without creating a Keychain identity or making a
+network request when the user has never used FeedbackKit. Omit `after` on the first page and pass
+each page's `nextCursor` only while `hasMore` is true.
+
 The default language policy follows the host app's effective SwiftUI locale. A single-language app
 can keep the feedback UI and server-authored content on that language even when the device uses a
 different language:
@@ -137,6 +189,9 @@ to bridge the same safe event model into another telemetry system.
   bounds the final encoded snapshot. Event and breadcrumb arrays returned by custom sources remain
   host-controlled and should be kept small.
 - Implement `FeedbackAppMetadataProvider` for deterministic tests or custom device context.
+- Custom `FeedbackVisitorCredentialProviding` implementations should implement
+  `existingCredential(for:)` as a strictly read-only lookup to enable foreground reply checks. The
+  default implementation returns `nil` so existing conformers remain source compatible.
 - Use `FeedbackStyle` for the intentionally small set of spacing, radius, and border adjustments.
 
 For custom attachment workflows, `FeedbackAttachmentSource(fileURL:)` keeps uploads file-backed.

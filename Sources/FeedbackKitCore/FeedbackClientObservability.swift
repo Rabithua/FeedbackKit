@@ -23,6 +23,7 @@ public struct FeedbackClientOperation: RawRepresentable, Hashable, Sendable {
     public static let attachmentPresign = Self(rawValue: "attachment_presign")
     public static let attachmentUpload = Self(rawValue: "attachment_upload")
     public static let attachmentFinalize = Self(rawValue: "attachment_finalize")
+    public static let inbox = Self(rawValue: "inbox")
     public static let inboxAcknowledge = Self(rawValue: "inbox_acknowledge")
     public static let visitorDelete = Self(rawValue: "visitor_delete")
     public static let diagnosticPresign = Self(rawValue: "diagnostic_presign")
