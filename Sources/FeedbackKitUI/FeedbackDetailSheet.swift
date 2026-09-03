@@ -47,11 +47,17 @@ struct FeedbackDetailSheet: View {
                         }
                     } label: {
                         Text("+\(detail.voteCount)")
-                            .font(.system(size: 22, weight: .black, design: .rounded))
+                            .font(.system(.title2, design: .rounded, weight: .black))
                             .foregroundStyle(detail.hasVoted ? Color.accentColor : Color.primary)
                     }
                     .buttonStyle(.plain)
                     .disabled(model.isVoting || model.isLoading)
+                    .accessibilityLabel(
+                        localization.text(
+                            detail.hasVoted ? "feedbackkit.vote.remove" : "feedbackkit.vote"
+                        )
+                    )
+                    .accessibilityValue(Text(detail.voteCount, format: .number))
                 }
             } close: {
                 close()
@@ -73,7 +79,7 @@ struct FeedbackDetailSheet: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .presentationDetents([.medium])
+        .presentationDetents([.medium, .large])
         .task { await appear() }
         .accessibilityIdentifier("developerCommunity.feedbackDetail")
     }
