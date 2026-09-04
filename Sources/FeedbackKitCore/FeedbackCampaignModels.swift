@@ -311,8 +311,33 @@ public struct FeedbackCampaignStringAnswerSchema: Codable, Hashable, Sendable {
     public let constant: String?
     public let minLength: Int?
     public let maxLength: Int
+    /// A legacy constraint that can still appear on campaigns published by older servers.
+    /// New FeedbackServer campaign definitions no longer accept regular-expression patterns.
     public let pattern: String?
 
+    public init(
+        title: String? = nil,
+        description: String? = nil,
+        allowedValues: [String]? = nil,
+        constant: String? = nil,
+        minLength: Int? = nil,
+        maxLength: Int
+    ) {
+        type = .string
+        self.title = title
+        self.description = description
+        self.allowedValues = allowedValues
+        self.constant = constant
+        self.minLength = minLength
+        self.maxLength = maxLength
+        pattern = nil
+    }
+
+    @available(
+        *,
+        deprecated,
+        message: "FeedbackServer no longer accepts pattern constraints on new campaigns."
+    )
     public init(
         title: String? = nil,
         description: String? = nil,

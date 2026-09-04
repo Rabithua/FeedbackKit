@@ -10,7 +10,7 @@ diagnostics, typed campaign forms, opt-in Journey analytics, and a default Swift
 - `FeedbackKitCore`: FeedbackServer DTOs, client transport, visitor credentials, drafts, uploads, voting, campaign forms, and inbox APIs.
 - `FeedbackKitDiagnostics`: structured logs, breadcrumbs, MetricKit crash summaries, redaction, retention, and private diagnostic snapshots.
 - `FeedbackKitJourney`: opt-in user journey sessions and events, recorded in memory and submitted on session end for product analytics.
-- `FeedbackKitUI`: the localized SwiftUI feedback center.
+- `FeedbackKitUI`: the localized SwiftUI feedback center and opt-in campaign sheet.
 - `FeedbackKitTestSupport`: fixture transport, `URLProtocol`, fixed clocks, and metadata providers.
 
 ## Add the package
@@ -50,7 +50,37 @@ FeedbackCenterView(client: client)
 
 Published campaigns are available through `FeedbackKitCore`. Their bounded answer schemas decode
 into typed Swift cases, and `campaign.form` converts the server's flat elements into pages with
-stable integer IDs and no page-break markers:
+stable integer IDs and no page-break markers.
+
+`FeedbackKitUI` can render and submit the complete form. Campaign presentation stays host-owned:
+the SDK does not add campaigns to `FeedbackCenterView`, poll for them, or display them automatically.
+Present the sheet only after your app has chosen a campaign:
+
+```swift
+@State private var selectedCampaign: FeedbackCampaign?
+
+Button("Take survey") {
+    Task {
+        selectedCampaign = try? await client.campaigns().first
+    }
+}
+.sheet(item: $selectedCampaign) { campaign in
+    FeedbackCampaignSheet(
+        campaign: campaign,
+        client: client
+    ) { response in
+        print("Submitted campaign response", response.id)
+    }
+}
+```
+
+When the host already has a campaign ID, use
+`FeedbackCampaignSheet(campaignID:client:)` and let the sheet load that campaign. Both initializers
+support the same `FeedbackStyle`, haptics, language policy, and optional submission callback as the
+rest of the packaged UI. Answers and additional comments stay in the sheet; diagnostics begin off
+and appear only when both the Product and the host-provided client support them.
+
+For a fully custom campaign interface, render the typed form directly:
 
 ```swift
 let campaigns = try await client.campaigns()

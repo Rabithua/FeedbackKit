@@ -97,6 +97,41 @@ struct FeedbackHitTargetButtonTests {
         #expect(secondRemovalCount == 2)
     }
 
+    @Test func campaignNavigationVisibleCornersTriggerTheirActions() throws {
+        var backCount = 0
+        var primaryCount = 0
+        let width: CGFloat = 320
+        let height: CGFloat = 54
+        let host = NSHostingView(
+            rootView: FeedbackCampaignNavigationBar(
+                isFirstPage: false,
+                isLastPage: true,
+                isSubmitting: false,
+                style: .default,
+                back: { backCount += 1 },
+                primary: { primaryCount += 1 }
+            )
+            .frame(width: width, height: height)
+        )
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: width, height: height),
+            styleMask: [.borderless],
+            backing: .buffered,
+            defer: false
+        )
+        window.contentView = host
+        window.makeKeyAndOrderFront(nil)
+        defer { window.orderOut(nil) }
+        host.layoutSubtreeIfNeeded()
+
+        for point in [NSPoint(x: 2, y: 6), NSPoint(x: 318, y: 6)] {
+            try click(window: window, at: point)
+        }
+
+        #expect(backCount == 1)
+        #expect(primaryCount == 1)
+    }
+
     private func click(window: NSWindow, at point: NSPoint) throws {
         let timestamp = ProcessInfo.processInfo.systemUptime
         let down = try #require(

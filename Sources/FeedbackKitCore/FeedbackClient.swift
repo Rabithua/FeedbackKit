@@ -132,7 +132,7 @@ public actor FeedbackClient {
         )
     }
 
-    /// Lists every published campaign that is currently collecting responses.
+    /// Lists up to the 20 newest published campaigns currently collecting responses.
     public func campaigns() async throws -> [FeedbackCampaign] {
         try await get(
             FeedbackCampaignList.self,

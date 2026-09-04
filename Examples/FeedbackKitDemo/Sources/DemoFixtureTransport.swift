@@ -81,6 +81,30 @@ actor DemoFixtureTransport: FeedbackTransport {
         }
 
         switch (method, path) {
+        case ("GET", "/v1/api/client/campaigns"):
+            return (
+                200,
+                requestHeaders,
+                DemoFixturePayloads.envelope(#"{"campaigns":[\#(DemoFixturePayloads.campaign)]}"#)
+            )
+        case ("GET", "/v1/api/client/campaigns/\(DemoFixturePayloads.campaignID)"):
+            return (200, requestHeaders, DemoFixturePayloads.envelope(DemoFixturePayloads.campaign))
+        case ("POST", "/v1/api/client/campaigns/\(DemoFixturePayloads.campaignID)/responses"):
+            if scenario == .validation {
+                return (
+                    422,
+                    requestHeaders,
+                    DemoFixturePayloads.error(
+                        code: "campaign_answer_invalid",
+                        message: "Fixture campaign validation failure"
+                    )
+                )
+            }
+            return (
+                201,
+                requestHeaders,
+                DemoFixturePayloads.envelope(DemoFixturePayloads.campaignResponse)
+            )
         case ("GET", "/v1/api/client/activity"):
             return (200, requestHeaders, DemoFixturePayloads.activity(empty: scenario == .empty))
         case ("GET", "/v1/api/client/feedback"):

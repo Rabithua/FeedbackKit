@@ -13,6 +13,7 @@ struct FeedbackKitIntegrationExample: View {
     )
     @Environment(\.scenePhase) private var scenePhase
     @State private var replyInbox = FeedbackReplyInboxController(client: Self.client)
+    @State private var selectedCampaign: FeedbackCampaign?
 
     var body: some View {
         FeedbackCenterView(client: Self.client)
@@ -29,5 +30,18 @@ struct FeedbackKitIntegrationExample: View {
                     controller: replyInbox
                 )
             }
+            .sheet(item: $selectedCampaign) { campaign in
+                FeedbackCampaignSheet(campaign: campaign, client: Self.client)
+            }
+    }
+}
+
+/// This compile-only fixture covers the convenience initializer that loads a selected campaign.
+@MainActor
+struct FeedbackCampaignIDIntegrationExample: View {
+    let client: FeedbackClient
+
+    var body: some View {
+        FeedbackCampaignSheet(campaignID: "campaign-id", client: client)
     }
 }

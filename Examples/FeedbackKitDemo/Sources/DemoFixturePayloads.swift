@@ -1,7 +1,12 @@
 import Foundation
 
 enum DemoFixturePayloads {
+    static let campaignID = "99999999-9999-4999-8999-999999999999"
     static let product = #"{"slug":"feedbackkit-demo","name":"FeedbackKit Demo","defaultLocale":"en","defaultFeedbackVisibility":"private","iconUrl":null,"attachmentLimits":{"count":5,"imageBytes":10485760,"videoBytes":52428800},"diagnostics":{"enabled":true,"maxBytes":262144,"schemaVersions":[1]}}"#
+
+    static let campaign = #"{"id":"99999999-9999-4999-8999-999999999999","title":"Shape FeedbackKit","description":"A two-page fixture campaign covering the packaged form controls.","elements":[{"kind":"notice","text":"Thanks for helping us choose what to build next."},{"kind":"question","key":"satisfaction","text":"How satisfied are you with FeedbackKit?","required":true,"answer":{"type":"integer","title":"Satisfaction","description":"Choose from 1 to 5.","minimum":1,"maximum":5}},{"kind":"question","key":"recommend","text":"Would you recommend FeedbackKit?","required":true,"answer":{"type":"boolean"}},{"kind":"pagebreak"},{"kind":"question","key":"features","text":"Which areas should we improve?","required":true,"answer":{"type":"array","description":"Choose one or two.","items":{"type":"string","enum":["Campaigns","Diagnostics","Conversations"],"maxLength":40},"minItems":1,"maxItems":2,"uniqueItems":true}},{"kind":"question","key":"note","text":"What should we know?","required":false,"answer":{"type":"string","maxLength":400}}],"publishedAt":"2026-09-05T00:00:00.000Z","updatedAt":"2026-09-05T00:00:00.000Z"}"#
+
+    static let campaignResponse = #"{"id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","type":"survey","title":"Shape FeedbackKit","displayTitle":"Shape FeedbackKit","body":"How satisfied are you with FeedbackKit?\n4/5","status":"open","visibility":"private","publishedAt":null,"pinnedAt":null,"lastActivityAt":"2026-09-05T01:00:00.000Z","createdAt":"2026-09-05T01:00:00.000Z","updatedAt":"2026-09-05T01:00:00.000Z","diagnosticsIncluded":false}"#
 
     static let activityEntry = #"{"kind":"feedback","id":"11111111-1111-4111-8111-111111111111","pinnedAt":null,"activityAt":"2026-08-23T10:00:00.000Z","data":{"type":"suggestion","status":"open","title":"Fixture feedback","displayTitle":"Fixture feedback","body":"This public suggestion is served by the in-app fixture transport.","authorDisplayCode":"DEMO-01","voteCount":7,"hasVoted":false,"createdAt":"2026-08-23T10:00:00.000Z"}}"#
 
