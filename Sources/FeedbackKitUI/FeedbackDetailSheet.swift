@@ -12,6 +12,7 @@ struct FeedbackDetailSheet: View {
 
     init(
         id: String,
+        initialDetail: FeedbackDetail? = nil,
         client: FeedbackClient,
         style: FeedbackStyle,
         voteChanged: @escaping (FeedbackVoteResult) -> Void,
@@ -20,6 +21,7 @@ struct FeedbackDetailSheet: View {
     ) {
         _model = State(initialValue: FeedbackDetailModel(
             id: id,
+            initialDetail: initialDetail,
             client: client,
             voteChanged: voteChanged
         ))
@@ -45,11 +47,17 @@ struct FeedbackDetailSheet: View {
                         }
                     } label: {
                         Text("+\(detail.voteCount)")
-                            .font(.system(size: 22, weight: .black, design: .rounded))
+                            .font(.system(.title2, design: .rounded, weight: .black))
                             .foregroundStyle(detail.hasVoted ? Color.accentColor : Color.primary)
                     }
                     .buttonStyle(.plain)
                     .disabled(model.isVoting || model.isLoading)
+                    .accessibilityLabel(
+                        localization.text(
+                            detail.hasVoted ? "feedbackkit.vote.remove" : "feedbackkit.vote"
+                        )
+                    )
+                    .accessibilityValue(Text(detail.voteCount, format: .number))
                 }
             } close: {
                 close()
@@ -71,14 +79,22 @@ struct FeedbackDetailSheet: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .presentationDetents([.medium])
-        .task { await load() }
+        .presentationDetents([.medium, .large])
+        .task { await appear() }
         .accessibilityIdentifier("developerCommunity.feedbackDetail")
     }
 
     private func load() async {
         if await model.load() {
             await viewed()
+        }
+    }
+
+    private func appear() async {
+        if model.detail != nil {
+            await viewed()
+        } else {
+            await load()
         }
     }
 

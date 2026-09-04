@@ -22,10 +22,12 @@ final class FeedbackDetailModel {
 
     init(
         id: String,
+        initialDetail: FeedbackDetail? = nil,
         client: FeedbackClient,
         voteChanged: @escaping (FeedbackVoteResult) -> Void
     ) {
         self.id = id
+        detail = initialDetail
         self.client = client
         self.voteChanged = voteChanged
     }

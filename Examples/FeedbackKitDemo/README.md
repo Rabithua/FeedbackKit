@@ -1,7 +1,8 @@
 # FeedbackKit Demo
 
-Open `FeedbackKitDemo.xcodeproj` and run the `FeedbackKitDemo` scheme on iOS 18 or later. The project
-uses a local package reference to the repository root.
+Open `FeedbackKitDemo.xcodeproj` from FeedbackKit `2.0.0` or newer and run the `FeedbackKitDemo`
+scheme on iOS 18 or later. The project uses a local package reference to the repository root, so no
+separate package version selection is required.
 
 Fixture mode is selected by default and requires no configuration. It exercises healthy and empty
 products, offline transport, validation errors, rate limiting, temporary unavailability,

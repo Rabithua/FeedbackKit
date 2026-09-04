@@ -307,6 +307,57 @@ public actor FeedbackClient {
         ).cursor
     }
 
+    /// Loads inbox events only when this Product already has an anonymous visitor identity.
+    ///
+    /// Unlike other visitor APIs, this method never creates or repairs a credential. It returns
+    /// `nil` without making a network request when no existing credential is available. Omitting
+    /// `after` lets FeedbackServer begin at the visitor's acknowledged cursor; pass a cursor only
+    /// when continuing pagination.
+    public func existingVisitorInbox(after: Int? = nil) async throws -> FeedbackInboxPage? {
+        guard let credential = try await credentialStore.existingCredential(
+            for: configuration.productKey
+        ) else { return nil }
+
+        let query = after.map { [URLQueryItem(name: "after", value: String($0))] } ?? []
+        return try await get(
+            FeedbackInboxPage.self,
+            operation: .inbox,
+            path: "inbox",
+            query: query,
+            existingCredential: credential
+        )
+    }
+
+    /// Package-only counterpart used by FeedbackKitUI after an existing-identity inbox check.
+    /// Keeping the same read-only identity rule ensures the SDK does not create a replacement
+    /// visitor if the local credential disappears while the controller prepares a reply.
+    package func existingVisitorFeedback(id: String) async throws -> FeedbackDetail? {
+        guard let credential = try await credentialStore.existingCredential(
+            for: configuration.productKey
+        ) else { return nil }
+        return try await get(
+            FeedbackDetail.self,
+            operation: .feedbackDetail,
+            path: "feedback/\(id)",
+            existingCredential: credential
+        )
+    }
+
+    /// Acknowledges with an already established identity and never creates a replacement.
+    package func acknowledgeExistingVisitorInbox(cursor: Int) async throws -> Int? {
+        guard let credential = try await credentialStore.existingCredential(
+            for: configuration.productKey
+        ) else { return nil }
+        return try await send(
+            Ack.self,
+            operation: .inboxAcknowledge,
+            method: .post,
+            path: "inbox/ack",
+            body: Ack(cursor: cursor),
+            existingCredential: credential
+        ).cursor
+    }
+
     public func deleteVisitor() async throws {
         let _: Bool? = try await sendWithoutBody(
             Bool?.self,

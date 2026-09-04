@@ -24,13 +24,15 @@ Neither is required for client bootstrap or feedback submission.
 
 ## 2. Add the Swift package
 
-Add `https://github.com/Rabithua/FeedbackKit.git` in Xcode with **Up to Next Minor Version**, starting
-at `0.2.0`.
+Add `https://github.com/Rabithua/FeedbackKit.git` in Xcode with **Up to Next Major Version**, starting
+at `2.0.0`. Existing 0.2 integrations can update their package requirement without changing source;
+see [Migrating to FeedbackKit 2.0](MigratingTo2.0.md).
 
 Link `FeedbackKitCore` and `FeedbackKitUI` to the app target. Link `FeedbackKitDiagnostics` only when
-the app will offer opt-in diagnostic upload. Add `FeedbackKitTestSupport` only to test targets.
+the app will offer opt-in diagnostic upload, and link `FeedbackKitJourney` only when the app will
+record opt-in journey analytics. Add `FeedbackKitTestSupport` only to test targets.
 
-FeedbackKit requires iOS 18 or macOS 15 and Swift 6 language mode.
+FeedbackKit 2.0 requires iOS 18 or macOS 15 and Swift 6 language mode.
 
 ## 3. Configure each build environment
 
@@ -77,6 +79,24 @@ Configuration initialization is throwing and side-effect free. In production cod
 `FeedbackConfigurationError` in the app's integration or diagnostics screen when build settings
 may be absent. Present `FeedbackCenterView(client: runtime.client)` from a sheet or full-screen
 cover. `FeedbackCenterToolbarButton` provides a ready-made 44-point toolbar entry.
+
+### Optionally present administrator replies on foreground
+
+Create one `FeedbackReplyInboxController` beside the long-lived client. When the host scene becomes
+active, call `beginForegroundCycle()` in a task. When it reaches `.background`, call
+`endForegroundCycle()`. Do not end the cycle for `.inactive`; interruptions and system overlays may
+move a scene between `.active` and `.inactive` several times in one foreground session.
+
+Drive `FeedbackConversationSheet` with `.sheet(item: $controller.pendingPresentation)`. It opens the
+already-loaded conversation and acknowledges the selected reply on appearance. FeedbackKit checks
+only once per cycle, scans all inbox pages, and chooses the highest-sequence administrator reply.
+It does not acknowledge status-only events, failed detail loads, or cancelled checks. If no
+credential already exists, the check creates no identity and performs no request.
+
+Apps supplying their own feedback UI can use `FeedbackKitCore` without `FeedbackKitUI`: call
+`existingVisitorInbox()` for the first page, continue with `existingVisitorInbox(after:)`, load the
+chosen conversation with the normal client API, and call `acknowledgeInbox(cursor:)` only when the
+host considers that reply displayed.
 
 The main hub ends with a centered `Powered by FeedKit.cn` attribution. Activating it opens
 `https://feedkit.cn/`; displaying the attribution does not make an additional network request.
