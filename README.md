@@ -1,6 +1,9 @@
 # FeedbackKit
 
-FeedbackKit is an iOS and iPadOS 18+ Swift package for integrating a complete feedback center with FeedbackServer. It includes anonymous visitor identity, public activity, owned feedback conversations, attachments, voting, a version-and-body changelog, user-controlled private diagnostics, and a default SwiftUI interface.
+FeedbackKit 2.0 is an iOS and iPadOS 18+ Swift package for integrating a complete feedback center
+with FeedbackServer. It includes anonymous visitor identity, public activity, owned feedback
+conversations, attachments, voting, a version-and-body changelog, user-controlled private
+diagnostics, opt-in Journey analytics, and a default SwiftUI interface.
 
 ## Products
 
@@ -13,15 +16,20 @@ FeedbackKit is an iOS and iPadOS 18+ Swift package for integrating a complete fe
 ## Add the package
 
 In Xcode, add `https://github.com/Rabithua/FeedbackKit.git` with the **Up to Next
-Minor Version** rule starting at `0.2.0`. Link these products to the app target:
+Major Version** rule starting at `2.0.0`. Link these products to the app target:
 
 - `FeedbackKitCore`
 - `FeedbackKitUI`
 - `FeedbackKitDiagnostics` only when the app offers diagnostic upload
+- `FeedbackKitJourney` only when the app records opt-in journey analytics
 
 `FeedbackKitTestSupport` is intended for test targets only.
 `FeedbackKitUI` depends only on `FeedbackKitCore`; adding the default interface does not link the
-diagnostic collector unless the app selects that product.
+diagnostic collector or Journey analytics unless the app selects those products.
+
+Existing 0.2 integrations do not require source changes. Update the package requirement to a
+minimum of `2.0.0`; see [Migrating to 2.0](Documentation/MigratingTo2.0.md) for the release changes
+and rollout checklist.
 
 ## Minimal integration
 
@@ -157,7 +165,9 @@ implementation clips legacy `diagnosticSnapshotData()` results.
 
 Follow the complete [new app onboarding guide](Documentation/GettingStarted.md) for Product setup,
 xcconfig/Info.plist configuration, diagnostics and privacy decisions, route handling, catalog
-seeding, and acceptance checks. For upgrades, read [Migrating to 0.2](Documentation/MigratingTo0.2.md).
+seeding, and acceptance checks. For upgrades, read [Migrating to 2.0](Documentation/MigratingTo2.0.md).
+The earlier [0.2 migration guide](Documentation/MigratingTo0.2.md) remains available for historical
+integrations.
 The runnable [FeedbackKit Demo](Examples/FeedbackKitDemo/README.md) starts in Fixture mode with no
 configuration and also offers an explicitly verified Live mode.
 
@@ -214,3 +224,18 @@ swift test
 xcodebuild -scheme FeedbackKit-Package -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO build
 xcodebuild -project Examples/FeedbackKitDemo/FeedbackKitDemo.xcodeproj -scheme FeedbackKitDemo -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO build
 ```
+
+Normal package tests are deterministic and offline. The FeedbackServer v2 contract is opt-in and is
+reported as skipped unless both variables are present. `FEEDBACKKIT_TEST_BASE_URL` must be the full
+API base URL through `/v1/api`; `FEEDBACKKIT_TEST_PRODUCT_KEY` must be a publishable key for a test
+Product whose temporary visitor and feedback data may be deleted:
+
+```bash
+FEEDBACKKIT_TEST_BASE_URL='https://api.feedkit.cn/v1/api' \
+FEEDBACKKIT_TEST_PRODUCT_KEY='<publishable-product-key>' \
+swift test --filter FeedbackServerV2ContractTests
+```
+
+The live test never prints the Product Key. It creates an isolated visitor, conditionally uploads a
+tiny image when the Product allows attachments, exercises the v2 SDK routes, and deletes the visitor
+at the end.
