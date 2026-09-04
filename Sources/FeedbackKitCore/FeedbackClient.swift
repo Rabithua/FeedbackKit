@@ -156,7 +156,8 @@ public actor FeedbackClient {
         request: FeedbackCampaignResponseRequest,
         idempotencyKey: String
     ) async throws -> OwnedFeedbackSummary {
-        try await send(
+        try validateCampaignAnswers(request.answers)
+        return try await send(
             OwnedFeedbackSummary.self,
             operation: .campaignResponse,
             method: .post,
@@ -176,6 +177,7 @@ public actor FeedbackClient {
         includeDiagnostics: Bool,
         idempotencyKey: String
     ) async throws -> OwnedFeedbackSummary {
+        try validateCampaignAnswers(answers)
         let diagnosticID = try await diagnosticArtifactID(
             includeDiagnostics: includeDiagnostics,
             locale: locale,
@@ -453,5 +455,16 @@ public actor FeedbackClient {
             )
         }
         return try await uploadDiagnosticSnapshot(snapshot)
+    }
+
+    private func validateCampaignAnswers(
+        _ answers: [String: FeedbackCampaignAnswer]
+    ) throws {
+        guard answers.values.allSatisfy(\.containsOnlyFiniteNumbers) else {
+            throw FeedbackClientError(
+                kind: .validation,
+                context: FeedbackFailureContext(operation: .campaignResponse)
+            )
+        }
     }
 }

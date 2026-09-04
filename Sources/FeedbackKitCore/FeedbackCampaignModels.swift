@@ -490,6 +490,13 @@ public enum FeedbackCampaignScalarAnswer: Codable, Hashable, Sendable {
     public init(_ value: Double) { self = .number(value) }
     public init(_ value: Bool) { self = .boolean(value) }
 
+    var containsOnlyFiniteNumbers: Bool {
+        switch self {
+        case .string, .boolean: true
+        case let .number(value): value.isFinite
+        }
+    }
+
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         if let value = try? container.decode(Bool.self) { self = .boolean(value) }
@@ -522,6 +529,14 @@ public enum FeedbackCampaignAnswer: Codable, Hashable, Sendable {
     public init(_ values: [Int]) { self = .array(values.map(FeedbackCampaignScalarAnswer.init)) }
     public init(_ values: [Double]) { self = .array(values.map(FeedbackCampaignScalarAnswer.init)) }
     public init(_ values: [Bool]) { self = .array(values.map(FeedbackCampaignScalarAnswer.init)) }
+
+    var containsOnlyFiniteNumbers: Bool {
+        switch self {
+        case .string, .boolean: true
+        case let .number(value): value.isFinite
+        case let .array(values): values.allSatisfy(\.containsOnlyFiniteNumbers)
+        }
+    }
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()

@@ -9,6 +9,28 @@ private actor CampaignCredential: FeedbackVisitorCredentialProviding {
     func deleteCredential(for productKey: String) async throws {}
 }
 
+private actor CampaignDiagnosticProvider: FeedbackDiagnosticsProviding {
+    private(set) var snapshotCount = 0
+
+    func makeDiagnosticSnapshot() async throws -> FeedbackDiagnosticSnapshot {
+        snapshotCount += 1
+        return FeedbackDiagnosticSnapshot(
+            data: Data("{}".utf8),
+            schemaVersion: 1,
+            sha256: String(repeating: "a", count: 64)
+        )
+    }
+
+    func recordNetwork(
+        method: String,
+        host: String,
+        path: String,
+        statusCode: Int?,
+        duration: TimeInterval,
+        errorCategory: String?
+    ) async {}
+}
+
 struct FeedbackCampaignTests {
     @Test("Campaign list and detail decode typed schemas into display-ready pages")
     func campaignReadsDecodeTypedFormPages() async throws {
@@ -224,6 +246,72 @@ struct FeedbackCampaignTests {
         #expect(response.type == .survey)
         #expect(response.visibility == .private)
         #expect(response.diagnosticsIncluded == false)
+    }
+
+    @Test("Non-finite campaign answers fail before diagnostics or transport")
+    func nonFiniteAnswersFailWithoutSideEffects() async throws {
+        let diagnostics = CampaignDiagnosticProvider()
+        let transport = FeedbackFixtureTransport { request in
+            Issue.record("Unexpected request: \(request.url?.path ?? "")")
+            return (500, [:], Data())
+        }
+        let context = FeedbackClientContext(
+            appVersion: "2.0.0",
+            buildNumber: "42",
+            osVersion: "26.0",
+            deviceCategory: "phone",
+            locale: "en"
+        )
+        let client = FeedbackClient(
+            configuration: try FeedbackConfiguration(
+                productKey: "pk_test",
+                keychainService: "test.feedback.visitor"
+            ),
+            diagnostics: diagnostics,
+            transport: transport,
+            credentialStore: CampaignCredential(),
+            metadataProvider: FeedbackFixedMetadataProvider(context: context)
+        )
+
+        do {
+            _ = try await client.submitCampaignResponse(
+                campaignID: "campaign",
+                request: FeedbackCampaignResponseRequest(
+                    answers: [
+                        "scores": .array([
+                            FeedbackCampaignScalarAnswer(Double.infinity),
+                        ]),
+                    ],
+                    clientContext: context
+                ),
+                idempotencyKey: "non-finite-low-level"
+            )
+            Issue.record("Expected the low-level API to reject infinity")
+        } catch let error as FeedbackClientError {
+            #expect(error.kind == .validation)
+            #expect(error.context.operation == .campaignResponse)
+        } catch {
+            Issue.record("Expected FeedbackClientError, got \(error)")
+        }
+
+        do {
+            _ = try await client.submitCampaignResponse(
+                campaignID: "campaign",
+                answers: ["score": FeedbackCampaignAnswer(Double.nan)],
+                locale: Locale(identifier: "en"),
+                includeDiagnostics: true,
+                idempotencyKey: "non-finite-high-level"
+            )
+            Issue.record("Expected the high-level API to reject NaN")
+        } catch let error as FeedbackClientError {
+            #expect(error.kind == .validation)
+            #expect(error.context.operation == .campaignResponse)
+        } catch {
+            Issue.record("Expected FeedbackClientError, got \(error)")
+        }
+
+        #expect(await diagnostics.snapshotCount == 0)
+        #expect(await transport.requests.isEmpty)
     }
 
     @Test("Survey cannot be sent through the ordinary feedback endpoint")

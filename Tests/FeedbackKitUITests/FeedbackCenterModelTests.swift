@@ -77,6 +77,28 @@ struct FeedbackCenterModelTests {
         #expect(model.bootstrap == nil)
     }
 
+    @Test func surveyPackageRouteDoesNotOpenOrdinaryComposer() {
+        let model = FeedbackCenterModel(
+            client: FeedbackClient(
+                configuration: try! FeedbackConfiguration(
+                    productKey: "pk_test",
+                    keychainService: "test.feedback.visitor"
+                ),
+                credentialStore: Credential()
+            )
+        )
+
+        #expect(model.openPackageRoute("/feedback/new?type=bug"))
+        guard case .composer(.bug) = model.sheet else {
+            Issue.record("Expected the bug composer route to remain supported")
+            return
+        }
+
+        model.sheet = nil
+        #expect(model.openPackageRoute("/feedback/new?type=survey") == false)
+        #expect(model.sheet?.id == nil)
+    }
+
     @Test func viewingFeedbackAcknowledgesThroughItsNewestInboxEvent() async throws {
         let feedbackID = "11111111-1111-4111-8111-111111111111"
         let transport = FeedbackFixtureTransport { request in
