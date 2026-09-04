@@ -243,7 +243,8 @@ struct FeedbackCampaignTests {
             idempotencyKey: "campaign-response-1"
         )
 
-        #expect(response.type == .survey)
+        #expect(response.recordKind == .survey)
+        #expect(response.type == .conversation)
         #expect(response.visibility == .private)
         #expect(response.diagnosticsIncluded == false)
     }
@@ -314,53 +315,24 @@ struct FeedbackCampaignTests {
         #expect(await transport.requests.isEmpty)
     }
 
-    @Test("Survey cannot be sent through the ordinary feedback endpoint")
-    func surveyIsOutputOnlyForOrdinaryFeedback() async throws {
-        let transport = FeedbackFixtureTransport { request in
-            Issue.record("Unexpected request: \(request.url?.path ?? "")")
-            return (500, [:], Data())
-        }
-        let request = FeedbackCreateRequest(
-            type: .survey,
-            title: nil,
-            body: "Not a campaign response",
-            clientContext: FeedbackClientContext(
-                appVersion: "2.0.0",
-                buildNumber: "42",
-                osVersion: "26.0",
-                deviceCategory: "phone",
-                locale: "en"
-            ),
-            attachmentIds: []
+    @Test("Campaign record kinds preserve the ordinary feedback enum")
+    func campaignRecordKindsAreSourceCompatible() throws {
+        #expect(FeedbackKind.allCases == [.bug, .suggestion, .praise, .conversation])
+        #expect(FeedbackKind.submittableCases == FeedbackKind.allCases)
+        #expect(FeedbackKind.allCases.allSatisfy { $0.isSubmittable })
+        #expect(FeedbackRecordKind.survey.feedbackKind == nil)
+
+        let data = Data(
+            #"{"id":"33333333-3333-4333-8333-333333333333","type":"survey","title":"Campaign","displayTitle":"Campaign","body":"Answer","status":"open","visibility":"private","publishedAt":null,"pinnedAt":null,"lastActivityAt":"2026-09-04T10:00:00.000Z","createdAt":"2026-09-04T10:00:00.000Z","updatedAt":"2026-09-04T10:00:00.000Z","authorDisplayCode":"ABC-123","isOwner":true,"voteCount":0,"hasVoted":false,"messages":[],"attachments":[],"diagnosticsIncluded":false}"#.utf8
         )
+        let detail = try FeedbackCoding.decoder().decode(FeedbackDetail.self, from: data)
 
-        do {
-            _ = try await makeClient(transport: transport).createFeedback(
-                request,
-                idempotencyKey: "not-a-survey"
-            )
-            Issue.record("Expected local validation to reject survey feedback")
-        } catch let error as FeedbackClientError {
-            #expect(error.kind == .validation)
-            #expect(error.context.operation == .createFeedback)
-        }
-
-        do {
-            _ = try await makeClient(transport: transport).submitFeedback(
-                type: .survey,
-                title: nil,
-                body: "Not a campaign response",
-                locale: Locale(identifier: "en"),
-                includeDiagnostics: true,
-                idempotencyKey: "not-a-survey-high-level"
-            )
-            Issue.record("Expected high-level validation to reject survey feedback")
-        } catch let error as FeedbackClientError {
-            #expect(error.kind == .validation)
-            #expect(error.context.operation == .createFeedback)
-        }
-        #expect(await transport.requests.isEmpty)
-        #expect(FeedbackKind.submittableCases.contains(.survey) == false)
+        #expect(detail.recordKind == .survey)
+        #expect(detail.type == .conversation)
+        #expect(
+            String(decoding: try FeedbackCoding.encoder().encode(detail), as: UTF8.self)
+                .contains(#""type":"survey""#)
+        )
     }
 
     @Test("Campaign diagnostics failures carry the campaign response operation")

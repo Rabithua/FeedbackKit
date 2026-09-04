@@ -14,24 +14,29 @@ at `2.1.0`. In a package manifest, use:
 Keep the existing Product Key, Keychain service, and long-lived `FeedbackClient`. No Product or
 visitor migration is needed.
 
-## Required source change
+## Source compatibility
 
-Campaign responses are private feedback records with the server type `survey`. `FeedbackKind` now
-includes `.survey` so owned-feedback and detail responses decode without losing that distinction.
-If the app switches exhaustively over `FeedbackKind`, add the new case:
+Campaign responses are private feedback records with the server type `survey`. `FeedbackKind`
+remains the same four-case ordinary submission enum, so existing exhaustive switches continue to
+compile. `OwnedFeedbackSummary` and `FeedbackDetail` now expose the exact server value through the
+extensible `recordKind` property:
 
 ```swift
-switch feedback.type {
-case .bug, .suggestion, .praise, .conversation:
-    showOrdinaryFeedback(feedback)
+switch feedback.recordKind {
 case .survey:
     showCampaignResponse(feedback)
+case .bug, .suggestion, .praise, .conversation:
+    showOrdinaryFeedback(feedback)
+default:
+    showOrdinaryFeedback(feedback)
 }
 ```
 
-Use `FeedbackKind.submittableCases` for an ordinary feedback picker. It contains the four kinds
-accepted by `createFeedback` and `submitFeedback`; `.survey` can be created only through
-`submitCampaignResponse`.
+The existing `type: FeedbackKind` property remains available as a compatibility projection and
+returns `.conversation` for campaign or future non-submittable record kinds. Use `recordKind` for
+display and branching when the campaign distinction matters. `FeedbackKind.submittableCases`
+contains the four kinds accepted by `createFeedback` and `submitFeedback`; a survey can be created
+only through `submitCampaignResponse`.
 
 ## Campaign API
 
@@ -50,6 +55,6 @@ read, render, and submit flow.
 ## Upgrade checklist
 
 - Move the package requirement and resolved pin to `2.1.0` or newer.
-- Add `.survey` to exhaustive `FeedbackKind` switches.
-- Replace `FeedbackKind.allCases` with `FeedbackKind.submittableCases` in ordinary submission UIs.
+- Use `recordKind` where owned-feedback or detail UIs should distinguish campaign responses.
+- Keep `FeedbackKind` or `FeedbackKind.submittableCases` for ordinary submission UIs.
 - Re-run the host app's build and feedback integration tests.

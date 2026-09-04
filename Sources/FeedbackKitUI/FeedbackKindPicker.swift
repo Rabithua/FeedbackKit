@@ -52,7 +52,6 @@ struct FeedbackKindPicker: View {
         case .suggestion: localization.text("feedbackkit.kind.suggestion.description")
         case .praise: localization.text("feedbackkit.kind.praise.description")
         case .conversation: localization.text("feedbackkit.kind.conversation.description")
-        case .survey: localization.text("feedbackkit.kind.survey.description")
         }
     }
 }

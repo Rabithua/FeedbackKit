@@ -28,8 +28,8 @@ Major Version** rule starting at `2.1.0`. Link these products to the app target:
 diagnostic collector or Journey analytics unless the app selects those products.
 
 Existing integrations should update the package requirement to a minimum of `2.1.0`; see
-[Migrating to 2.1](Documentation/MigratingTo2.1.md) for the campaign APIs and the one exhaustive
-switch change.
+[Migrating to 2.1](Documentation/MigratingTo2.1.md) for the campaign APIs and source-compatibility
+details.
 
 ## Minimal integration
 
@@ -101,9 +101,10 @@ let response = try await client.submitCampaignResponse(
 )
 ```
 
-Campaign responses decode as `FeedbackKind.survey` in owned-feedback and detail results, but
-`survey` is intentionally absent from `FeedbackKind.submittableCases` and cannot be sent through
-the ordinary feedback endpoint.
+Campaign responses expose `recordKind == .survey` in owned-feedback and detail results.
+`FeedbackKind` remains the four-case ordinary submission enum, so existing exhaustive switches keep
+compiling. Its compatibility `type` projection returns `.conversation` for a campaign response;
+use `recordKind` whenever the exact server-side distinction matters.
 
 ## Show new replies on foreground
 
