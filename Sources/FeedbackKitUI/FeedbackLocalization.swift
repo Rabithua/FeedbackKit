@@ -63,6 +63,7 @@ struct FeedbackLocalization: EnvironmentKey, Sendable {
         case .suggestion: text("feedbackkit.kind.suggestion")
         case .praise: text("feedbackkit.kind.praise")
         case .conversation: text("feedbackkit.kind.conversation")
+        case .survey: text("feedbackkit.kind.survey")
         }
     }
 

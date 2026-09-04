@@ -5,8 +5,15 @@ public enum FeedbackKind: String, Codable, CaseIterable, Identifiable, Sendable 
     case suggestion
     case praise
     case conversation
+    /// A private response created by the campaign response API.
+    case survey
 
     public var id: Self { self }
+
+    /// Kinds accepted by the ordinary feedback submission API.
+    public static let submittableCases: [Self] = [.bug, .suggestion, .praise, .conversation]
+
+    public var isSubmittable: Bool { self != .survey }
 }
 
 public enum FeedbackStatus: String, Codable, Sendable {

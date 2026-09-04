@@ -61,6 +61,8 @@
 "feedbackkit.kind.praise.description" = "Send the developers some positive energy";
 "feedbackkit.kind.suggestion" = "Suggest an Idea";
 "feedbackkit.kind.suggestion.description" = "Share a request or idea that could improve the app";
+"feedbackkit.kind.survey" = "Survey Response";
+"feedbackkit.kind.survey.description" = "Respond to a developer campaign";
 "feedbackkit.kind.title" = "Choose Feedback Type";
 "feedbackkit.loading" = "Loading…";
 "feedbackkit.mine.empty" = "You haven’t sent feedback yet";

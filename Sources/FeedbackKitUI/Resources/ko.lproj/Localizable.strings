@@ -61,6 +61,8 @@
 "feedbackkit.kind.praise.description" = "개발자에게 힘이 되는 말을 전해 주세요";
 "feedbackkit.kind.suggestion" = "아이디어 제안";
 "feedbackkit.kind.suggestion.description" = "App을 더 좋게 만들 요청이나 아이디어를 공유해 주세요";
+"feedbackkit.kind.survey" = "설문 응답";
+"feedbackkit.kind.survey.description" = "개발자가 만든 설문에 응답합니다";
 "feedbackkit.kind.title" = "피드백 유형 선택";
 "feedbackkit.loading" = "불러오는 중…";
 "feedbackkit.mine.empty" = "보낸 피드백이 없습니다";

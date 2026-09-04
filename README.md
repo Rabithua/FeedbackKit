@@ -3,11 +3,11 @@
 FeedbackKit 2.0 is an iOS and iPadOS 18+ Swift package for integrating a complete feedback center
 with FeedbackServer. It includes anonymous visitor identity, public activity, owned feedback
 conversations, attachments, voting, a version-and-body changelog, user-controlled private
-diagnostics, opt-in Journey analytics, and a default SwiftUI interface.
+diagnostics, typed campaign forms, opt-in Journey analytics, and a default SwiftUI interface.
 
 ## Products
 
-- `FeedbackKitCore`: FeedbackServer DTOs, client transport, visitor credentials, drafts, uploads, voting, and inbox APIs.
+- `FeedbackKitCore`: FeedbackServer DTOs, client transport, visitor credentials, drafts, uploads, voting, campaign forms, and inbox APIs.
 - `FeedbackKitDiagnostics`: structured logs, breadcrumbs, MetricKit crash summaries, redaction, retention, and private diagnostic snapshots.
 - `FeedbackKitJourney`: opt-in user journey sessions and events, recorded in memory and submitted on session end for product analytics.
 - `FeedbackKitUI`: the localized SwiftUI feedback center.
@@ -45,6 +45,65 @@ let client = FeedbackClient(configuration: configuration)
 
 FeedbackCenterView(client: client)
 ```
+
+## Campaign forms
+
+Published campaigns are available through `FeedbackKitCore`. Their bounded answer schemas decode
+into typed Swift cases, and `campaign.form` converts the server's flat elements into pages with
+stable integer IDs and no page-break markers:
+
+```swift
+let campaigns = try await client.campaigns()
+guard let summary = campaigns.first else { return }
+
+let campaign = try await client.campaign(id: summary.id)
+let form = campaign.form
+
+for page in form.pages {
+    for element in page.elements {
+        switch element.content {
+        case let .notice(text):
+            showNotice(text)
+        case let .question(question):
+            switch question.answer {
+            case let .string(schema):
+                showTextOrSingleChoice(question, allowedValues: schema.allowedValues)
+            case let .number(schema):
+                showNumber(question, minimum: schema.minimum, maximum: schema.maximum)
+            case let .integer(schema):
+                showInteger(question, minimum: schema.minimum, maximum: schema.maximum)
+            case let .boolean(schema):
+                showToggle(question, constant: schema.constant)
+            case let .array(schema):
+                showMultipleChoice(question, schema: schema)
+            }
+        }
+    }
+}
+```
+
+Build an answer dictionary with the public scalar and array initializers, then submit it. Client
+context is prepared automatically; attachment IDs and an explicitly authorized diagnostic snapshot
+use the same rules as ordinary feedback:
+
+```swift
+let response = try await client.submitCampaignResponse(
+    campaignID: campaign.id,
+    answers: [
+        "satisfaction": FeedbackCampaignAnswer(4),
+        "features": FeedbackCampaignAnswer(["sync", "share"]),
+        "recommend": FeedbackCampaignAnswer(true),
+    ],
+    comment: "Keep it up!",
+    locale: .current,
+    includeDiagnostics: false,
+    idempotencyKey: UUID().uuidString
+)
+```
+
+Campaign responses decode as `FeedbackKind.survey` in owned-feedback and detail results, but
+`survey` is intentionally absent from `FeedbackKind.submittableCases` and cannot be sent through
+the ordinary feedback endpoint.
 
 ## Show new replies on foreground
 

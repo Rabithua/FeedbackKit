@@ -61,6 +61,8 @@
 "feedbackkit.kind.praise.description" = "開発者にうれしい言葉を届けます";
 "feedbackkit.kind.suggestion" = "アイデアを提案";
 "feedbackkit.kind.suggestion.description" = "Appをより良くする要望やアイデアを共有します";
+"feedbackkit.kind.survey" = "アンケート回答";
+"feedbackkit.kind.survey.description" = "開発者のアンケートに回答します";
 "feedbackkit.kind.title" = "フィードバックの種類を選択";
 "feedbackkit.loading" = "読み込み中…";
 "feedbackkit.mine.empty" = "送信したフィードバックはありません";
