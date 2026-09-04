@@ -144,7 +144,8 @@ final class FeedbackCenterModel {
                let item = components.queryItems?.first,
                item.name == "type",
                let value = item.value,
-               let kind = FeedbackKind(rawValue: value)
+               let kind = FeedbackKind(rawValue: value),
+               kind.isSubmittable
             {
                 sheet = .composer(kind)
             } else if let id = routeUUID(components.path, prefix: "/feedback/") {
