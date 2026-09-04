@@ -16,7 +16,7 @@ struct FeedbackKindPicker: View {
                 ? [GridItem(.flexible())]
                 : [GridItem(.flexible()), GridItem(.flexible())]
             LazyVGrid(columns: columns, spacing: 12) {
-                ForEach(FeedbackKind.allCases) { kind in
+                ForEach(FeedbackKind.submittableCases) { kind in
                     Button {
                         haptics.trigger(.selection)
                         select(kind)
@@ -52,6 +52,7 @@ struct FeedbackKindPicker: View {
         case .suggestion: localization.text("feedbackkit.kind.suggestion.description")
         case .praise: localization.text("feedbackkit.kind.praise.description")
         case .conversation: localization.text("feedbackkit.kind.conversation.description")
+        case .survey: localization.text("feedbackkit.kind.survey.description")
         }
     }
 }

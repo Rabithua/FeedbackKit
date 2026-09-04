@@ -61,6 +61,8 @@
 "feedbackkit.kind.praise.description" = "少量的夸夸也能给开发者带来大量的情绪价值";
 "feedbackkit.kind.suggestion" = "需求建议";
 "feedbackkit.kind.suggestion.description" = "提交你的需求和倡议，让产品变得更好用";
+"feedbackkit.kind.survey" = "问卷回复";
+"feedbackkit.kind.survey.description" = "回复开发者发起的问卷";
 "feedbackkit.kind.title" = "请选择反馈类型";
 "feedbackkit.loading" = "加载中…";
 "feedbackkit.mine.empty" = "你还没有发送过反馈";

@@ -50,6 +50,21 @@ struct FeedbackLocalizationTests {
 
     @Test(
         arguments: [
+            ("en", "Survey Response"),
+            ("zh-Hans", "问卷回复"),
+            ("zh-Hant", "問卷回覆"),
+            ("ja", "アンケート回答"),
+            ("ko", "설문 응답"),
+        ]
+    )
+    func surveyResponseKindIsLocalized(identifier: String, expected: String) {
+        let localization = FeedbackLocalization(locale: Locale(identifier: identifier))
+
+        #expect(localization.kind(.survey) == expected)
+    }
+
+    @Test(
+        arguments: [
             "feedback_feature_unavailable",
             "feedback_service_read_only",
             "feedback_storage_unavailable",
