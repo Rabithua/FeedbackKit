@@ -1,13 +1,13 @@
-# Migrating to FeedbackKit 3.0
+# Migrating to FeedbackKit 2.1
 
-FeedbackKit 3.0 adds the visitor campaign API and typed, display-ready campaign form models. Update
-the package dependency to a minimum of `3.0.0`. In Xcode, use **Up to Next Major Version** starting
-at `3.0.0`. In a package manifest, use:
+FeedbackKit 2.1 adds the visitor campaign API and typed, display-ready campaign form models. Update
+the package dependency to a minimum of `2.1.0`. In Xcode, use **Up to Next Major Version** starting
+at `2.1.0`. In a package manifest, use:
 
 ```swift
 .package(
     url: "https://github.com/Rabithua/FeedbackKit.git",
-    from: "3.0.0"
+    from: "2.1.0"
 )
 ```
 
@@ -49,7 +49,7 @@ read, render, and submit flow.
 
 ## Upgrade checklist
 
-- Move the package requirement and resolved pin to `3.0.0` or newer.
+- Move the package requirement and resolved pin to `2.1.0` or newer.
 - Add `.survey` to exhaustive `FeedbackKind` switches.
 - Replace `FeedbackKind.allCases` with `FeedbackKind.submittableCases` in ordinary submission UIs.
 - Re-run the host app's build and feedback integration tests.

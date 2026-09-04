@@ -25,14 +25,14 @@ Neither is required for client bootstrap or feedback submission.
 ## 2. Add the Swift package
 
 Add `https://github.com/Rabithua/FeedbackKit.git` in Xcode with **Up to Next Major Version**, starting
-at `3.0.0`. Existing integrations should follow
-[Migrating to FeedbackKit 3.0](MigratingTo3.0.md).
+at `2.1.0`. Existing integrations should follow
+[Migrating to FeedbackKit 2.1](MigratingTo2.1.md).
 
 Link `FeedbackKitCore` and `FeedbackKitUI` to the app target. Link `FeedbackKitDiagnostics` only when
 the app will offer opt-in diagnostic upload, and link `FeedbackKitJourney` only when the app will
 record opt-in journey analytics. Add `FeedbackKitTestSupport` only to test targets.
 
-FeedbackKit 3.0 requires iOS 18 or macOS 15 and Swift 6 language mode.
+FeedbackKit 2.1 requires iOS 18 or macOS 15 and Swift 6 language mode.
 
 ## 3. Configure each build environment
 

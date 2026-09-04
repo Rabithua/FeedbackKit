@@ -1,6 +1,6 @@
 # FeedbackKit
 
-FeedbackKit 3.0 is an iOS and iPadOS 18+ Swift package for integrating a complete feedback center
+FeedbackKit 2.1 is an iOS and iPadOS 18+ Swift package for integrating a complete feedback center
 with FeedbackServer. It includes anonymous visitor identity, public activity, owned feedback
 conversations, attachments, voting, a version-and-body changelog, user-controlled private
 diagnostics, typed campaign forms, opt-in Journey analytics, and a default SwiftUI interface.
@@ -16,7 +16,7 @@ diagnostics, typed campaign forms, opt-in Journey analytics, and a default Swift
 ## Add the package
 
 In Xcode, add `https://github.com/Rabithua/FeedbackKit.git` with the **Up to Next
-Major Version** rule starting at `3.0.0`. Link these products to the app target:
+Major Version** rule starting at `2.1.0`. Link these products to the app target:
 
 - `FeedbackKitCore`
 - `FeedbackKitUI`
@@ -27,8 +27,8 @@ Major Version** rule starting at `3.0.0`. Link these products to the app target:
 `FeedbackKitUI` depends only on `FeedbackKitCore`; adding the default interface does not link the
 diagnostic collector or Journey analytics unless the app selects those products.
 
-Existing integrations should update the package requirement to a minimum of `3.0.0`; see
-[Migrating to 3.0](Documentation/MigratingTo3.0.md) for the campaign APIs and the one exhaustive
+Existing integrations should update the package requirement to a minimum of `2.1.0`; see
+[Migrating to 2.1](Documentation/MigratingTo2.1.md) for the campaign APIs and the one exhaustive
 switch change.
 
 ## Minimal integration
@@ -224,7 +224,7 @@ implementation clips legacy `diagnosticSnapshotData()` results.
 
 Follow the complete [new app onboarding guide](Documentation/GettingStarted.md) for Product setup,
 xcconfig/Info.plist configuration, diagnostics and privacy decisions, route handling, catalog
-seeding, and acceptance checks. For upgrades, read [Migrating to 3.0](Documentation/MigratingTo3.0.md).
+seeding, and acceptance checks. For upgrades, read [Migrating to 2.1](Documentation/MigratingTo2.1.md).
 The earlier [2.0](Documentation/MigratingTo2.0.md) and
 [0.2](Documentation/MigratingTo0.2.md) migration guides remain available for historical integrations.
 The runnable [FeedbackKit Demo](Examples/FeedbackKitDemo/README.md) starts in Fixture mode with no

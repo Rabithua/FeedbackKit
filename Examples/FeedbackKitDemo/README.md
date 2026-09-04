@@ -1,6 +1,6 @@
 # FeedbackKit Demo
 
-Open `FeedbackKitDemo.xcodeproj` from FeedbackKit `3.0.0` or newer and run the `FeedbackKitDemo`
+Open `FeedbackKitDemo.xcodeproj` from FeedbackKit `2.1.0` or newer and run the `FeedbackKitDemo`
 scheme on iOS 18 or later. The project uses a local package reference to the repository root, so no
 separate package version selection is required.
 
