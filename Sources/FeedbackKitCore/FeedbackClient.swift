@@ -221,6 +221,12 @@ public actor FeedbackClient {
         includeDiagnostics: Bool,
         idempotencyKey: String
     ) async throws -> OwnedFeedbackSummary {
+        guard type.isSubmittable else {
+            throw FeedbackClientError(
+                kind: .validation,
+                context: FeedbackFailureContext(operation: .createFeedback)
+            )
+        }
         let diagnosticID = try await diagnosticArtifactID(
             includeDiagnostics: includeDiagnostics,
             locale: locale,

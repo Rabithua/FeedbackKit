@@ -256,6 +256,21 @@ struct FeedbackCampaignTests {
             #expect(error.kind == .validation)
             #expect(error.context.operation == .createFeedback)
         }
+
+        do {
+            _ = try await makeClient(transport: transport).submitFeedback(
+                type: .survey,
+                title: nil,
+                body: "Not a campaign response",
+                locale: Locale(identifier: "en"),
+                includeDiagnostics: true,
+                idempotencyKey: "not-a-survey-high-level"
+            )
+            Issue.record("Expected high-level validation to reject survey feedback")
+        } catch let error as FeedbackClientError {
+            #expect(error.kind == .validation)
+            #expect(error.context.operation == .createFeedback)
+        }
         #expect(await transport.requests.isEmpty)
         #expect(FeedbackKind.submittableCases.contains(.survey) == false)
     }
