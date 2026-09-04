@@ -34,7 +34,7 @@ struct FeedbackDetailSheet: View {
         VStack(spacing: 0) {
             FeedbackSheetHeader(
                 title: model.detail.map {
-                    "\(localization.kind($0.type))（\(localization.status($0.status))）"
+                    "\(localization.kind($0.recordKind))（\(localization.status($0.status))）"
                 } ?? ""
             ) {
                 if let detail = model.detail, detail.isPublic {

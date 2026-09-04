@@ -61,6 +61,8 @@
 "feedbackkit.kind.praise.description" = "少量的誇獎也能帶給開發者大量正能量";
 "feedbackkit.kind.suggestion" = "需求建議";
 "feedbackkit.kind.suggestion.description" = "提交你的需求和建議，讓產品變得更好用";
+"feedbackkit.kind.survey" = "問卷回覆";
+"feedbackkit.kind.survey.description" = "回覆開發者發起的問卷";
 "feedbackkit.kind.title" = "請選擇回饋類型";
 "feedbackkit.loading" = "載入中…";
 "feedbackkit.mine.empty" = "你還沒有傳送過回饋";

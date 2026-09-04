@@ -66,6 +66,16 @@ struct FeedbackLocalization: EnvironmentKey, Sendable {
         }
     }
 
+    func kind(_ kind: FeedbackRecordKind) -> String {
+        if let feedbackKind = kind.feedbackKind {
+            return self.kind(feedbackKind)
+        }
+        if kind == .survey {
+            return text("feedbackkit.kind.survey")
+        }
+        return kind.rawValue
+    }
+
     func status(_ status: FeedbackStatus) -> String {
         switch status {
         case .open: text("feedbackkit.status.open")

@@ -132,8 +132,79 @@ public actor FeedbackClient {
         )
     }
 
+    /// Lists every published campaign that is currently collecting responses.
+    public func campaigns() async throws -> [FeedbackCampaign] {
+        try await get(
+            FeedbackCampaignList.self,
+            operation: .campaigns,
+            path: "campaigns"
+        ).campaigns
+    }
+
+    /// Loads one published campaign and its complete form definition.
+    public func campaign(id: String) async throws -> FeedbackCampaign {
+        try await get(
+            FeedbackCampaign.self,
+            operation: .campaign,
+            path: "campaigns/\(id)"
+        )
+    }
+
+    /// Submits a fully prepared campaign response request.
+    public func submitCampaignResponse(
+        campaignID: String,
+        request: FeedbackCampaignResponseRequest,
+        idempotencyKey: String
+    ) async throws -> OwnedFeedbackSummary {
+        try validateCampaignAnswers(request.answers)
+        return try await send(
+            OwnedFeedbackSummary.self,
+            operation: .campaignResponse,
+            method: .post,
+            path: "campaigns/\(campaignID)/responses",
+            body: request,
+            idempotencyKey: idempotencyKey
+        )
+    }
+
+    /// Prepares client context and optional diagnostics before submitting a campaign response.
+    public func submitCampaignResponse(
+        campaignID: String,
+        answers: [String: FeedbackCampaignAnswer],
+        comment: String? = nil,
+        locale: Locale,
+        attachmentIds: [String] = [],
+        includeDiagnostics: Bool,
+        idempotencyKey: String
+    ) async throws -> OwnedFeedbackSummary {
+        try validateCampaignAnswers(answers)
+        let diagnosticID = try await diagnosticArtifactID(
+            includeDiagnostics: includeDiagnostics,
+            locale: locale,
+            operation: .campaignResponse
+        )
+        let context = await metadataProvider.clientContext(locale: locale)
+        return try await submitCampaignResponse(
+            campaignID: campaignID,
+            request: FeedbackCampaignResponseRequest(
+                answers: answers,
+                comment: comment,
+                clientContext: context,
+                attachmentIds: attachmentIds,
+                diagnosticArtifactId: diagnosticID
+            ),
+            idempotencyKey: idempotencyKey
+        )
+    }
+
     public func createFeedback(_ request: FeedbackCreateRequest, idempotencyKey: String) async throws -> OwnedFeedbackSummary {
-        try await send(
+        guard request.type.isSubmittable else {
+            throw FeedbackClientError(
+                kind: .validation,
+                context: FeedbackFailureContext(operation: .createFeedback)
+            )
+        }
+        return try await send(
             OwnedFeedbackSummary.self,
             operation: .createFeedback,
             method: .post,
@@ -152,44 +223,17 @@ public actor FeedbackClient {
         includeDiagnostics: Bool,
         idempotencyKey: String
     ) async throws -> OwnedFeedbackSummary {
-        var diagnosticID: String?
-        if includeDiagnostics {
-            guard let diagnostics else {
-                throw FeedbackClientError(
-                    kind: .diagnosticsUnavailable,
-                    context: FeedbackFailureContext(operation: .createFeedback)
-                )
-            }
-            let capability: FeedbackDiagnosticsCapability
-            if let latestDiagnosticsCapability {
-                capability = latestDiagnosticsCapability
-            } else {
-                guard let fetched = try await bootstrap(locale: locale).product.diagnostics else {
-                    throw FeedbackClientError(
-                        kind: .diagnosticsUnavailable,
-                        context: FeedbackFailureContext(operation: .createFeedback)
-                    )
-                }
-                capability = fetched
-            }
-            guard capability.supportsSchemaOne else {
-                throw FeedbackClientError(
-                    kind: .diagnosticsUnavailable,
-                    context: FeedbackFailureContext(operation: .createFeedback)
-                )
-            }
-            let snapshot = try await diagnostics.makeDiagnosticSnapshot(
-                maxBytes: capability.maxBytes,
-                locale: locale
+        guard type.isSubmittable else {
+            throw FeedbackClientError(
+                kind: .validation,
+                context: FeedbackFailureContext(operation: .createFeedback)
             )
-            guard snapshot.data.count <= capability.maxBytes else {
-                throw FeedbackClientError(
-                    kind: .payloadTooLarge,
-                    context: FeedbackFailureContext(operation: .createFeedback)
-                )
-            }
-            diagnosticID = try await uploadDiagnosticSnapshot(snapshot)
         }
+        let diagnosticID = try await diagnosticArtifactID(
+            includeDiagnostics: includeDiagnostics,
+            locale: locale,
+            operation: .createFeedback
+        )
         let context = await metadataProvider.clientContext(locale: locale)
         return try await createFeedback(
             FeedbackCreateRequest(
@@ -366,5 +410,61 @@ public actor FeedbackClient {
             path: "me"
         )
         try await credentialStore.deleteCredential(for: configuration.productKey)
+    }
+
+    private func diagnosticArtifactID(
+        includeDiagnostics: Bool,
+        locale: Locale,
+        operation: FeedbackClientOperation
+    ) async throws -> String? {
+        guard includeDiagnostics else { return nil }
+        guard let diagnostics else {
+            throw FeedbackClientError(
+                kind: .diagnosticsUnavailable,
+                context: FeedbackFailureContext(operation: operation)
+            )
+        }
+
+        let capability: FeedbackDiagnosticsCapability
+        if let latestDiagnosticsCapability {
+            capability = latestDiagnosticsCapability
+        } else {
+            guard let fetched = try await bootstrap(locale: locale).product.diagnostics else {
+                throw FeedbackClientError(
+                    kind: .diagnosticsUnavailable,
+                    context: FeedbackFailureContext(operation: operation)
+                )
+            }
+            capability = fetched
+        }
+        guard capability.supportsSchemaOne else {
+            throw FeedbackClientError(
+                kind: .diagnosticsUnavailable,
+                context: FeedbackFailureContext(operation: operation)
+            )
+        }
+
+        let snapshot = try await diagnostics.makeDiagnosticSnapshot(
+            maxBytes: capability.maxBytes,
+            locale: locale
+        )
+        guard snapshot.data.count <= capability.maxBytes else {
+            throw FeedbackClientError(
+                kind: .payloadTooLarge,
+                context: FeedbackFailureContext(operation: operation)
+            )
+        }
+        return try await uploadDiagnosticSnapshot(snapshot)
+    }
+
+    private func validateCampaignAnswers(
+        _ answers: [String: FeedbackCampaignAnswer]
+    ) throws {
+        guard answers.values.allSatisfy(\.containsOnlyFiniteNumbers) else {
+            throw FeedbackClientError(
+                kind: .validation,
+                context: FeedbackFailureContext(operation: .campaignResponse)
+            )
+        }
     }
 }

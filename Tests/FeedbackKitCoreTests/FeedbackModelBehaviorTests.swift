@@ -118,7 +118,7 @@ struct FeedbackModelBehaviorTests {
     ) -> FeedbackDetail {
         FeedbackDetail(
             id: "feedback-id",
-            type: .bug,
+            recordKind: .bug,
             title: nil,
             displayTitle: "Feedback",
             body: "Body",
