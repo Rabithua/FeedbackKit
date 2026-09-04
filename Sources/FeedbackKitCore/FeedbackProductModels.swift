@@ -5,15 +5,49 @@ public enum FeedbackKind: String, Codable, CaseIterable, Identifiable, Sendable 
     case suggestion
     case praise
     case conversation
-    /// A private response created by the campaign response API.
-    case survey
 
     public var id: Self { self }
 
     /// Kinds accepted by the ordinary feedback submission API.
-    public static let submittableCases: [Self] = [.bug, .suggestion, .praise, .conversation]
+    public static let submittableCases: [Self] = allCases
 
-    public var isSubmittable: Bool { self != .survey }
+    public var isSubmittable: Bool { true }
+}
+
+/// The extensible server-side kind of a feedback record.
+public struct FeedbackRecordKind: RawRepresentable, Codable, Hashable, Identifiable, Sendable {
+    public static let bug = Self(rawValue: "bug")
+    public static let suggestion = Self(rawValue: "suggestion")
+    public static let praise = Self(rawValue: "praise")
+    public static let conversation = Self(rawValue: "conversation")
+    /// A private response created by the campaign response API.
+    public static let survey = Self(rawValue: "survey")
+
+    public let rawValue: String
+    public var id: String { rawValue }
+
+    public init(rawValue: String) {
+        self.rawValue = rawValue
+    }
+
+    public init(_ feedbackKind: FeedbackKind) {
+        rawValue = feedbackKind.rawValue
+    }
+
+    /// The matching ordinary submission kind, or `nil` for campaign and future record kinds.
+    public var feedbackKind: FeedbackKind? {
+        FeedbackKind(rawValue: rawValue)
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        rawValue = try container.decode(String.self)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 }
 
 public enum FeedbackStatus: String, Codable, Sendable {

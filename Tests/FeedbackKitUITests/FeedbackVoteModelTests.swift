@@ -256,7 +256,7 @@ struct FeedbackVoteModelTests {
     private func feedbackDetail(messages: [FeedbackMessage]) -> FeedbackDetail {
         FeedbackDetail(
             id: feedbackID,
-            type: .bug,
+            recordKind: .bug,
             title: "Title",
             displayTitle: "Title",
             body: "Body",

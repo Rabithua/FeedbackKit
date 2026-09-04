@@ -93,7 +93,7 @@ struct MyFeedbackView: View {
                                 HStack(alignment: .center, spacing: 10) {
                                     VStack(alignment: .leading, spacing: 4) {
                                         HStack(spacing: 7) {
-                                            Text(localization.kind(feedback.type))
+                                            Text(localization.kind(feedback.recordKind))
                                                 .font(.headline)
                                                 .lineLimit(1)
                                                 .truncationMode(.tail)
