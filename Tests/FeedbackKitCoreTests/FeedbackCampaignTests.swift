@@ -369,6 +369,28 @@ struct FeedbackCampaignTests {
         )
     }
 
+    @Test("respondedAt decodes when present and is absent-tolerant when not")
+    func respondedAtReportsPriorParticipation() throws {
+        var object = Self.campaignJSONObject
+
+        // A server that does not send the field at all, and the Product-keyed
+        // routes, which have no visitor to report on.
+        let unanswered = try FeedbackCoding.decoder().decode(
+            FeedbackCampaign.self,
+            from: try JSONSerialization.data(withJSONObject: object)
+        )
+        #expect(unanswered.respondedAt == nil)
+        #expect(unanswered.hasResponded == false)
+
+        object["respondedAt"] = "2026-09-03T09:30:00.000Z"
+        let answered = try FeedbackCoding.decoder().decode(
+            FeedbackCampaign.self,
+            from: try JSONSerialization.data(withJSONObject: object)
+        )
+        #expect(answered.hasResponded)
+        #expect(answered.respondedAt == Date(timeIntervalSince1970: 1_788_427_800))
+    }
+
     private static var campaignJSONObject: [String: Any] { [
         "id": "11111111-1111-4111-8111-111111111111",
         "title": "Help us plan Q3",
