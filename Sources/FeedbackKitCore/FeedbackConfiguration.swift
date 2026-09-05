@@ -6,6 +6,8 @@ public struct FeedbackConfiguration: Sendable {
     public static let productKeyInfoDictionaryKey = "FeedbackProductKey"
     /// The optional Info.plist key that preserves a host-owned Keychain service.
     public static let keychainServiceInfoDictionaryKey = "FeedbackKeychainService"
+    /// The optional Info.plist key that routes requests to the beta API instead of production.
+    public static let useBetaAPIInfoDictionaryKey = "FeedbackUseBetaAPI"
 
     /// The publishable key that binds requests to a FeedbackServer Product.
     public let productKey: String
@@ -32,7 +34,8 @@ public struct FeedbackConfiguration: Sendable {
         }
         try self.init(
             productKey: productKey,
-            keychainService: "\(bundleIdentifier).feedbackkit.visitor"
+            keychainService: "\(bundleIdentifier).feedbackkit.visitor",
+            apiBaseURL: Self.usesBetaAPI(bundle: bundle) ? Self.betaAPIBaseURL : Self.productionAPIBaseURL
         )
     }
 
@@ -46,13 +49,35 @@ public struct FeedbackConfiguration: Sendable {
             )
         }
 
-        if let keychainService = bundle.object(
+        let keychainService: String
+        if let hostOwnedKeychainService = bundle.object(
             forInfoDictionaryKey: Self.keychainServiceInfoDictionaryKey
         ) as? String {
-            try self.init(productKey: productKey, keychainService: keychainService)
+            keychainService = hostOwnedKeychainService
         } else {
-            try self.init(productKey: productKey, bundle: bundle)
+            guard let bundleIdentifier = bundle.bundleIdentifier?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  bundleIdentifier.isEmpty == false
+            else {
+                throw FeedbackConfigurationError.missingBundleIdentifier
+            }
+            keychainService = "\(bundleIdentifier).feedbackkit.visitor"
         }
+
+        try self.init(
+            productKey: productKey,
+            keychainService: keychainService,
+            apiBaseURL: Self.usesBetaAPI(bundle: bundle) ? Self.betaAPIBaseURL : Self.productionAPIBaseURL
+        )
+    }
+
+    /// Info.plist values come through Xcode build-setting substitution as strings, never as a
+    /// literal `<true/>`/`<false/>`, so this accepts "YES"/"true"/"1" (case-insensitively) rather
+    /// than casting to `Bool`.
+    private static func usesBetaAPI(bundle: Bundle) -> Bool {
+        guard let rawValue = bundle.object(forInfoDictionaryKey: Self.useBetaAPIInfoDictionaryKey) as? String else {
+            return false
+        }
+        return ["YES", "TRUE", "1"].contains(rawValue.trimmingCharacters(in: .whitespacesAndNewlines).uppercased())
     }
 
     internal init(
@@ -80,6 +105,10 @@ public struct FeedbackConfiguration: Sendable {
 
     internal static let productionAPIBaseURL = URL(
         string: "https://api.feedkit.cn/v1/api"
+    )!
+
+    internal static let betaAPIBaseURL = URL(
+        string: "https://betaapi.feedkit.cn/v1/api"
     )!
 }
 

@@ -8,6 +8,10 @@ public struct FeedbackCampaign: Codable, Hashable, Identifiable, Sendable {
     public let elements: [FeedbackCampaignElement]
     public let publishedAt: Date?
     public let updatedAt: Date
+    /// When this visitor first answered, or nil if they have not. Always nil on
+    /// the Product-keyed public routes, which have no visitor to speak for, and
+    /// on servers older than the field.
+    public let respondedAt: Date?
 
     public init(
         id: String,
@@ -15,7 +19,8 @@ public struct FeedbackCampaign: Codable, Hashable, Identifiable, Sendable {
         description: String,
         elements: [FeedbackCampaignElement],
         publishedAt: Date?,
-        updatedAt: Date
+        updatedAt: Date,
+        respondedAt: Date? = nil
     ) {
         self.id = id
         self.title = title
@@ -23,7 +28,12 @@ public struct FeedbackCampaign: Codable, Hashable, Identifiable, Sendable {
         self.elements = elements
         self.publishedAt = publishedAt
         self.updatedAt = updatedAt
+        self.respondedAt = respondedAt
     }
+
+    /// Whether this visitor has already answered — the reason to stop offering
+    /// the campaign rather than collect a second response.
+    public var hasResponded: Bool { respondedAt != nil }
 
     /// The campaign converted into stable, display-ready pages.
     public var form: FeedbackCampaignForm {
