@@ -99,6 +99,26 @@ struct FeedbackCenterModelTests {
         #expect(model.sheet?.id == nil)
     }
 
+    @Test func campaignPackageRouteOpensTheCampaignSheet() {
+        let model = FeedbackCenterModel(
+            client: FeedbackClient(
+                configuration: try! FeedbackConfiguration(
+                    productKey: "pk_test",
+                    keychainService: "test.feedback.visitor"
+                ),
+                credentialStore: Credential()
+            )
+        )
+        let campaignID = "11111111-1111-4111-8111-111111111111"
+
+        #expect(model.openPackageRoute("/campaigns/\(campaignID)"))
+        guard case let .campaign(openedID) = model.sheet else {
+            Issue.record("Expected the Campaign route to open a Campaign sheet")
+            return
+        }
+        #expect(openedID == campaignID)
+    }
+
     @Test func viewingFeedbackAcknowledgesThroughItsNewestInboxEvent() async throws {
         let feedbackID = "11111111-1111-4111-8111-111111111111"
         let transport = FeedbackFixtureTransport { request in

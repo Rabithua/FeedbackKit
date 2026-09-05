@@ -152,6 +152,8 @@ final class FeedbackCenterModel {
                 sheet = .feedback(id)
             } else if let id = routeUUID(components.path, prefix: "/developer-posts/") {
                 sheet = .developerPost(id)
+            } else if let id = routeUUID(components.path, prefix: "/campaigns/") {
+                sheet = .campaign(id)
             } else if routeUUID(components.path, prefix: "/items/") != nil {
                 path.append(.roadmap)
             } else if routeUUID(components.path, prefix: "/releases/") != nil {

@@ -19,8 +19,27 @@ public struct FeedbackCampaign: Codable, Hashable, Identifiable, Sendable {
         description: String,
         elements: [FeedbackCampaignElement],
         publishedAt: Date?,
+        updatedAt: Date
+    ) {
+        self.init(
+            id: id,
+            title: title,
+            description: description,
+            elements: elements,
+            publishedAt: publishedAt,
+            updatedAt: updatedAt,
+            respondedAt: nil
+        )
+    }
+
+    public init(
+        id: String,
+        title: String,
+        description: String,
+        elements: [FeedbackCampaignElement],
+        publishedAt: Date?,
         updatedAt: Date,
-        respondedAt: Date? = nil
+        respondedAt: Date?
     ) {
         self.id = id
         self.title = title
@@ -39,6 +58,68 @@ public struct FeedbackCampaign: Codable, Hashable, Identifiable, Sendable {
     public var form: FeedbackCampaignForm {
         FeedbackCampaignForm(campaign: self)
     }
+}
+
+/// Lightweight, display-ready data for a host-owned Campaign invitation.
+public struct FeedbackCampaignPreview: Codable, Hashable, Identifiable, Sendable {
+    public let id: String
+    public let title: String
+    public let description: String
+    public let publishedAt: Date
+    public let updatedAt: Date
+
+    public init(
+        id: String,
+        title: String,
+        description: String,
+        publishedAt: Date,
+        updatedAt: Date
+    ) {
+        self.id = id
+        self.title = title
+        self.description = description
+        self.publishedAt = publishedAt
+        self.updatedAt = updatedAt
+    }
+}
+
+/// A Campaign prompt together with whether FeedbackKit could apply visitor history.
+public struct FeedbackCampaignPrompt: Codable, Hashable, Identifiable, Sendable {
+    public enum IdentityState: String, Codable, Hashable, Sendable {
+        case existingVisitor
+        case untracked
+    }
+
+    public let campaign: FeedbackCampaignPreview
+    public let identityState: IdentityState
+
+    public var id: String { campaign.id }
+    public var preview: FeedbackCampaignPreview { campaign }
+
+    public init(campaign: FeedbackCampaignPreview, identityState: IdentityState) {
+        self.campaign = campaign
+        self.identityState = identityState
+    }
+}
+
+/// The first time the current FeedbackKit visitor consumed a Campaign invitation.
+public struct FeedbackCampaignReadReceipt: Codable, Hashable, Sendable {
+    public let campaignID: String
+    public let readAt: Date
+
+    public init(campaignID: String, readAt: Date) {
+        self.campaignID = campaignID
+        self.readAt = readAt
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case campaignID = "campaignId"
+        case readAt
+    }
+}
+
+struct FeedbackCampaignPromptResponse: Decodable, Sendable {
+    let campaign: FeedbackCampaignPreview?
 }
 
 public struct FeedbackCampaignList: Codable, Hashable, Sendable {
@@ -321,8 +402,33 @@ public struct FeedbackCampaignStringAnswerSchema: Codable, Hashable, Sendable {
     public let constant: String?
     public let minLength: Int?
     public let maxLength: Int
+    /// A legacy constraint that can still appear on campaigns published by older servers.
+    /// New FeedbackServer campaign definitions no longer accept regular-expression patterns.
     public let pattern: String?
 
+    public init(
+        title: String? = nil,
+        description: String? = nil,
+        allowedValues: [String]? = nil,
+        constant: String? = nil,
+        minLength: Int? = nil,
+        maxLength: Int
+    ) {
+        type = .string
+        self.title = title
+        self.description = description
+        self.allowedValues = allowedValues
+        self.constant = constant
+        self.minLength = minLength
+        self.maxLength = maxLength
+        pattern = nil
+    }
+
+    @available(
+        *,
+        deprecated,
+        message: "FeedbackServer no longer accepts pattern constraints on new campaigns."
+    )
     public init(
         title: String? = nil,
         description: String? = nil,

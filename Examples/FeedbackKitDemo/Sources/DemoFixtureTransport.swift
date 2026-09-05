@@ -81,6 +81,47 @@ actor DemoFixtureTransport: FeedbackTransport {
         }
 
         switch (method, path) {
+        case ("GET", "/v1/api/public/campaigns/prompt"),
+             ("GET", "/v1/api/client/campaigns/prompt"):
+            return (
+                200,
+                requestHeaders,
+                DemoFixturePayloads.envelope(
+                    #"{"campaign":#(DemoFixturePayloads.campaignPreview)}"#
+                )
+            )
+        case ("GET", "/v1/api/client/campaigns"):
+            return (
+                200,
+                requestHeaders,
+                DemoFixturePayloads.envelope(#"{"campaigns":[\#(DemoFixturePayloads.campaign)]}"#)
+            )
+        case ("GET", "/v1/api/client/campaigns/\(DemoFixturePayloads.campaignID)"):
+            return (200, requestHeaders, DemoFixturePayloads.envelope(DemoFixturePayloads.campaign))
+        case ("POST", "/v1/api/client/campaigns/\(DemoFixturePayloads.campaignID)/responses"):
+            if scenario == .validation {
+                return (
+                    422,
+                    requestHeaders,
+                    DemoFixturePayloads.error(
+                        code: "campaign_answer_invalid",
+                        message: "Fixture campaign validation failure"
+                    )
+                )
+            }
+            return (
+                201,
+                requestHeaders,
+                DemoFixturePayloads.envelope(DemoFixturePayloads.campaignResponse)
+            )
+        case ("POST", "/v1/api/client/campaigns/\(DemoFixturePayloads.campaignID)/read"):
+            return (
+                200,
+                requestHeaders,
+                DemoFixturePayloads.envelope(
+                    #"{"campaignId":"\#(DemoFixturePayloads.campaignID)","readAt":"2026-09-05T00:00:00.000Z"}"#
+                )
+            )
         case ("GET", "/v1/api/client/activity"):
             return (200, requestHeaders, DemoFixturePayloads.activity(empty: scenario == .empty))
         case ("GET", "/v1/api/client/feedback"):
@@ -128,7 +169,7 @@ actor DemoFixtureTransport: FeedbackTransport {
                 200,
                 requestHeaders,
                 DemoFixturePayloads.envelope(
-                    #"{"id":"22222222-2222-4222-8222-222222222222","title":"Welcome to FeedbackKit","body":"This detail is also served by the fixture transport.","locale":"en","action":null,"publishedAt":"2026-08-22T10:00:00.000Z","pinnedAt":null,"updatedAt":"2026-08-22T10:00:00.000Z"}"#
+                    #"{"id":"22222222-2222-4222-8222-222222222222","title":"Welcome to FeedbackKit","body":"This detail is also served by the fixture transport.","locale":"en","action":{"type":"campaign","campaignId":"\#(DemoFixturePayloads.campaignID)","label":"Shape FeedbackKit"},"publishedAt":"2026-08-22T10:00:00.000Z","pinnedAt":null,"updatedAt":"2026-08-22T10:00:00.000Z"}"#
                 )
             )
         case ("POST", "/v1/api/client/uploads/presign"):

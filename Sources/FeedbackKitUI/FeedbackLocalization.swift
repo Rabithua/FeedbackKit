@@ -21,6 +21,14 @@ struct FeedbackLocalization: EnvironmentKey, Sendable {
         )
     }
 
+    func formattedText(_ key: String, _ arguments: CVarArg...) -> String {
+        String(
+            format: text(key),
+            locale: locale,
+            arguments: arguments
+        )
+    }
+
     func errorMessage(for error: Error) -> String {
         guard let clientError = error as? FeedbackClientError,
               clientError.kind == .server,

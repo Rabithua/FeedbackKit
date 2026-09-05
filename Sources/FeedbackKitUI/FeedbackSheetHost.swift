@@ -4,9 +4,8 @@ import SwiftUI
 struct FeedbackSheetHost: View {
     let sheet: FeedbackCenterSheet
     @Bindable var model: FeedbackCenterModel
-    let routeHandler: any FeedbackRouteHandler
     let style: FeedbackStyle
-    @Environment(\.openURL) private var openURL
+    let activatePost: (FeedbackDeveloperPostAction) -> Void
     @Environment(\.feedbackHaptics) private var haptics
     @Environment(\.locale) private var locale
 
@@ -53,26 +52,16 @@ struct FeedbackSheetHost: View {
                 ) {
                     model.sheet = nil
                 }
+            case let .campaign(id):
+                FeedbackCampaignSheet(
+                    campaignID: id,
+                    client: model.client,
+                    style: style,
+                    haptics: haptics
+                )
             }
         }
         .presentationDragIndicator(.hidden)
     }
 
-    private func activatePost(_ action: FeedbackDeveloperPostAction) {
-        switch action.type {
-        case .externalURL:
-            guard let url = URL(string: action.target), url.scheme?.lowercased() == "https" else {
-                haptics.trigger(.error)
-                return
-            }
-            haptics.trigger(.action)
-            openURL(url)
-        case .appRoute:
-            if model.openPackageRoute(action.target) || routeHandler.openFeedbackAppRoute(action.target) {
-                haptics.trigger(.navigation)
-            } else {
-                haptics.trigger(.error)
-            }
-        }
-    }
 }

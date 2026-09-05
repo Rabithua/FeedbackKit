@@ -99,6 +99,13 @@ struct FeedbackCampaignTests {
         }
         #expect(toggle.title == "Recommendation")
 
+        guard case let .question(name) = campaign.elements[2],
+              case let .string(nameSchema) = name.answer else {
+            Issue.record("Expected the name string schema")
+            return
+        }
+        #expect(nameSchema.pattern == nil)
+
         guard case let .question(budget) = campaign.elements[6],
               case let .number(amount) = budget.answer else {
             Issue.record("Expected the budget number schema")
@@ -186,6 +193,23 @@ struct FeedbackCampaignTests {
         #expect(schema.description == "Pick up to two")
         #expect(question.answer.type == .array)
         #expect(question.answer.description == "Pick up to two")
+    }
+
+    @Test("Legacy published campaign patterns remain decodable")
+    func legacyPublishedPatternRemainsDecodable() throws {
+        let data = Data(
+            #"{"type":"string","maxLength":80,"pattern":"^[A-Za-z ]+$"}"#.utf8
+        )
+
+        let schema = try FeedbackCoding.decoder().decode(
+            FeedbackCampaignAnswerSchema.self,
+            from: data
+        )
+        guard case let .string(stringSchema) = schema else {
+            Issue.record("Expected a legacy string schema")
+            return
+        }
+        #expect(stringSchema.pattern == "^[A-Za-z ]+$")
     }
 
     @Test("Campaign response sends natural JSON values and decodes the survey result")
@@ -418,7 +442,6 @@ struct FeedbackCampaignTests {
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 80,
-                    "pattern": "^[A-Za-z ]+$",
                 ],
             ],
             ["kind": "pagebreak"],

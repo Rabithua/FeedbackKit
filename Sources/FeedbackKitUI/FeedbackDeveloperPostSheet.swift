@@ -46,9 +46,9 @@ struct FeedbackDeveloperPostSheet: View {
                                     activate(action)
                                 } label: {
                                     HStack {
-                                        Text(action.label ?? localization.text("feedbackkit.open.link"))
+                                        Text(action.label ?? localization.text(action.feedbackDefaultLabelKey))
                                         Spacer()
-                                        Image(systemName: "arrow.up.right")
+                                        Image(systemName: action.feedbackSystemImage)
                                             .font(.system(size: 25, weight: .bold))
                                     }
                                     .frame(maxWidth: .infinity, minHeight: 52)

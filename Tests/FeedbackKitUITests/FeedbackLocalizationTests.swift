@@ -65,6 +65,57 @@ struct FeedbackLocalizationTests {
 
     @Test(
         arguments: [
+            ("en", "Submit response"),
+            ("zh-Hans", "提交问卷"),
+            ("zh-Hant", "提交問卷"),
+            ("ja", "回答を送信"),
+            ("ko", "응답 제출"),
+        ]
+    )
+    func campaignSheetCopyIsLocalized(identifier: String, expectedSubmit: String) {
+        let localization = FeedbackLocalization(locale: Locale(identifier: identifier))
+        let campaignKeys = [
+            "feedbackkit.campaign.title",
+            "feedbackkit.campaign.page",
+            "feedbackkit.campaign.optional",
+            "feedbackkit.campaign.answer.yes",
+            "feedbackkit.campaign.answer.no",
+            "feedbackkit.campaign.answer.placeholder",
+            "feedbackkit.campaign.answer.add",
+            "feedbackkit.campaign.answer.remove",
+            "feedbackkit.campaign.back",
+            "feedbackkit.campaign.submit",
+            "feedbackkit.campaign.comment.title",
+            "feedbackkit.campaign.comment.placeholder",
+            "feedbackkit.campaign.submission.cancel.title",
+            "feedbackkit.campaign.submission.cancel",
+            "feedbackkit.campaign.submission.cancel.message",
+            "feedbackkit.campaign.discard.title",
+            "feedbackkit.campaign.discard",
+            "feedbackkit.campaign.discard.message",
+            "feedbackkit.campaign.validation.required",
+            "feedbackkit.campaign.validation.invalid",
+            "feedbackkit.campaign.validation.too.short",
+            "feedbackkit.campaign.validation.too.long",
+            "feedbackkit.campaign.validation.too.small",
+            "feedbackkit.campaign.validation.too.large",
+            "feedbackkit.campaign.validation.step",
+            "feedbackkit.campaign.validation.too.few.items",
+            "feedbackkit.campaign.validation.too.many.items",
+            "feedbackkit.campaign.validation.duplicate.items",
+            "feedbackkit.campaign.validation.comment.too.long",
+        ]
+
+        #expect(campaignKeys.allSatisfy { localization.text($0) != $0 })
+        #expect(localization.text("feedbackkit.campaign.submit") == expectedSubmit)
+        #expect(
+            localization.formattedText("feedbackkit.campaign.page", "1", "2")
+                .contains("1")
+        )
+    }
+
+    @Test(
+        arguments: [
             "feedback_feature_unavailable",
             "feedback_service_read_only",
             "feedback_storage_unavailable",

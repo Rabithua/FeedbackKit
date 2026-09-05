@@ -19,6 +19,8 @@ public struct FeedbackClientOperation: RawRepresentable, Hashable, Sendable {
     public static let releases = Self(rawValue: "releases")
     public static let campaigns = Self(rawValue: "campaigns")
     public static let campaign = Self(rawValue: "campaign")
+    public static let campaignPrompt = Self(rawValue: "campaign_prompt")
+    public static let campaignRead = Self(rawValue: "campaign_read")
     public static let campaignResponse = Self(rawValue: "campaign_response")
     public static let createFeedback = Self(rawValue: "create_feedback")
     public static let vote = Self(rawValue: "vote")

@@ -132,7 +132,7 @@ public actor FeedbackClient {
         )
     }
 
-    /// Lists every published campaign that is currently collecting responses.
+    /// Lists up to the 20 newest published campaigns currently collecting responses.
     public func campaigns() async throws -> [FeedbackCampaign] {
         try await get(
             FeedbackCampaignList.self,
@@ -147,6 +147,50 @@ public actor FeedbackClient {
             FeedbackCampaign.self,
             operation: .campaign,
             path: "campaigns/\(id)"
+        )
+    }
+
+    /// Returns the newest Campaign suitable for a host-owned invitation, if one exists.
+    ///
+    /// Existing FeedbackKit visitors use their server-side read and response history. Without a
+    /// local visitor credential, this performs a public lookup and does not create an identity.
+    /// A credential-store error is propagated instead of being treated as a new visitor.
+    public func campaignPrompt() async throws -> FeedbackCampaignPrompt? {
+        let existingCredential = try await credentialStore.existingCredential(
+            for: configuration.productKey
+        )
+        let response: FeedbackCampaignPromptResponse
+        let identityState: FeedbackCampaignPrompt.IdentityState
+        if let existingCredential {
+            response = try await get(
+                FeedbackCampaignPromptResponse.self,
+                operation: .campaignPrompt,
+                path: "campaigns/prompt",
+                existingCredential: existingCredential
+            )
+            identityState = .existingVisitor
+        } else {
+            response = try await get(
+                FeedbackCampaignPromptResponse.self,
+                operation: .campaignPrompt,
+                scope: .public,
+                path: "campaigns/prompt"
+            )
+            identityState = .untracked
+        }
+        return response.campaign.map {
+            FeedbackCampaignPrompt(campaign: $0, identityState: identityState)
+        }
+    }
+
+    /// Marks a Campaign invitation as consumed, creating a stable FeedbackKit visitor if needed.
+    @discardableResult
+    public func markCampaignRead(id: String) async throws -> FeedbackCampaignReadReceipt {
+        try await sendWithoutBody(
+            FeedbackCampaignReadReceipt.self,
+            operation: .campaignRead,
+            method: .post,
+            path: "campaigns/\(id)/read"
         )
     }
 
@@ -177,6 +221,27 @@ public actor FeedbackClient {
         includeDiagnostics: Bool,
         idempotencyKey: String
     ) async throws -> OwnedFeedbackSummary {
+        let request = try await prepareCampaignResponseRequest(
+            answers: answers,
+            comment: comment,
+            locale: locale,
+            attachmentIds: attachmentIds,
+            includeDiagnostics: includeDiagnostics
+        )
+        return try await submitCampaignResponse(
+            campaignID: campaignID,
+            request: request,
+            idempotencyKey: idempotencyKey
+        )
+    }
+
+    package func prepareCampaignResponseRequest(
+        answers: [String: FeedbackCampaignAnswer],
+        comment: String?,
+        locale: Locale,
+        attachmentIds: [String] = [],
+        includeDiagnostics: Bool
+    ) async throws -> FeedbackCampaignResponseRequest {
         try validateCampaignAnswers(answers)
         let diagnosticID = try await diagnosticArtifactID(
             includeDiagnostics: includeDiagnostics,
@@ -184,16 +249,12 @@ public actor FeedbackClient {
             operation: .campaignResponse
         )
         let context = await metadataProvider.clientContext(locale: locale)
-        return try await submitCampaignResponse(
-            campaignID: campaignID,
-            request: FeedbackCampaignResponseRequest(
-                answers: answers,
-                comment: comment,
-                clientContext: context,
-                attachmentIds: attachmentIds,
-                diagnosticArtifactId: diagnosticID
-            ),
-            idempotencyKey: idempotencyKey
+        return FeedbackCampaignResponseRequest(
+            answers: answers,
+            comment: comment,
+            clientContext: context,
+            attachmentIds: attachmentIds,
+            diagnosticArtifactId: diagnosticID
         )
     }
 

@@ -178,7 +178,7 @@ struct FeedbackActivityRow: View {
                 .accessibilityValue(String(voteState.count))
             } else if case let .developerPost(_, data) = entry, let action = data.action {
                 Button { activatePost(action) } label: {
-                    Image(systemName: "arrow.up.right")
+                    Image(systemName: action.feedbackSystemImage)
                         .font(.system(size: 25, weight: .bold))
                         .frame(minWidth: 48, minHeight: 44)
                         .contentShape(Rectangle())
@@ -186,7 +186,7 @@ struct FeedbackActivityRow: View {
                 .buttonStyle(.plain)
                 .foregroundStyle(.primary)
                 .accessibilityLabel(
-                    action.label ?? localization.text("feedbackkit.open.link")
+                    action.label ?? localization.text(action.feedbackDefaultLabelKey)
                 )
             }
         }

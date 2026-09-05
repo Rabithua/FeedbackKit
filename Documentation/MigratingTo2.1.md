@@ -40,14 +40,26 @@ only through `submitCampaignResponse`.
 
 ## Campaign API
 
-- `campaigns()` lists campaigns currently collecting responses.
+- `campaigns()` lists up to the 20 newest campaigns currently collecting responses.
 - `campaign(id:)` loads one complete campaign.
+- `campaignPrompt()` returns one lightweight invitation candidate. It applies read/response
+  history for an existing FeedbackKit visitor and otherwise uses a no-write public fallback.
+- `markCampaignRead(id:)` explicitly consumes an invitation and may create the anonymous visitor
+  identity. `FeedbackCampaignSheet` also calls it once after Campaign content becomes displayable.
 - `FeedbackCampaignAnswerSchema` exposes the bounded server schema as typed string, number,
   integer, boolean, and array cases.
 - `FeedbackCampaign.form` splits flat campaign elements into identified pages and removes the
   page-break markers.
 - `submitCampaignResponse` accepts typed natural-JSON answers, optional comments and attachments,
   and the same explicit diagnostics choice as ordinary feedback.
+- `FeedbackCampaignSheet` is an opt-in SwiftUI renderer. It never presents itself or creates a
+  homepage invitation. Campaign actions in developer posts can open it from `FeedbackCenterView`.
+- `FeedbackDeveloperPostAction.Kind.campaign` decodes `campaignId`; `campaignID` exposes the typed
+  projection while the existing `target` projection remains available.
+
+FeedbackServer no longer accepts regular-expression `pattern` constraints on newly created
+campaigns. FeedbackKit continues decoding that field for campaigns published by an older server,
+but new form renderers should rely on the current bounded schema fields instead.
 
 See the campaign example in the repository [README](../README.md#campaign-forms) for the complete
 read, render, and submit flow.
