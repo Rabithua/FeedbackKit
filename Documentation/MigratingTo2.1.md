@@ -42,14 +42,20 @@ only through `submitCampaignResponse`.
 
 - `campaigns()` lists up to the 20 newest campaigns currently collecting responses.
 - `campaign(id:)` loads one complete campaign.
+- `campaignPrompt()` returns one lightweight invitation candidate. It applies read/response
+  history for an existing FeedbackKit visitor and otherwise uses a no-write public fallback.
+- `markCampaignRead(id:)` explicitly consumes an invitation and may create the anonymous visitor
+  identity. `FeedbackCampaignSheet` also calls it once after Campaign content becomes displayable.
 - `FeedbackCampaignAnswerSchema` exposes the bounded server schema as typed string, number,
   integer, boolean, and array cases.
 - `FeedbackCampaign.form` splits flat campaign elements into identified pages and removes the
   page-break markers.
 - `submitCampaignResponse` accepts typed natural-JSON answers, optional comments and attachments,
   and the same explicit diagnostics choice as ordinary feedback.
-- `FeedbackCampaignSheet` is an opt-in SwiftUI renderer. Present it with a selected
-  `FeedbackCampaign` or a campaign ID; it is not wired into `FeedbackCenterView` automatically.
+- `FeedbackCampaignSheet` is an opt-in SwiftUI renderer. It never presents itself or creates a
+  homepage invitation. Campaign actions in developer posts can open it from `FeedbackCenterView`.
+- `FeedbackDeveloperPostAction.Kind.campaign` decodes `campaignId`; `campaignID` exposes the typed
+  projection while the existing `target` projection remains available.
 
 FeedbackServer no longer accepts regular-expression `pattern` constraints on newly created
 campaigns. FeedbackKit continues decoding that field for campaigns published by an older server,

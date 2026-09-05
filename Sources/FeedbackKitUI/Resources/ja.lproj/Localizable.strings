@@ -69,6 +69,7 @@
 "feedbackkit.mine.title" = "自分のフィードバック";
 "feedbackkit.open" = "フィードバックセンターを開く";
 "feedbackkit.open.link" = "開く";
+"feedbackkit.open.route" = "アプリ内で開く";
 "feedbackkit.pinned" = "固定";
 "feedbackkit.release.current" = "（現在のバージョン）";
 "feedbackkit.releases.empty" = "リリースはまだありません";
@@ -97,6 +98,11 @@
 "feedbackkit.vote" = "投票";
 "feedbackkit.vote.remove" = "投票を取り消す";
 "feedbackkit.campaign.title" = "アンケート";
+"feedbackkit.campaign.open" = "アンケートを開く";
+"feedbackkit.campaign.completed.title" = "回答済み";
+"feedbackkit.campaign.completed.message" = "このアンケートにはすでに回答しています。";
+"feedbackkit.campaign.ended.title" = "アンケートは終了しました";
+"feedbackkit.campaign.ended.message" = "このアンケートは回答を受け付けていません。";
 "feedbackkit.campaign.page" = "%@ / %@ ページ";
 "feedbackkit.campaign.optional" = "任意";
 "feedbackkit.campaign.answer.yes" = "はい";
@@ -104,6 +110,7 @@
 "feedbackkit.campaign.answer.placeholder" = "回答を入力";
 "feedbackkit.campaign.answer.add" = "回答を追加";
 "feedbackkit.campaign.answer.remove" = "回答を削除";
+"feedbackkit.campaign.answer.quantity" = "数量：%d";
 "feedbackkit.campaign.back" = "戻る";
 "feedbackkit.campaign.submit" = "回答を送信";
 "feedbackkit.campaign.comment.title" = "補足コメント（任意）";

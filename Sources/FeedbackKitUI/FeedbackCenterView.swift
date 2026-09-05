@@ -87,8 +87,8 @@ public struct FeedbackCenterView: View {
             FeedbackSheetHost(
                 sheet: sheet,
                 model: model,
-                routeHandler: routeHandler,
-                style: style
+                style: style,
+                activatePost: activatePost
             )
         }
         .environment(\.feedbackHaptics, haptics)
@@ -151,6 +151,13 @@ public struct FeedbackCenterView: View {
             } else {
                 haptics.trigger(.error)
             }
+        case .campaign:
+            guard let campaignID = action.campaignID else {
+                haptics.trigger(.error)
+                return
+            }
+            haptics.trigger(.navigation)
+            model.sheet = .campaign(campaignID)
         }
     }
 

@@ -69,6 +69,7 @@
 "feedbackkit.mine.title" = "我的反馈";
 "feedbackkit.open" = "打开共建中心";
 "feedbackkit.open.link" = "打开";
+"feedbackkit.open.route" = "在应用内打开";
 "feedbackkit.pinned" = "置顶";
 "feedbackkit.release.current" = "（当前版本）";
 "feedbackkit.releases.empty" = "还没有更新日志";
@@ -97,6 +98,11 @@
 "feedbackkit.vote" = "投票";
 "feedbackkit.vote.remove" = "取消投票";
 "feedbackkit.campaign.title" = "问卷";
+"feedbackkit.campaign.open" = "打开问卷";
+"feedbackkit.campaign.completed.title" = "已提交回答";
+"feedbackkit.campaign.completed.message" = "你已经完成了这份问卷。";
+"feedbackkit.campaign.ended.title" = "问卷已结束";
+"feedbackkit.campaign.ended.message" = "这份问卷已不再接受回答。";
 "feedbackkit.campaign.page" = "第 %@ 页，共 %@ 页";
 "feedbackkit.campaign.optional" = "可选";
 "feedbackkit.campaign.answer.yes" = "是";
@@ -104,6 +110,7 @@
 "feedbackkit.campaign.answer.placeholder" = "输入回答";
 "feedbackkit.campaign.answer.add" = "添加一项回答";
 "feedbackkit.campaign.answer.remove" = "删除这项回答";
+"feedbackkit.campaign.answer.quantity" = "数量：%d";
 "feedbackkit.campaign.back" = "上一步";
 "feedbackkit.campaign.submit" = "提交问卷";
 "feedbackkit.campaign.comment.title" = "其他补充（可选）";

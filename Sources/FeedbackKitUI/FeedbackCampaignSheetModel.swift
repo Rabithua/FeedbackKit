@@ -81,7 +81,7 @@ final class FeedbackCampaignQuestionState {
     let arrayChoices: [FeedbackCampaignChoice]?
 
     var scalarValue: FeedbackCampaignScalarAnswer?
-    var selectedArrayValues: Set<FeedbackCampaignScalarAnswer> = []
+    var selectedArrayValues: [FeedbackCampaignScalarAnswer] = []
     var arrayItems: [FeedbackCampaignArrayItem] = []
 
     init(question: FeedbackCampaignQuestion) {
@@ -122,7 +122,11 @@ final class FeedbackCampaignQuestionState {
             case let .boolean(value): String(value)
             }
         }
-        set { scalarValue = .string(newValue) }
+        set {
+            scalarValue = newValue.isEmpty && question.required == false
+                ? nil
+                : .string(newValue)
+        }
     }
 
     var hasInput: Bool {
@@ -157,10 +161,28 @@ final class FeedbackCampaignQuestionState {
     }
 
     func toggleArrayChoice(_ choice: FeedbackCampaignChoice) {
-        if selectedArrayValues.remove(choice.value) == nil,
-           isArrayChoiceDisabled(choice) == false {
-            selectedArrayValues.insert(choice.value)
+        if let index = selectedArrayValues.firstIndex(of: choice.value) {
+            selectedArrayValues.remove(at: index)
+        } else if isArrayChoiceDisabled(choice) == false {
+            selectedArrayValues.append(choice.value)
         }
+    }
+
+    func arrayChoiceCount(_ choice: FeedbackCampaignChoice) -> Int {
+        selectedArrayValues.count { $0 == choice.value }
+    }
+
+    func addArrayChoice(_ choice: FeedbackCampaignChoice) {
+        guard case let .array(schema) = question.answer,
+              schema.uniqueItems != true,
+              selectedArrayValues.count < schema.maxItems
+        else { return }
+        selectedArrayValues.append(choice.value)
+    }
+
+    func removeArrayChoice(_ choice: FeedbackCampaignChoice) {
+        guard let index = selectedArrayValues.lastIndex(of: choice.value) else { return }
+        selectedArrayValues.remove(at: index)
     }
 
     func addArrayItem() {
@@ -224,10 +246,8 @@ final class FeedbackCampaignQuestionState {
         locale: Locale
     ) -> Result<FeedbackCampaignAnswer?, FeedbackCampaignValidationIssue> {
         let drafts: [FeedbackCampaignScalarAnswer]
-        if let arrayChoices {
-            drafts = arrayChoices.compactMap { choice in
-                selectedArrayValues.contains(choice.value) ? choice.value : nil
-            }
+        if arrayChoices != nil {
+            drafts = selectedArrayValues
         } else {
             drafts = arrayItems.map(\.value)
         }
@@ -342,14 +362,27 @@ final class FeedbackCampaignQuestionState {
         formatter.locale = locale
         formatter.numberStyle = .decimal
         formatter.isLenient = false
-        return formatter.number(from: trimmed)?.doubleValue
+        var object: AnyObject?
+        let length = (trimmed as NSString).length
+        var consumed = NSRange(location: 0, length: length)
+        do {
+            try formatter.getObjectValue(&object, for: trimmed, range: &consumed)
+        } catch {
+            return nil
+        }
+        guard consumed.location == 0,
+              NSMaxRange(consumed) == length,
+              let number = object as? NSNumber
+        else { return nil }
+        return number.doubleValue
     }
 
     private static func isMultiple(_ value: Double, of divisor: Double) -> Bool {
         guard divisor.isFinite, divisor > 0 else { return false }
         let quotient = value / divisor
-        let tolerance = max(1, abs(quotient)) * 1e-9
-        return abs(quotient - quotient.rounded()) <= tolerance
+        let nearest = quotient.rounded()
+        let tolerance = max(quotient.ulp, nearest.ulp) * 4
+        return abs(quotient - nearest) <= tolerance
     }
 
     private static func choices(
@@ -407,8 +440,9 @@ final class FeedbackCampaignQuestionState {
               maximum >= minimum,
               maximum - minimum <= 20
         else { return nil }
-        let lower = Int(ceil(minimum))
-        let upper = Int(floor(maximum))
+        guard let lower = Int(exactly: ceil(minimum)),
+              let upper = Int(exactly: floor(maximum))
+        else { return nil }
         guard lower <= upper else { return nil }
         let values = (lower...upper).compactMap { value -> FeedbackCampaignScalarAnswer? in
             let number = Double(value)
@@ -447,6 +481,7 @@ private struct FeedbackCampaignSubmissionFingerprint: Equatable {
 private struct FeedbackCampaignPendingAttempt {
     let fingerprint: FeedbackCampaignSubmissionFingerprint
     let idempotencyKey: String
+    let request: FeedbackCampaignResponseRequest?
 }
 
 @MainActor @Observable
@@ -460,6 +495,7 @@ final class FeedbackCampaignSheetModel {
     private(set) var isSubmitting = false
     private(set) var diagnosticsAvailable = false
     private(set) var loadError: Error?
+    private(set) var isUnavailable = false
     private(set) var submissionErrorMessage: String?
     var currentPageIndex = 0
     var comment = ""
@@ -468,6 +504,7 @@ final class FeedbackCampaignSheetModel {
     var validatedPageIDs: Set<Int> = []
 
     @ObservationIgnored private var didLoadDiagnosticsCapability = false
+    @ObservationIgnored private var didAttemptMarkRead = false
     @ObservationIgnored private var pendingAttempt: FeedbackCampaignPendingAttempt?
 
     init(campaign: FeedbackCampaign, client: FeedbackClient) {
@@ -516,7 +553,16 @@ final class FeedbackCampaignSheetModel {
 
     func retry(locale: Locale) async {
         loadError = nil
+        isUnavailable = false
         await load(locale: locale)
+    }
+
+    /// A read acknowledgement is deliberately best effort: request observability records a
+    /// failure, while the visitor can still view and answer the Campaign.
+    func markReadIfNeeded() async {
+        guard campaign != nil, didAttemptMarkRead == false else { return }
+        didAttemptMarkRead = true
+        _ = try? await client.markCampaignRead(id: campaignID)
     }
 
     func questionState(
@@ -557,7 +603,11 @@ final class FeedbackCampaignSheetModel {
         localization: FeedbackLocalization,
         diagnosticsOverride: Bool? = nil
     ) async -> OwnedFeedbackSummary? {
-        guard isSubmitting == false, let form else { return nil }
+        guard isSubmitting == false,
+              campaign?.hasResponded == false,
+              isUnavailable == false,
+              let form
+        else { return nil }
         validatedPageIDs.formUnion(form.pages.map(\.id))
         guard validateEntireForm(form, locale: locale) else { return nil }
 
@@ -576,7 +626,8 @@ final class FeedbackCampaignSheetModel {
         } else {
             attempt = FeedbackCampaignPendingAttempt(
                 fingerprint: fingerprint,
-                idempotencyKey: UUID().uuidString
+                idempotencyKey: UUID().uuidString,
+                request: nil
             )
             pendingAttempt = attempt
         }
@@ -586,12 +637,25 @@ final class FeedbackCampaignSheetModel {
         diagnosticFailure = false
         defer { isSubmitting = false }
         do {
+            let request: FeedbackCampaignResponseRequest
+            if let prepared = attempt.request {
+                request = prepared
+            } else {
+                request = try await client.prepareCampaignResponseRequest(
+                    answers: fingerprint.answers,
+                    comment: fingerprint.comment,
+                    locale: locale,
+                    includeDiagnostics: includeDiagnostics
+                )
+                pendingAttempt = FeedbackCampaignPendingAttempt(
+                    fingerprint: fingerprint,
+                    idempotencyKey: attempt.idempotencyKey,
+                    request: request
+                )
+            }
             let response = try await client.submitCampaignResponse(
                 campaignID: campaignID,
-                answers: fingerprint.answers,
-                comment: fingerprint.comment,
-                locale: locale,
-                includeDiagnostics: includeDiagnostics,
+                request: request,
                 idempotencyKey: attempt.idempotencyKey
             )
             pendingAttempt = nil
@@ -621,6 +685,8 @@ final class FeedbackCampaignSheetModel {
             configureQuestionStates(for: campaign)
         } catch is CancellationError {
             return
+        } catch let error as FeedbackClientError where error.kind == .notFound {
+            isUnavailable = true
         } catch {
             loadError = error
         }

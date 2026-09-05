@@ -102,7 +102,10 @@ extension FeedbackClient {
         request.httpMethod = method.rawValue
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue(configuration.productKey, forHTTPHeaderField: "X-Product-Key")
-        request.setValue("release-body-only", forHTTPHeaderField: "X-FeedbackKit-Capabilities")
+        request.setValue(
+            "release-body-only,campaign-post-action",
+            forHTTPHeaderField: "X-FeedbackKit-Capabilities"
+        )
         if let body {
             request.httpBody = body
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")

@@ -59,4 +59,29 @@ final class DemoHitTargetUITests: XCTestCase {
             "A successful response should dismiss the host-presented campaign sheet"
         )
     }
+
+    func testCampaignDeveloperPostActionOpensFromVisibleCorners() {
+        for horizontalOffset in [0.08, 0.92] {
+            let app = XCUIApplication()
+            app.launchArguments += ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+            app.launch()
+
+            app.buttons["Fixture mode"].tap()
+            let openButton = app.buttons["demo.fixture.open"]
+            XCTAssertTrue(openButton.waitForExistence(timeout: 3))
+            openButton.tap()
+
+            let campaignAction = app.buttons["Shape FeedbackKit"]
+            XCTAssertTrue(campaignAction.waitForExistence(timeout: 3))
+            campaignAction.coordinate(
+                withNormalizedOffset: CGVector(dx: horizontalOffset, dy: 0.1)
+            ).tap()
+
+            XCTAssertTrue(
+                app.buttons["developerCommunity.campaign.primary"].waitForExistence(timeout: 3),
+                "The Campaign CTA's visible edge must open the Campaign sheet"
+            )
+            app.terminate()
+        }
+    }
 }

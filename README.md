@@ -53,32 +53,32 @@ into typed Swift cases, and `campaign.form` converts the server's flat elements 
 stable integer IDs and no page-break markers.
 
 `FeedbackKitUI` can render and submit the complete form. Campaign presentation stays host-owned:
-the SDK does not add campaigns to `FeedbackCenterView`, poll for them, or display them automatically.
-Present the sheet only after your app has chosen a campaign:
+the SDK does not poll, show a homepage invitation, or present a Campaign automatically. A host can
+ask for one lightweight invitation candidate without creating a visitor identity:
 
 ```swift
-@State private var selectedCampaign: FeedbackCampaign?
-
-Button("Take survey") {
-    Task {
-        selectedCampaign = try? await client.campaigns().first
-    }
-}
-.sheet(item: $selectedCampaign) { campaign in
-    FeedbackCampaignSheet(
-        campaign: campaign,
-        client: client
-    ) { response in
-        print("Submitted campaign response", response.id)
-    }
+if let prompt = try await client.campaignPrompt() {
+    showCampaignInvitation(
+        preview: prompt.preview,
+        accept: { presentCampaign(id: prompt.id) },
+        decline: {
+            Task { try? await client.markCampaignRead(id: prompt.id) }
+        }
+    )
 }
 ```
 
-When the host already has a campaign ID, use
-`FeedbackCampaignSheet(campaignID:client:)` and let the sheet load that campaign. Both initializers
-support the same `FeedbackStyle`, haptics, language policy, and optional submission callback as the
-rest of the packaged UI. Answers and additional comments stay in the sheet; diagnostics begin off
-and appear only when both the Product and the host-provided client support them.
+`campaignPrompt()` returns `.existingVisitor` when server-side read and response history was
+available, or `.untracked` when it used the Product-keyed public fallback. Keychain inspection
+failures are surfaced; they are never treated as a new user. Rejecting the invitation is host-owned,
+so call `markCampaignRead(id:)` when a rejection should suppress it next time.
+
+Present `FeedbackCampaignSheet(campaignID:client:)` after acceptance. Once the full Campaign is
+displayable, the sheet marks it read once; that best-effort acknowledgement never blocks the form.
+The alternate `campaign:` initializer behaves the same way. Both support the existing
+`FeedbackStyle`, haptics, language policy, and submission callback. An answered Campaign renders a
+completion state, and a removed or invalidated Campaign opened from an old link renders an ended
+state. A Campaign action on a developer post opens this same sheet inside `FeedbackCenterView`.
 
 For a fully custom campaign interface, render the typed form directly:
 

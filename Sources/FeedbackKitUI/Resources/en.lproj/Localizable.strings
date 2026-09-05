@@ -69,6 +69,7 @@
 "feedbackkit.mine.title" = "My Feedback";
 "feedbackkit.open" = "Open feedback center";
 "feedbackkit.open.link" = "Open";
+"feedbackkit.open.route" = "Open in app";
 "feedbackkit.pinned" = "PINNED";
 "feedbackkit.release.current" = "(Current Version)";
 "feedbackkit.releases.empty" = "No releases yet";
@@ -97,6 +98,11 @@
 "feedbackkit.vote" = "Vote";
 "feedbackkit.vote.remove" = "Remove vote";
 "feedbackkit.campaign.title" = "Campaign";
+"feedbackkit.campaign.open" = "Open campaign";
+"feedbackkit.campaign.completed.title" = "Response submitted";
+"feedbackkit.campaign.completed.message" = "You have already completed this campaign.";
+"feedbackkit.campaign.ended.title" = "Campaign ended";
+"feedbackkit.campaign.ended.message" = "This campaign is no longer accepting responses.";
 "feedbackkit.campaign.page" = "Page %@ of %@";
 "feedbackkit.campaign.optional" = "Optional";
 "feedbackkit.campaign.answer.yes" = "Yes";
@@ -104,6 +110,7 @@
 "feedbackkit.campaign.answer.placeholder" = "Enter your answer";
 "feedbackkit.campaign.answer.add" = "Add response";
 "feedbackkit.campaign.answer.remove" = "Remove response";
+"feedbackkit.campaign.answer.quantity" = "Quantity: %d";
 "feedbackkit.campaign.back" = "Back";
 "feedbackkit.campaign.submit" = "Submit response";
 "feedbackkit.campaign.comment.title" = "Additional comment (optional)";

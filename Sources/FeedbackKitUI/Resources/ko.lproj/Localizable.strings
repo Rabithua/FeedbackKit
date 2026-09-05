@@ -69,6 +69,7 @@
 "feedbackkit.mine.title" = "내 피드백";
 "feedbackkit.open" = "피드백 센터 열기";
 "feedbackkit.open.link" = "열기";
+"feedbackkit.open.route" = "앱에서 열기";
 "feedbackkit.pinned" = "고정";
 "feedbackkit.release.current" = "(현재 버전)";
 "feedbackkit.releases.empty" = "아직 릴리스가 없습니다";
@@ -97,6 +98,11 @@
 "feedbackkit.vote" = "투표";
 "feedbackkit.vote.remove" = "투표 취소";
 "feedbackkit.campaign.title" = "설문";
+"feedbackkit.campaign.open" = "설문 열기";
+"feedbackkit.campaign.completed.title" = "응답 제출 완료";
+"feedbackkit.campaign.completed.message" = "이미 이 설문을 완료했습니다.";
+"feedbackkit.campaign.ended.title" = "설문 종료됨";
+"feedbackkit.campaign.ended.message" = "이 설문은 더 이상 응답을 받지 않습니다.";
 "feedbackkit.campaign.page" = "%@ / %@페이지";
 "feedbackkit.campaign.optional" = "선택 사항";
 "feedbackkit.campaign.answer.yes" = "예";
@@ -104,6 +110,7 @@
 "feedbackkit.campaign.answer.placeholder" = "답변 입력";
 "feedbackkit.campaign.answer.add" = "답변 추가";
 "feedbackkit.campaign.answer.remove" = "답변 삭제";
+"feedbackkit.campaign.answer.quantity" = "수량: %d";
 "feedbackkit.campaign.back" = "이전";
 "feedbackkit.campaign.submit" = "응답 제출";
 "feedbackkit.campaign.comment.title" = "추가 의견(선택 사항)";

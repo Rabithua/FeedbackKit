@@ -4,11 +4,58 @@ public struct FeedbackDeveloperPostAction: Codable, Hashable, Sendable {
     public enum Kind: String, Codable, Sendable {
         case externalURL = "external_url"
         case appRoute = "app_route"
+        case campaign
     }
 
     public let type: Kind
     public let target: String
     public let label: String?
+
+    /// The Campaign identifier for a Campaign action; nil for URL and app-route actions.
+    public var campaignID: String? { type == .campaign ? target : nil }
+
+    public init(type: Kind, target: String, label: String? = nil) {
+        self.type = type
+        self.target = target
+        self.label = label
+    }
+
+    public init(campaignID: String, label: String? = nil) {
+        type = .campaign
+        target = campaignID
+        self.label = label
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case type
+        case target
+        case campaignID = "campaignId"
+        case label
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        type = try container.decode(Kind.self, forKey: .type)
+        label = try container.decodeIfPresent(String.self, forKey: .label)
+        switch type {
+        case .externalURL, .appRoute:
+            target = try container.decode(String.self, forKey: .target)
+        case .campaign:
+            target = try container.decode(String.self, forKey: .campaignID)
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(type, forKey: .type)
+        try container.encodeIfPresent(label, forKey: .label)
+        switch type {
+        case .externalURL, .appRoute:
+            try container.encode(target, forKey: .target)
+        case .campaign:
+            try container.encode(target, forKey: .campaignID)
+        }
+    }
 }
 
 public struct FeedbackDeveloperPost: Codable, Hashable, Identifiable, Sendable {

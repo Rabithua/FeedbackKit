@@ -4,8 +4,8 @@ import SwiftUI
 /// A host-presented, ready-made sheet for one FeedbackServer campaign.
 ///
 /// The host remains responsible for discovering and choosing a campaign, then presenting this
-/// view with `.sheet(item:)` or another presentation API. FeedbackKit never presents campaigns
-/// automatically or adds them to `FeedbackCenterView`.
+/// view with `.sheet(item:)` or another presentation API. FeedbackKit never presents a Campaign
+/// invitation automatically; Feedback Center only opens one from an explicit Campaign action.
 public struct FeedbackCampaignSheet: View {
     @State private var model: FeedbackCampaignSheetModel
     private let style: FeedbackStyle
@@ -103,7 +103,19 @@ private struct FeedbackCampaignSheetContent: View {
             .padding(.bottom, 8)
 
             Group {
-                if let form = model.form, let page = model.currentPage {
+                if model.isUnavailable {
+                    campaignTerminalState(
+                        titleKey: "feedbackkit.campaign.ended.title",
+                        descriptionKey: "feedbackkit.campaign.ended.message",
+                        systemImage: "clock.badge.xmark"
+                    )
+                } else if model.campaign?.hasResponded == true {
+                    campaignTerminalState(
+                        titleKey: "feedbackkit.campaign.completed.title",
+                        descriptionKey: "feedbackkit.campaign.completed.message",
+                        systemImage: "checkmark.circle"
+                    )
+                } else if let form = model.form, let page = model.currentPage {
                     campaignForm(form: form, page: page)
                 } else if model.isLoading {
                     ProgressView(localization.text("feedbackkit.loading"))
@@ -122,6 +134,9 @@ private struct FeedbackCampaignSheetContent: View {
         .interactiveDismissDisabled(model.isSubmitting || model.hasInput)
         .task(id: locale.identifier) {
             await model.load(locale: locale)
+        }
+        .task(id: model.campaign?.id) {
+            await model.markReadIfNeeded()
         }
         .onDisappear {
             submissionTask?.cancel()
@@ -163,6 +178,18 @@ private struct FeedbackCampaignSheetContent: View {
                 submit(diagnosticsOverride: false)
             }
             Button(localization.text("feedbackkit.cancel"), role: .cancel) {}
+        }
+    }
+
+    private func campaignTerminalState(
+        titleKey: String,
+        descriptionKey: String,
+        systemImage: String
+    ) -> some View {
+        ContentUnavailableView {
+            Label(localization.text(titleKey), systemImage: systemImage)
+        } description: {
+            Text(localization.text(descriptionKey))
         }
     }
 

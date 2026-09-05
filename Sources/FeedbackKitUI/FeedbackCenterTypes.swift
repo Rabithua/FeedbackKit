@@ -84,6 +84,7 @@ enum FeedbackCenterSheet: Identifiable {
     case composer(FeedbackKind)
     case feedback(String)
     case developerPost(String)
+    case campaign(String)
 
     var id: String {
         switch self {
@@ -91,7 +92,22 @@ enum FeedbackCenterSheet: Identifiable {
         case let .composer(kind): "composer-\(kind.rawValue)"
         case let .feedback(id): "feedback-\(id)"
         case let .developerPost(id): "post-\(id)"
+        case let .campaign(id): "campaign-\(id)"
         }
+    }
+}
+
+extension FeedbackDeveloperPostAction {
+    var feedbackDefaultLabelKey: String {
+        switch type {
+        case .externalURL: "feedbackkit.open.link"
+        case .appRoute: "feedbackkit.open.route"
+        case .campaign: "feedbackkit.campaign.open"
+        }
+    }
+
+    var feedbackSystemImage: String {
+        type == .externalURL ? "arrow.up.right" : "arrow.right"
     }
 }
 

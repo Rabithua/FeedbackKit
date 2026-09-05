@@ -125,15 +125,34 @@ struct FeedbackCampaignQuestionView: View {
     private func arrayControl(schema: FeedbackCampaignArrayAnswerSchema) -> some View {
         if let choices = state.arrayChoices {
             VStack(spacing: 8) {
-                ForEach(choices) { choice in
-                    FeedbackCampaignChoiceRow(
-                        label: choice.label(locale: locale, localization: localization),
-                        selected: state.isArrayChoiceSelected(choice),
-                        disabled: state.isArrayChoiceDisabled(choice),
-                        style: style
-                    ) {
-                        haptics.trigger(.selection)
-                        state.toggleArrayChoice(choice)
+                if schema.uniqueItems == true {
+                    ForEach(choices) { choice in
+                        FeedbackCampaignChoiceRow(
+                            label: choice.label(locale: locale, localization: localization),
+                            selected: state.isArrayChoiceSelected(choice),
+                            disabled: state.isArrayChoiceDisabled(choice),
+                            style: style
+                        ) {
+                            haptics.trigger(.selection)
+                            state.toggleArrayChoice(choice)
+                        }
+                    }
+                } else {
+                    ForEach(choices) { choice in
+                        FeedbackCampaignRepeatableChoiceRow(
+                            label: choice.label(locale: locale, localization: localization),
+                            count: state.arrayChoiceCount(choice),
+                            canAdd: state.selectedArrayValues.count < schema.maxItems,
+                            style: style,
+                            add: {
+                                haptics.trigger(.selection)
+                                state.addArrayChoice(choice)
+                            },
+                            remove: {
+                                haptics.trigger(.selection)
+                                state.removeArrayChoice(choice)
+                            }
+                        )
                     }
                 }
             }
@@ -177,6 +196,45 @@ struct FeedbackCampaignQuestionView: View {
                 )
             }
         }
+    }
+}
+
+private struct FeedbackCampaignRepeatableChoiceRow: View {
+    let label: String
+    let count: Int
+    let canAdd: Bool
+    let style: FeedbackStyle
+    let add: () -> Void
+    let remove: () -> Void
+
+    @Environment(\.feedbackLocalization) private var localization
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Text(label)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Text(count.formatted())
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+                .accessibilityLabel(
+                    localization.formattedText("feedbackkit.campaign.answer.quantity", count)
+                )
+            FeedbackHitTargetButton(action: remove) {
+                Image(systemName: "minus.circle")
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .disabled(count == 0)
+            FeedbackHitTargetButton(action: add) {
+                Image(systemName: "plus.circle")
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .disabled(canAdd == false)
+        }
+        .padding(.leading, 14)
+        .padding(.vertical, 4)
+        .feedbackBorder(style)
     }
 }
 
