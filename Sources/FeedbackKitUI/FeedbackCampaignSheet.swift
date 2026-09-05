@@ -222,7 +222,6 @@ private struct FeedbackCampaignSheetContent: View {
             .padding(.horizontal, style.pagePadding)
             .padding(.top, 10)
             .padding(.bottom, 14)
-            .background(.bar)
         }
     }
 
