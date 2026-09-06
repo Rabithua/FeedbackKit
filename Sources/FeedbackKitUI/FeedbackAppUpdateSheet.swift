@@ -97,7 +97,7 @@ public struct FeedbackAppUpdateSheet: View {
             HStack(spacing: 8) {
                 Text(update.currentVersion)
                 Image(systemName: "arrow.right")
-                    .font(.caption.weight(.medium))
+                    .font(.body.weight(.medium))
                 Text(update.latestVersion)
                     .fontWeight(.semibold)
                     .foregroundStyle(.tint)
