@@ -70,20 +70,24 @@ public struct FeedbackAppUpdateSheet: View {
                     haptics.trigger(.action)
                     continueFeedback()
                 } label: {
-                    Text(localization.text("feedbackkit.update.continue"))
+                    Text(localization.text(dynamicTypeSize.isAccessibilitySize
+                        ? "feedbackkit.update.continue.short" : "feedbackkit.update.continue"))
                         .frame(minWidth: 72)
                 }
                 .buttonStyle(.bordered)
+                .accessibilityLabel(localization.text("feedbackkit.update.continue"))
                 .accessibilityIdentifier("developerCommunity.update.continue")
 
                 Button(action: openUpdate) {
-                    Text(localization.text("feedbackkit.update.open"))
+                    Text(localization.text(dynamicTypeSize.isAccessibilitySize
+                        ? "feedbackkit.update.open.short" : "feedbackkit.update.open"))
                         .fontWeight(.semibold)
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
+                .accessibilityLabel(localization.text("feedbackkit.update.open"))
                 .accessibilityIdentifier("developerCommunity.update.open")
             }
             .controlSize(.large)

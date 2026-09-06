@@ -141,3 +141,5 @@
 "feedbackkit.update.open" = "前往更新";
 "feedbackkit.update.failed" = "无法打开更新页面，请重试或继续反馈。";
 "feedbackkit.update.checking" = "正在检查新版本…";
+"feedbackkit.update.continue.short" = "继续";
+"feedbackkit.update.open.short" = "更新";

@@ -141,3 +141,5 @@
 "feedbackkit.update.open" = "업데이트";
 "feedbackkit.update.failed" = "업데이트 페이지를 열 수 없어요. 다시 시도하거나 계속 제보해 주세요.";
 "feedbackkit.update.checking" = "업데이트 확인 중…";
+"feedbackkit.update.continue.short" = "계속";
+"feedbackkit.update.open.short" = "업데이트";

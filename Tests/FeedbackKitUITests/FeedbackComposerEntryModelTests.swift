@@ -112,7 +112,7 @@ struct FeedbackComposerEntryModelTests {
     @Test(arguments: ["en", "zh-Hans", "zh-Hant", "ja", "ko"])
     func reminderIsLocalizedWithBothVersions(locale: String) {
         let localization = FeedbackLocalization(locale: Locale(identifier: locale))
-        for suffix in ["title", "message", "versions", "continue", "open", "failed", "checking"] {
+        for suffix in ["title", "message", "versions", "continue", "open", "failed", "checking", "continue.short", "open.short"] {
             let key = "feedbackkit.update.\(suffix)"
             #expect(localization.text(key) != key)
         }

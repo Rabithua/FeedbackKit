@@ -141,3 +141,5 @@
 "feedbackkit.update.open" = "Update app";
 "feedbackkit.update.failed" = "Unable to open the update page. Please try again or continue with your feedback.";
 "feedbackkit.update.checking" = "Checking for updates…";
+"feedbackkit.update.continue.short" = "Report";
+"feedbackkit.update.open.short" = "Update";

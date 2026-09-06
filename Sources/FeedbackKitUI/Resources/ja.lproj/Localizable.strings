@@ -141,3 +141,5 @@
 "feedbackkit.update.open" = "アップデート";
 "feedbackkit.update.failed" = "更新ページを開けませんでした。もう一度お試しいただくか、報告を続けてください。";
 "feedbackkit.update.checking" = "アップデートを確認中…";
+"feedbackkit.update.continue.short" = "報告";
+"feedbackkit.update.open.short" = "更新";

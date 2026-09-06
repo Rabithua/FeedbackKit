@@ -141,3 +141,5 @@
 "feedbackkit.update.open" = "前往更新";
 "feedbackkit.update.failed" = "無法開啟更新頁面，請重試或繼續回饋。";
 "feedbackkit.update.checking" = "正在檢查新版本…";
+"feedbackkit.update.continue.short" = "繼續";
+"feedbackkit.update.open.short" = "更新";
