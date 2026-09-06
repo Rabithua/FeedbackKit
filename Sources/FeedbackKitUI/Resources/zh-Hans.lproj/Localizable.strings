@@ -132,3 +132,14 @@
 "feedbackkit.campaign.validation.too.many.items" = "请选择或添加更少的回答。";
 "feedbackkit.campaign.validation.duplicate.items" = "每项回答必须不同。";
 "feedbackkit.campaign.validation.comment.too.long" = "补充内容太长。";
+
+// Update reminder before bug reports
+"feedbackkit.update.title" = "先试试更新版本";
+"feedbackkit.update.message" = "发现了新版本，你遇到的问题可能已经修复。建议更新后再试试，也可以继续反馈。";
+"feedbackkit.update.versions" = "当前版本 %@ · 最新版本 %@";
+"feedbackkit.update.continue" = "继续反馈";
+"feedbackkit.update.open" = "前往更新";
+"feedbackkit.update.failed" = "无法打开更新页面，请重试或继续反馈。";
+"feedbackkit.update.checking" = "正在检查新版本…";
+"feedbackkit.update.continue.short" = "继续";
+"feedbackkit.update.open.short" = "更新";

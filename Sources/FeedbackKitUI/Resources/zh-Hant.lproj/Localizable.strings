@@ -132,3 +132,14 @@
 "feedbackkit.campaign.validation.too.many.items" = "請選擇或新增較少回答。";
 "feedbackkit.campaign.validation.duplicate.items" = "每項回答必須不同。";
 "feedbackkit.campaign.validation.comment.too.long" = "補充內容太長。";
+
+// Update reminder before bug reports
+"feedbackkit.update.title" = "先試試更新版本";
+"feedbackkit.update.message" = "發現了新版本，你遇到的問題可能已經修復。建議更新後再試試，也可以繼續回饋。";
+"feedbackkit.update.versions" = "目前版本 %@ · 最新版本 %@";
+"feedbackkit.update.continue" = "繼續回饋";
+"feedbackkit.update.open" = "前往更新";
+"feedbackkit.update.failed" = "無法開啟更新頁面，請重試或繼續回饋。";
+"feedbackkit.update.checking" = "正在檢查新版本…";
+"feedbackkit.update.continue.short" = "繼續";
+"feedbackkit.update.open.short" = "更新";

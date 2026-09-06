@@ -8,6 +8,7 @@ public struct FeedbackCenterView: View {
     private let haptics: FeedbackHaptics
     private let initialRoute: String?
     private let languagePolicy: FeedbackLanguagePolicy
+    private let updateChecker: (any FeedbackAppUpdateChecking)?
     @State private var didOpenInitialRoute = false
 
     @Environment(\.dismiss) private var dismiss
@@ -20,7 +21,8 @@ public struct FeedbackCenterView: View {
         style: FeedbackStyle = .default,
         haptics: FeedbackHaptics = .none,
         initialRoute: String? = nil,
-        languagePolicy: FeedbackLanguagePolicy = .followHost
+        languagePolicy: FeedbackLanguagePolicy = .followHost,
+        updateChecker: (any FeedbackAppUpdateChecking)? = nil
     ) {
         _model = State(initialValue: FeedbackCenterModel(client: client))
         self.routeHandler = routeHandler
@@ -28,6 +30,7 @@ public struct FeedbackCenterView: View {
         self.haptics = haptics
         self.initialRoute = initialRoute
         self.languagePolicy = languagePolicy
+        self.updateChecker = updateChecker
     }
 
     public var body: some View {
@@ -88,6 +91,7 @@ public struct FeedbackCenterView: View {
                 sheet: sheet,
                 model: model,
                 style: style,
+                updateChecker: updateChecker,
                 activatePost: activatePost
             )
         }

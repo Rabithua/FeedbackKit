@@ -1,6 +1,6 @@
 # FeedbackKit
 
-FeedbackKit 2.1 is an iOS and iPadOS 18+ Swift package for integrating a complete feedback center
+FeedbackKit 2.3 is an iOS and iPadOS 18+ Swift package for integrating a complete feedback center
 with FeedbackServer. It includes anonymous visitor identity, public activity, owned feedback
 conversations, attachments, voting, a version-and-body changelog, user-controlled private
 diagnostics, typed campaign forms, opt-in Journey analytics, and a default SwiftUI interface.
@@ -45,6 +45,24 @@ let client = FeedbackClient(configuration: configuration)
 
 FeedbackCenterView(client: client)
 ```
+
+## Update reminder before bug reports
+
+Starting in 2.3.0, pass an optional `FeedbackAppUpdateChecking` implementation to
+`FeedbackCenterView(client:updateChecker:)`. The host checks its distribution channel,
+compares the installed marketing version with the latest available version, and returns
+`FeedbackAppUpdate(currentVersion:latestVersion:url:)` only when an update is available.
+Keep the check bounded (for example, a five-second network timeout) and cancellation-aware.
+
+The SDK checks when the user chooses Report a Bug, including `/feedback/new?type=bug`
+routes. It shows a localized update reminder before creating the composer. Users can
+update, continue reporting, close the reminder, or skip a slow check. An unavailable
+update or failed check opens the composer; other feedback types never run the check.
+The SDK neither submits feedback nor discards drafts from this reminder. Existing hosts
+that omit `updateChecker` retain their current behavior.
+
+`FeedbackAppUpdateSheet` exposes the same reminder for host previews. Its continuation
+callback should open the bug composer; its close callback should dismiss the presentation.
 
 ## Campaign forms
 
