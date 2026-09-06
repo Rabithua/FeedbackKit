@@ -1,6 +1,9 @@
 import Foundation
 
 public struct FeedbackRedactor: Sendable {
+    // Foundation's JSON writer can exhaust a MetricKit callback thread's stack
+    // on a deeply nested callStackTree, before the final output is clipped.
+    private static let maximumJSONDepth = 32
     private static let sensitiveKeyFragments = [
         "authorization", "cookie", "password", "token", "apikey", "credential",
         "secret", "sessionid", "sessiontoken", "phone",
@@ -9,10 +12,50 @@ public struct FeedbackRedactor: Sendable {
     public init() {}
 
     public func redact(_ value: String) -> String {
+        guard isJSONDepthSafe(value) else {
+            // Do not fall back to raw text: escaped JSON keys can contain secrets
+            // that the unstructured-text redactor cannot safely identify.
+            return "[REDACTED_JSON_DEPTH_LIMIT]"
+        }
         if let json = redactJSON(value) {
             return String(json.prefix(8_192))
         }
         return String(redactText(value).prefix(8_192))
+    }
+
+    private func isJSONDepthSafe(_ value: String) -> Bool {
+        var bytes = value.utf8[...]
+        if bytes.starts(with: [0xEF, 0xBB, 0xBF]) { bytes = bytes.dropFirst(3) }
+        let first = bytes.first { ![0x20, 0x09, 0x0A, 0x0D].contains($0) }
+        guard first == 0x7B || first == 0x5B else { return true }
+
+        var depth = 0
+        var inString = false
+        var escaped = false
+        for byte in bytes {
+            if inString {
+                if escaped {
+                    escaped = false
+                } else if byte == 0x5C {
+                    escaped = true
+                } else if byte == 0x22 {
+                    inString = false
+                }
+            } else {
+                switch byte {
+                case 0x22:
+                    inString = true
+                case 0x7B, 0x5B:
+                    depth += 1
+                    if depth > Self.maximumJSONDepth { return false }
+                case 0x7D, 0x5D:
+                    depth = max(0, depth - 1)
+                default:
+                    break
+                }
+            }
+        }
+        return true
     }
 
     private func redactText(_ value: String) -> String {
