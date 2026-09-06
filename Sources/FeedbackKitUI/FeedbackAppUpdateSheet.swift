@@ -33,7 +33,10 @@ public struct FeedbackAppUpdateSheet: View {
                 VStack(alignment: .leading, spacing: 16) {
                     HStack(alignment: .top, spacing: 12) {
                         Image(systemName: "arrow.down.app.fill")
-                            .font(.system(size: 32))
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 24, height: 24)
+                            .frame(width: 32, height: 32)
                             .foregroundStyle(.tint)
                             .accessibilityHidden(true)
                         Text(localization.text("feedbackkit.update.title"))
