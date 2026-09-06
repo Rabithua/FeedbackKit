@@ -5,6 +5,7 @@ public struct FeedbackAppUpdateSheet: View {
     private let update: FeedbackAppUpdate
     private let haptics: FeedbackHaptics
     private let languagePolicy: FeedbackLanguagePolicy
+    private let layout: FeedbackAppUpdateSheetLayout?
     private let continueFeedback: () -> Void
     private let close: () -> Void
     @Environment(\.locale) private var hostLocale
@@ -17,17 +18,42 @@ public struct FeedbackAppUpdateSheet: View {
         update: FeedbackAppUpdate,
         haptics: FeedbackHaptics = .none,
         languagePolicy: FeedbackLanguagePolicy = .followHost,
+        layout: FeedbackAppUpdateSheetLayout? = nil,
         continueFeedback: @escaping () -> Void,
         close: @escaping () -> Void
     ) {
         self.update = update
         self.haptics = haptics
         self.languagePolicy = languagePolicy
+        self.layout = layout
         self.continueFeedback = continueFeedback
         self.close = close
     }
 
     public var body: some View {
+        Group {
+            if let layout {
+                layout.body(for: .init(
+                    title: localization.text("feedbackkit.update.title"),
+                    message: localization.text("feedbackkit.update.message"),
+                    details: AnyView(details),
+                    actions: AnyView(actionButtons),
+                    isBusy: isOpeningUpdate,
+                    close: close
+                ))
+            } else {
+                defaultLayout
+            }
+        }
+        .presentationDetents(dynamicTypeSize.isAccessibilitySize ? [.large] : [.fraction(0.42), .medium, .large])
+        .presentationDragIndicator(.visible)
+        .interactiveDismissDisabled(isOpeningUpdate)
+        .environment(\.feedbackHaptics, haptics)
+        .environment(\.feedbackLocalization, localization)
+        .accessibilityIdentifier("developerCommunity.update.sheet")
+    }
+
+    private var defaultLayout: some View {
         VStack(spacing: 0) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
@@ -48,26 +74,7 @@ public struct FeedbackAppUpdateSheet: View {
                     }
                     Text(localization.text("feedbackkit.update.message"))
                         .foregroundStyle(.secondary)
-                    HStack(spacing: 8) {
-                        Text(update.currentVersion)
-                        Image(systemName: "arrow.right")
-                            .font(.caption.weight(.medium))
-                        Text(update.latestVersion)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.tint)
-                    }
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(localization.formattedText(
-                        "feedbackkit.update.versions", update.currentVersion, update.latestVersion
-                    ))
-                    if openingFailed {
-                        Text(localization.text("feedbackkit.update.failed"))
-                            .font(.footnote)
-                            .foregroundStyle(.red)
-                            .accessibilityIdentifier("developerCommunity.update.failed")
-                    }
+                    details
                 }
                 .frame(maxWidth: 560, alignment: .leading)
                 .frame(maxWidth: .infinity)
@@ -77,45 +84,67 @@ public struct FeedbackAppUpdateSheet: View {
             }
             .scrollBounceBehavior(.basedOnSize)
 
-            HStack(spacing: 12) {
-                Button {
-                    haptics.trigger(.action)
-                    continueFeedback()
-                } label: {
-                    Text(localization.text(dynamicTypeSize.isAccessibilitySize
-                        ? "feedbackkit.update.continue.short" : "feedbackkit.update.continue"))
-                        .frame(minWidth: 72)
-                }
-                .buttonStyle(.bordered)
-                .accessibilityLabel(localization.text("feedbackkit.update.continue"))
-                .accessibilityIdentifier("developerCommunity.update.continue")
-
-                Button(action: openUpdate) {
-                    Text(localization.text(dynamicTypeSize.isAccessibilitySize
-                        ? "feedbackkit.update.open.short" : "feedbackkit.update.open"))
-                        .fontWeight(.semibold)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .accessibilityLabel(localization.text("feedbackkit.update.open"))
-                .accessibilityIdentifier("developerCommunity.update.open")
-            }
-            .controlSize(.large)
-            .disabled(isOpeningUpdate)
-            .frame(maxWidth: 560)
-            .padding(.horizontal, 24)
-            .padding(.top, 16)
-            .padding(.bottom, 20)
+            actionButtons
+                .frame(maxWidth: 560)
+                .padding(.horizontal, 24)
+                .padding(.top, 16)
+                .padding(.bottom, 20)
         }
-        .background(FeedbackSystemBackground())
-        .presentationDetents(dynamicTypeSize.isAccessibilitySize ? [.large] : [.fraction(0.42), .medium, .large])
-        .presentationDragIndicator(.visible)
-        .interactiveDismissDisabled(isOpeningUpdate)
-        .environment(\.feedbackHaptics, haptics)
-        .environment(\.feedbackLocalization, localization)
-        .accessibilityIdentifier("developerCommunity.update.sheet")
+    }
+
+    private var details: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 8) {
+                Text(update.currentVersion)
+                Image(systemName: "arrow.right")
+                    .fontWeight(.medium)
+                Text(update.latestVersion)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.tint)
+            }
+            .font(.title3)
+            .foregroundStyle(.secondary)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(localization.formattedText(
+                "feedbackkit.update.versions", update.currentVersion, update.latestVersion
+            ))
+            if openingFailed {
+                Text(localization.text("feedbackkit.update.failed"))
+                    .font(.footnote)
+                    .foregroundStyle(.red)
+                    .accessibilityIdentifier("developerCommunity.update.failed")
+            }
+        }
+    }
+
+    private var actionButtons: some View {
+        HStack(spacing: 12) {
+            Button {
+                haptics.trigger(.action)
+                continueFeedback()
+            } label: {
+                Text(localization.text(dynamicTypeSize.isAccessibilitySize
+                    ? "feedbackkit.update.continue.short" : "feedbackkit.update.continue"))
+                    .frame(minWidth: 72)
+            }
+            .buttonStyle(.bordered)
+            .accessibilityLabel(localization.text("feedbackkit.update.continue"))
+            .accessibilityIdentifier("developerCommunity.update.continue")
+
+            Button(action: openUpdate) {
+                Text(localization.text(dynamicTypeSize.isAccessibilitySize
+                    ? "feedbackkit.update.open.short" : "feedbackkit.update.open"))
+                    .fontWeight(.semibold)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .accessibilityLabel(localization.text("feedbackkit.update.open"))
+            .accessibilityIdentifier("developerCommunity.update.open")
+        }
+        .controlSize(.large)
+        .disabled(isOpeningUpdate)
     }
 
     private var localization: FeedbackLocalization {

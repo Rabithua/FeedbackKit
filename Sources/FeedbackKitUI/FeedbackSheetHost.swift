@@ -6,6 +6,7 @@ struct FeedbackSheetHost: View {
     @Bindable var model: FeedbackCenterModel
     let style: FeedbackStyle
     let updateChecker: (any FeedbackAppUpdateChecking)?
+    let updateSheetLayout: FeedbackAppUpdateSheetLayout?
     let activatePost: (FeedbackDeveloperPostAction) -> Void
     @Environment(\.feedbackHaptics) private var haptics
     @Environment(\.locale) private var locale
@@ -24,6 +25,7 @@ struct FeedbackSheetHost: View {
                     FeedbackComposerEntry(
                         kind: kind,
                         updateChecker: updateChecker,
+                        updateSheetLayout: updateSheetLayout,
                         style: style,
                         close: { model.sheet = nil }
                     ) {
