@@ -271,6 +271,10 @@ snapshot generation. Custom sources should override
 `diagnosticSnapshotData(maxBytes:)` and stop reading at that limit; the compatibility
 implementation clips legacy `diagnosticSnapshotData()` results.
 
+JSON with more than 32 nested containers is replaced with `[REDACTED_JSON_DEPTH_LIMIT]`
+before parsing or serialization. This prevents deeply nested MetricKit call stacks from
+exhausting a callback thread's stack, without retaining unredacted payload text.
+
 Follow the complete [new app onboarding guide](Documentation/GettingStarted.md) for Product setup,
 xcconfig/Info.plist configuration, diagnostics and privacy decisions, route handling, catalog
 seeding, and acceptance checks. For upgrades, read [Migrating to 2.1](Documentation/MigratingTo2.1.md).
