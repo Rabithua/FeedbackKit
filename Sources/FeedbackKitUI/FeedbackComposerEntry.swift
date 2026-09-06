@@ -4,6 +4,7 @@ import SwiftUI
 struct FeedbackComposerEntry<Composer: View>: View {
     @State private var model: FeedbackComposerEntryModel
     private let style: FeedbackStyle
+    private let updateSheetLayout: FeedbackAppUpdateSheetLayout?
     private let close: () -> Void
     private let composer: () -> Composer
     @Environment(\.feedbackHaptics) private var haptics
@@ -12,12 +13,14 @@ struct FeedbackComposerEntry<Composer: View>: View {
     init(
         kind: FeedbackKind,
         updateChecker: (any FeedbackAppUpdateChecking)?,
+        updateSheetLayout: FeedbackAppUpdateSheetLayout?,
         style: FeedbackStyle,
         close: @escaping () -> Void,
         @ViewBuilder composer: @escaping () -> Composer
     ) {
         _model = State(initialValue: FeedbackComposerEntryModel(kind: kind, updateChecker: updateChecker))
         self.style = style
+        self.updateSheetLayout = updateSheetLayout
         self.close = close
         self.composer = composer
     }
@@ -44,6 +47,7 @@ struct FeedbackComposerEntry<Composer: View>: View {
                 FeedbackAppUpdateSheet(
                     update: update,
                     haptics: haptics,
+                    layout: updateSheetLayout,
                     continueFeedback: model.continueFeedback,
                     close: close
                 )

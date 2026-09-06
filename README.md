@@ -64,6 +64,11 @@ that omit `updateChecker` retain their current behavior.
 `FeedbackAppUpdateSheet` exposes the same reminder for host previews. Its continuation
 callback should open the bug composer; its close callback should dismiss the presentation.
 
+To use an existing host sheet template, pass a `FeedbackAppUpdateSheetLayout` to the center's
+`updateSheetLayout` parameter and to the preview sheet's `layout` parameter. Its content
+provides localized header text, version/error details, and the SDK-owned action buttons.
+The host supplies its template layout; the reminder does not add an opaque background.
+
 ## Campaign forms
 
 Published campaigns are available through `FeedbackKitCore`. Their bounded answer schemas decode
