@@ -97,12 +97,12 @@ public struct FeedbackAppUpdateSheet: View {
             HStack(spacing: 8) {
                 Text(update.currentVersion)
                 Image(systemName: "arrow.right")
-                    .font(.body.weight(.medium))
+                    .fontWeight(.medium)
                 Text(update.latestVersion)
                     .fontWeight(.semibold)
                     .foregroundStyle(.tint)
             }
-            .font(.subheadline)
+            .font(.title3)
             .foregroundStyle(.secondary)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(localization.formattedText(
