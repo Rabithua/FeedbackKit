@@ -33,7 +33,10 @@ public struct FeedbackAppUpdateSheet: View {
                 VStack(alignment: .leading, spacing: 16) {
                     HStack(alignment: .top, spacing: 12) {
                         Image(systemName: "arrow.down.app.fill")
-                            .font(.system(size: 32))
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 24, height: 24)
+                            .frame(width: 32, height: 32)
                             .foregroundStyle(.tint)
                             .accessibilityHidden(true)
                         Text(localization.text("feedbackkit.update.title"))
@@ -45,11 +48,20 @@ public struct FeedbackAppUpdateSheet: View {
                     }
                     Text(localization.text("feedbackkit.update.message"))
                         .foregroundStyle(.secondary)
-                    Text(localization.formattedText(
-                        "feedbackkit.update.versions", update.currentVersion, update.latestVersion
-                    ))
+                    HStack(spacing: 8) {
+                        Text(update.currentVersion)
+                        Image(systemName: "arrow.right")
+                            .font(.caption.weight(.medium))
+                        Text(update.latestVersion)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.tint)
+                    }
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(localization.formattedText(
+                        "feedbackkit.update.versions", update.currentVersion, update.latestVersion
+                    ))
                     if openingFailed {
                         Text(localization.text("feedbackkit.update.failed"))
                             .font(.footnote)
