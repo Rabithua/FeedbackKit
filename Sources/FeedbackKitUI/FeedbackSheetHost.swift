@@ -5,6 +5,7 @@ struct FeedbackSheetHost: View {
     let sheet: FeedbackCenterSheet
     @Bindable var model: FeedbackCenterModel
     let style: FeedbackStyle
+    let updateChecker: (any FeedbackAppUpdateChecking)?
     let activatePost: (FeedbackDeveloperPostAction) -> Void
     @Environment(\.feedbackHaptics) private var haptics
     @Environment(\.locale) private var locale
@@ -20,18 +21,26 @@ struct FeedbackSheetHost: View {
                 }
             case let .composer(kind):
                 if let product = model.bootstrap?.product {
-                    FeedbackComposer(
+                    FeedbackComposerEntry(
                         kind: kind,
-                        product: product,
-                        client: model.client,
-                        draftStore: FeedbackDraftStore(),
+                        updateChecker: updateChecker,
                         style: style,
-                        submitted: {
-                            model.sheet = nil
-                            Task { await model.load(locale: locale, force: true) }
-                        },
                         close: { model.sheet = nil }
-                    )
+                    ) {
+                        FeedbackComposer(
+                            kind: kind,
+                            product: product,
+                            client: model.client,
+                            draftStore: FeedbackDraftStore(),
+                            style: style,
+                            submitted: {
+                                model.sheet = nil
+                                Task { await model.load(locale: locale, force: true) }
+                            },
+                            close: { model.sheet = nil }
+                        )
+                    }
+                    .id(kind)
                 }
             case let .feedback(id):
                 FeedbackDetailSheet(

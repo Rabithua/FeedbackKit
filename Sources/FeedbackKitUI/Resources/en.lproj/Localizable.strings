@@ -132,3 +132,12 @@
 "feedbackkit.campaign.validation.too.many.items" = "Choose or add fewer responses.";
 "feedbackkit.campaign.validation.duplicate.items" = "Each response must be different.";
 "feedbackkit.campaign.validation.comment.too.long" = "The additional comment is too long.";
+
+// Update reminder before bug reports
+"feedbackkit.update.title" = "Try updating first";
+"feedbackkit.update.message" = "A newer version is available and may already fix this issue. Please update and try again, or continue to report the bug.";
+"feedbackkit.update.versions" = "Installed: %@ · Latest: %@";
+"feedbackkit.update.continue" = "Continue";
+"feedbackkit.update.open" = "Update app";
+"feedbackkit.update.failed" = "Unable to open the update page. Please try again or continue with your feedback.";
+"feedbackkit.update.checking" = "Checking for updates…";

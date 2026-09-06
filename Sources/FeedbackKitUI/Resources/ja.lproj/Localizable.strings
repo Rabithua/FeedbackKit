@@ -132,3 +132,12 @@
 "feedbackkit.campaign.validation.too.many.items" = "選択または追加する回答を減らしてください。";
 "feedbackkit.campaign.validation.duplicate.items" = "同じ回答は追加できません。";
 "feedbackkit.campaign.validation.comment.too.long" = "補足コメントが長すぎます。";
+
+// Update reminder before bug reports
+"feedbackkit.update.title" = "まずアップデートをお試しください";
+"feedbackkit.update.message" = "新しいバージョンで、この問題が修正されている可能性があります。アップデート後にもう一度お試しいただくか、このまま不具合を報告できます。";
+"feedbackkit.update.versions" = "現在のバージョン %@ · 最新バージョン %@";
+"feedbackkit.update.continue" = "報告を続ける";
+"feedbackkit.update.open" = "アップデート";
+"feedbackkit.update.failed" = "更新ページを開けませんでした。もう一度お試しいただくか、報告を続けてください。";
+"feedbackkit.update.checking" = "アップデートを確認中…";
