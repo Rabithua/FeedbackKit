@@ -3,23 +3,19 @@ import SwiftUI
 
 struct FeedbackComposerEntry<Composer: View>: View {
     @State private var model: FeedbackComposerEntryModel
-    private let style: FeedbackStyle
     private let updateSheetLayout: FeedbackAppUpdateSheetLayout?
     private let close: () -> Void
     private let composer: () -> Composer
     @Environment(\.feedbackHaptics) private var haptics
-    @Environment(\.feedbackLocalization) private var localization
 
     init(
         kind: FeedbackKind,
-        updateChecker: (any FeedbackAppUpdateChecking)?,
+        availableUpdate: FeedbackAppUpdate?,
         updateSheetLayout: FeedbackAppUpdateSheetLayout?,
-        style: FeedbackStyle,
         close: @escaping () -> Void,
         @ViewBuilder composer: @escaping () -> Composer
     ) {
-        _model = State(initialValue: FeedbackComposerEntryModel(kind: kind, updateChecker: updateChecker))
-        self.style = style
+        _model = State(initialValue: FeedbackComposerEntryModel(kind: kind, availableUpdate: availableUpdate))
         self.updateSheetLayout = updateSheetLayout
         self.close = close
         self.composer = composer
@@ -28,21 +24,6 @@ struct FeedbackComposerEntry<Composer: View>: View {
     var body: some View {
         Group {
             switch model.phase {
-            case .checking:
-                VStack(spacing: 24) {
-                    FeedbackSheetHeader(title: localization.kind(FeedbackKind.bug), close: close)
-                    ProgressView(localization.text("feedbackkit.update.checking"))
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    Button(localization.text("feedbackkit.update.continue")) {
-                        haptics.trigger(.action)
-                        model.continueFeedback()
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.large)
-                }
-                .padding(.horizontal, style.pagePadding)
-                .padding(.vertical, 24)
-                .presentationDetents([.medium, .large])
             case let .update(update):
                 FeedbackAppUpdateSheet(
                     update: update,
@@ -55,6 +36,5 @@ struct FeedbackComposerEntry<Composer: View>: View {
                 composer()
             }
         }
-        .task { await model.checkForUpdate() }
     }
 }

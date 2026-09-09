@@ -54,12 +54,14 @@ compares the installed marketing version with the latest available version, and 
 `FeedbackAppUpdate(currentVersion:latestVersion:url:)` only when an update is available.
 Keep the check bounded (for example, a five-second network timeout) and cancellation-aware.
 
-The SDK checks when the user chooses Report a Bug, including `/feedback/new?type=bug`
-routes. It shows a localized update reminder before creating the composer. Users can
-update, continue reporting, close the reminder, or skip a slow check. An unavailable
-update or failed check opens the composer; other feedback types never run the check.
-The SDK neither submits feedback nor discards drafts from this reminder. Existing hosts
-that omit `updateChecker` retain their current behavior.
+The SDK checks in the background when the feedback center appears, independently of its
+bootstrap load. Opening Report a Bug (including `/feedback/new?type=bug`) reads the result
+already available: a confirmed update shows the existing reminder; a pending, failed, or
+empty result opens the composer immediately. There is no checking screen and late results
+never interrupt an open composer. Other feedback kinds do not show update reminders.
+Hosts should cache both positive and negative results and coalesce concurrent checks across
+center presentations. The SDK neither submits feedback nor discards drafts from this reminder.
+Existing hosts that omit `updateChecker` retain their current behavior.
 
 `FeedbackAppUpdateSheet` exposes the same reminder for host previews. Its continuation
 callback should open the bug composer; its close callback should dismiss the presentation.

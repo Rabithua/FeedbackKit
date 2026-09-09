@@ -15,7 +15,8 @@ public struct FeedbackAppUpdate: Equatable, Sendable {
 
 /// Supplies the host's update policy without coupling FeedbackKit to an app or store.
 public protocol FeedbackAppUpdateChecking: Sendable {
-    /// Return nil when no newer version is available. Use a bounded timeout and
-    /// honor cancellation; failures allow the user to continue reporting a bug.
+    /// Called in the background when the feedback center appears. Return nil when no
+    /// newer version is available. Hosts should cache results and coalesce requests.
+    /// Use a bounded timeout; pending or failed checks never delay the composer.
     func availableUpdate() async throws -> FeedbackAppUpdate?
 }
