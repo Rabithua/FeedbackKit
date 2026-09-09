@@ -24,25 +24,27 @@ struct FeedbackAttachmentStrip: View {
                         remove: { remove(attachment.id) }
                     )
                 }
-                PhotosPicker(
-                    selection: $selections,
-                    maxSelectionCount: max(
-                        0,
-                        model.product.attachmentLimits.count - model.attachments.count
-                    ),
-                    matching: .any(of: [.images, .videos])
-                ) {
-                    FeedbackAttachmentAddLabel(
-                        title: addTitle,
-                        isLoading: isImporting,
-                        style: style
+                if model.attachmentsAvailable {
+                    PhotosPicker(
+                        selection: $selections,
+                        maxSelectionCount: max(
+                            0,
+                            model.product.attachmentLimits.count - model.attachments.count
+                        ),
+                        matching: .any(of: [.images, .videos])
+                    ) {
+                        FeedbackAttachmentAddLabel(
+                            title: addTitle,
+                            isLoading: isImporting,
+                            style: style
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(
+                        model.isImporting
+                            || model.attachments.count >= model.product.attachmentLimits.count
                     )
                 }
-                .buttonStyle(.plain)
-                .disabled(
-                    model.isImporting
-                        || model.attachments.count >= model.product.attachmentLimits.count
-                )
             }
             .padding(.vertical, 7)
             .padding(.horizontal, 2)

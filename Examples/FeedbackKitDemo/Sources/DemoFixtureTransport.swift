@@ -2,6 +2,7 @@ import FeedbackKitCore
 import Foundation
 
 actor DemoFixtureTransport: FeedbackTransport {
+    private var bootstrapCount = 0
     private let scenario: DemoScenario
 
     init(scenario: DemoScenario) {
@@ -55,6 +56,7 @@ actor DemoFixtureTransport: FeedbackTransport {
         let requestHeaders = ["X-Request-ID": "fixture-\(UUID().uuidString)"]
 
         if path == "/v1/api/client/bootstrap" {
+            bootstrapCount += 1
             switch scenario {
             case .rateLimited:
                 return (
@@ -75,7 +77,7 @@ actor DemoFixtureTransport: FeedbackTransport {
                 return (
                     200,
                     requestHeaders,
-                    DemoFixturePayloads.bootstrap(empty: scenario == .empty)
+                    DemoFixturePayloads.bootstrap(empty: scenario == .empty, attachmentsEnabled: scenario != .free && !(scenario == .downgraded && bootstrapCount > 1))
                 )
             }
         }

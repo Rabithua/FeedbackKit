@@ -1,6 +1,8 @@
 import Foundation
 
 enum DemoScenario: String, CaseIterable, Identifiable {
+    case free
+    case downgraded
     case healthy
     case empty
     case offline
@@ -12,6 +14,8 @@ enum DemoScenario: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
+        case .free: "Free (no attachments)"
+        case .downgraded: "Downgrade while composing"
         case .healthy: "Healthy"
         case .empty: "Empty product"
         case .offline: "Offline"
@@ -23,6 +27,10 @@ enum DemoScenario: String, CaseIterable, Identifiable {
 
     var explanation: String {
         switch self {
+        case .free:
+            "Text feedback with no attachment or diagnostic entry."
+        case .downgraded:
+            "Attachments become unavailable when the composer refreshes before submission."
         case .healthy:
             "Preloaded activity, roadmap, changelog, feedback, uploads, votes, and diagnostics."
         case .empty:

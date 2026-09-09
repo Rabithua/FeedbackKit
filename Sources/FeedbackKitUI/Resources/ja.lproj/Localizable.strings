@@ -143,3 +143,5 @@
 "feedbackkit.update.checking" = "アップデートを確認中…";
 "feedbackkit.update.continue.short" = "報告";
 "feedbackkit.update.open.short" = "更新";
+
+"feedbackkit.attachment.unavailable" = "この App では添付ファイルを利用できません。選択した添付ファイルを削除してから再試行してください。入力した文章は保持されています。";

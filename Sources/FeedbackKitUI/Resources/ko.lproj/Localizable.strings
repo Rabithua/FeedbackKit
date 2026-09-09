@@ -143,3 +143,5 @@
 "feedbackkit.update.checking" = "업데이트 확인 중…";
 "feedbackkit.update.continue.short" = "계속";
 "feedbackkit.update.open.short" = "업데이트";
+
+"feedbackkit.attachment.unavailable" = "이 앱에서는 첨부 파일을 사용할 수 없습니다. 선택한 첨부 파일을 제거한 후 다시 시도해 주세요. 작성한 내용은 유지됩니다.";
