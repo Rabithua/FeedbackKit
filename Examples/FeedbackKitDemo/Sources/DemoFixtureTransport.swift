@@ -77,7 +77,7 @@ actor DemoFixtureTransport: FeedbackTransport {
                 return (
                     200,
                     requestHeaders,
-                    DemoFixturePayloads.bootstrap(empty: scenario == .empty, attachmentsEnabled: scenario != .free && !(scenario == .downgraded && bootstrapCount > 2))
+                    DemoFixturePayloads.bootstrap(empty: scenario == .empty, attachmentsEnabled: scenario != .free && !(scenario == .downgraded && bootstrapCount > 1))
                 )
             }
         }
