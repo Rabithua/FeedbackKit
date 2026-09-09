@@ -8,7 +8,7 @@ public struct FeedbackCenterView: View {
     private let haptics: FeedbackHaptics
     private let initialRoute: String?
     private let languagePolicy: FeedbackLanguagePolicy
-    private let updateChecker: (any FeedbackAppUpdateChecking)?
+    @State private var appUpdate: FeedbackAppUpdateModel
     private let updateSheetLayout: FeedbackAppUpdateSheetLayout?
     @State private var didOpenInitialRoute = false
 
@@ -32,7 +32,7 @@ public struct FeedbackCenterView: View {
         self.haptics = haptics
         self.initialRoute = initialRoute
         self.languagePolicy = languagePolicy
-        self.updateChecker = updateChecker
+        _appUpdate = State(initialValue: FeedbackAppUpdateModel(checker: updateChecker))
         self.updateSheetLayout = updateSheetLayout
     }
 
@@ -89,12 +89,13 @@ public struct FeedbackCenterView: View {
                 _ = openPackageRoute(initialRoute)
             }
         }
+        .task { await appUpdate.prefetch() }
         .sheet(item: $model.sheet) { sheet in
             FeedbackSheetHost(
                 sheet: sheet,
                 model: model,
                 style: style,
-                updateChecker: updateChecker,
+                availableUpdate: appUpdate.update,
                 updateSheetLayout: updateSheetLayout,
                 activatePost: activatePost
             )

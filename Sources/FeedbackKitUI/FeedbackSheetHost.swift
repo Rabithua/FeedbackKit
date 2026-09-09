@@ -5,7 +5,7 @@ struct FeedbackSheetHost: View {
     let sheet: FeedbackCenterSheet
     @Bindable var model: FeedbackCenterModel
     let style: FeedbackStyle
-    let updateChecker: (any FeedbackAppUpdateChecking)?
+    let availableUpdate: FeedbackAppUpdate?
     let updateSheetLayout: FeedbackAppUpdateSheetLayout?
     let activatePost: (FeedbackDeveloperPostAction) -> Void
     @Environment(\.feedbackHaptics) private var haptics
@@ -24,9 +24,8 @@ struct FeedbackSheetHost: View {
                 if let product = model.bootstrap?.product {
                     FeedbackComposerEntry(
                         kind: kind,
-                        updateChecker: updateChecker,
+                        availableUpdate: availableUpdate,
                         updateSheetLayout: updateSheetLayout,
-                        style: style,
                         close: { model.sheet = nil }
                     ) {
                         FeedbackComposer(
