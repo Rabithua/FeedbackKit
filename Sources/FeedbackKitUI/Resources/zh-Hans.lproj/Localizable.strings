@@ -143,3 +143,5 @@
 "feedbackkit.update.checking" = "正在检查新版本…";
 "feedbackkit.update.continue.short" = "继续";
 "feedbackkit.update.open.short" = "更新";
+
+"feedbackkit.attachment.unavailable" = "此 App 暂不支持附件。请移除已选附件后重试，填写的文字已保留。";

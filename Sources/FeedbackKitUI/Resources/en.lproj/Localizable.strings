@@ -143,3 +143,5 @@
 "feedbackkit.update.checking" = "Checking for updates…";
 "feedbackkit.update.continue.short" = "Report";
 "feedbackkit.update.open.short" = "Update";
+
+"feedbackkit.attachment.unavailable" = "Attachments are unavailable for this app. Remove the selected attachments and try again. Your text has been kept.";

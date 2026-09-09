@@ -21,7 +21,10 @@ enum DemoFixturePayloads {
 
     static let feedbackDetail = #"{"id":"55555555-5555-4555-8555-555555555555","type":"bug","title":"Example private feedback","displayTitle":"Example private feedback","body":"This conversation belongs to the fixture visitor.","status":"open","visibility":"private","publishedAt":null,"pinnedAt":null,"lastActivityAt":"2026-08-23T12:00:00.000Z","createdAt":"2026-08-23T11:00:00.000Z","updatedAt":"2026-08-23T12:00:00.000Z","authorDisplayCode":"DEMO-01","isOwner":true,"voteCount":0,"hasVoted":false,"messages":[{"id":"66666666-6666-4666-8666-666666666666","actor":"admin","body":"Thanks — this fixture reply demonstrates the private conversation.","createdAt":"2026-08-23T12:00:00.000Z"}],"attachments":[],"diagnosticsIncluded":false}"#
 
-    static func bootstrap(empty: Bool) -> Data {
+    static func bootstrap(empty: Bool, attachmentsEnabled: Bool = true) -> Data {
+        let product = attachmentsEnabled ? Self.product : Self.product
+            .replacingOccurrences(of: "\"count\":5", with: "\"count\":0")
+            .replacingOccurrences(of: "\"enabled\":true", with: "\"enabled\":false")
         let activity = empty ? "[]" : "[\(activityEntry),\(developerPostEntry)]"
         let roadmap = empty ? "[]" : "[\(roadmapItem)]"
         let changelog = empty ? "[]" : "[\(release)]"

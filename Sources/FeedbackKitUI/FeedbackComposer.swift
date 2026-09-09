@@ -91,12 +91,14 @@ struct FeedbackComposer: View {
                     }
                     .feedbackBorder(style)
 
-                    FeedbackAttachmentStrip(
-                        model: model,
-                        selections: $selections,
-                        style: style,
-                        remove: removeAttachment
-                    )
+                    if model.showsAttachmentStrip {
+                        FeedbackAttachmentStrip(
+                            model: model,
+                            selections: $selections,
+                            style: style,
+                            remove: removeAttachment
+                        )
+                    }
 
                     if model.diagnosticsAvailable {
                         Toggle(isOn: diagnosticsBinding) {

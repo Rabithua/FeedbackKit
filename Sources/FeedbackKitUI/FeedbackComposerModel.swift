@@ -35,7 +35,7 @@ final class FeedbackComposerModel {
     @ObservationIgnored private var submissionState = FeedbackSubmissionState()
     @ObservationIgnored private var attachmentLeases = FeedbackAttachmentLeaseRegistry()
 
-    let product: FeedbackProduct
+    private(set) var product: FeedbackProduct
     let client: FeedbackClient
     let draftStore: FeedbackDraftStore
 
@@ -51,6 +51,10 @@ final class FeedbackComposerModel {
         self.draftStore = draftStore
         disclosedVisibility = product.defaultFeedbackVisibility
     }
+
+    var attachmentsAvailable: Bool { product.attachmentLimits.count > 0 }
+
+    var showsAttachmentStrip: Bool { attachmentsAvailable || !attachments.isEmpty }
 
     var diagnosticsAvailable: Bool {
         product.diagnostics?.supportsSchemaOne == true && client.diagnosticsProvider != nil
@@ -91,7 +95,8 @@ final class FeedbackComposerModel {
         _ items: [PhotosPickerItem],
         localization: FeedbackLocalization
     ) async -> Bool {
-        guard items.isEmpty == false,
+        guard attachmentsAvailable,
+              items.isEmpty == false,
               isImporting == false,
               isSubmitting == false
         else { return false }
@@ -163,6 +168,12 @@ final class FeedbackComposerModel {
         do {
             let refreshed = try await client.bootstrap(locale: locale).product
             try Task.checkCancellation()
+            product = refreshed
+            if !attachmentsAvailable && !snapshot.attachments.isEmpty {
+                errorMessage = localization.text("feedbackkit.attachment.unavailable")
+                await saveDraft()
+                return false
+            }
             if refreshed.defaultFeedbackVisibility != disclosedVisibility {
                 disclosedVisibility = refreshed.defaultFeedbackVisibility
                 submissionInputDidChange()

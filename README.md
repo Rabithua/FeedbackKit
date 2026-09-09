@@ -356,3 +356,13 @@ swift test --filter FeedbackServerV2ContractTests
 The live test never prints the Product Key. It creates an isolated visitor, conditionally uploads a
 tiny image when the Product allows attachments, exercises the v2 SDK routes, and deletes the visitor
 at the end.
+
+### Attachment availability
+
+The SDK uses the current bootstrap Product's `attachmentLimits.count`, not a plan name, to
+show the attachment picker. A count of zero hides new attachments and leaves text feedback
+available. Before submission the composer refreshes bootstrap; if attachments have become
+unavailable, it retains the selected files and text, shows an explanation, and lets the user
+remove attachments before retrying. Files are never silently removed or omitted from a
+submission. Existing local selections remain removable even when the picker is hidden.
+The fixture demo includes Free and downgrade scenarios for this behavior.

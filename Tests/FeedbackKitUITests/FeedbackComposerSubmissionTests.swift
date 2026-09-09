@@ -25,6 +25,7 @@ private struct FeedbackSubmissionRecord: Sendable {
 
 private actor ControlledSubmissionTransport: FeedbackTransport {
     private var feedbackStatusCodes: [Int]
+    private var attachmentCount = 5
     private let suspendsBootstrap: Bool
     private var bootstrapContinuation: CheckedContinuation<Void, Never>?
     private var bootstrapWaiters: [CheckedContinuation<Void, Never>] = []
@@ -36,6 +37,8 @@ private actor ControlledSubmissionTransport: FeedbackTransport {
         self.feedbackStatusCodes = feedbackStatusCodes
         self.suspendsBootstrap = suspendsBootstrap
     }
+
+    func setAttachmentCount(_ count: Int) { attachmentCount = count }
 
     func waitForBootstrapRequest() async {
         guard bootstrapContinuation == nil else { return }
@@ -63,7 +66,9 @@ private actor ControlledSubmissionTransport: FeedbackTransport {
                 }
                 try Task.checkCancellation()
             }
-            return try response(for: request, data: Self.bootstrapEnvelope)
+            let json = String(decoding: Self.bootstrapEnvelope, as: UTF8.self)
+                .replacingOccurrences(of: "\"count\":5", with: "\"count\":\(attachmentCount)")
+            return try response(for: request, data: Data(json.utf8))
 
         case ("POST", "/v1/api/client/uploads/presign"):
             attachmentPresignCount += 1
@@ -267,6 +272,43 @@ struct FeedbackComposerSubmissionTests {
             locale: locale,
             localization: FeedbackLocalization(locale: locale)
         )
+    }
+
+    @Test("Downgrade retains attachments and text without uploading; removal permits text submission")
+    func downgradeRetainsDraft() async throws {
+        let context = makeContext(feedbackStatusCodes: [201])
+        defer { context.cleanup() }
+        context.model.body = "Keep my text"
+        let source = attachment(id: UUID(), filename: "keep.png")
+        context.model.attachments = [source]
+        await context.transport.setAttachmentCount(0)
+
+        #expect(await submit(context.model) == false)
+        #expect(context.model.attachmentsAvailable == false)
+        #expect(context.model.showsAttachmentStrip)
+        #expect(context.model.attachments.map(\.id) == [source.id])
+        #expect(context.model.body == "Keep my text")
+        #expect(await context.transport.attachmentPresignCount == 0)
+        #expect(await context.transport.feedbackRecords.isEmpty)
+        #expect(context.model.errorMessage?.contains("Remove") == true)
+
+        context.model.removeAttachment(id: source.id)
+        #expect(context.model.showsAttachmentStrip == false)
+        #expect(await submit(context.model))
+        #expect(await context.transport.attachmentPresignCount == 0)
+    }
+
+    @Test("Renewal restores the attachment entry after capability refresh")
+    func renewalRestoresAttachments() async throws {
+        let context = makeContext(feedbackStatusCodes: [503, 201])
+        defer { context.cleanup() }
+        context.model.body = "Keep my text"
+        await context.transport.setAttachmentCount(0)
+        #expect(await submit(context.model) == false)
+        #expect(context.model.showsAttachmentStrip == false)
+        await context.transport.setAttachmentCount(5)
+        #expect(await submit(context.model))
+        #expect(context.model.attachmentsAvailable)
     }
 
     private func makeContext(
