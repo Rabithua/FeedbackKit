@@ -75,11 +75,12 @@ struct FeedbackSkeletonView: View {
         }
         .foregroundStyle(FeedbackStyle.skeletonForeground)
         .redacted(reason: .placeholder)
-        .opacity(isDimmed ? 0.45 : 0.85)
+        // Keep the pulse from animating the skeleton's initial layout and borders.
         .animation(
-            reduceMotion ? nil : .easeInOut(duration: 0.85).repeatForever(autoreverses: true),
-            value: isDimmed
-        )
+            reduceMotion ? nil : .easeInOut(duration: 0.85).repeatForever(autoreverses: true)
+        ) { content in
+            content.opacity(isDimmed ? 0.45 : 0.85)
+        }
         .allowsHitTesting(false)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(localization.text("feedbackkit.loading"))
