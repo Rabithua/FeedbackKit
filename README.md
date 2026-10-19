@@ -71,6 +71,14 @@ To use an existing host sheet template, pass a `FeedbackAppUpdateSheetLayout` to
 provides localized header text, version/error details, and the SDK-owned action buttons.
 The host supplies its template layout; the reminder does not add an opaque background.
 
+Use `content.actions` to keep the SDK's native buttons, or build buttons with your existing
+styles using `content.continueTitle` / `content.updateTitle` and
+`content.continueFeedback` / `content.openUpdate`. The display titles adapt to Dynamic Type;
+use `content.continueAccessibilityLabel` / `content.updateAccessibilityLabel` for their full
+accessibility labels. Disable custom controls while `content.isBusy`. These callbacks retain
+the same haptics, in-progress guards, update-link handling, failure details, and continuation
+behavior as the native buttons; hosts do not need to recreate that logic.
+
 ## Campaign forms
 
 Published campaigns are available through `FeedbackKitCore`. Their bounded answer schemas decode

@@ -38,6 +38,12 @@ public struct FeedbackAppUpdateSheet: View {
                     message: localization.text("feedbackkit.update.message"),
                     details: AnyView(details),
                     actions: AnyView(actionButtons),
+                    continueTitle: continueTitle,
+                    updateTitle: updateTitle,
+                    continueAccessibilityLabel: localization.text("feedbackkit.update.continue"),
+                    updateAccessibilityLabel: localization.text("feedbackkit.update.open"),
+                    continueFeedback: continueReporting,
+                    openUpdate: openUpdate,
                     isBusy: isOpeningUpdate,
                     close: close
                 ))
@@ -119,12 +125,8 @@ public struct FeedbackAppUpdateSheet: View {
 
     private var actionButtons: some View {
         HStack(spacing: 12) {
-            Button {
-                haptics.trigger(.action)
-                continueFeedback()
-            } label: {
-                Text(localization.text(dynamicTypeSize.isAccessibilitySize
-                    ? "feedbackkit.update.continue.short" : "feedbackkit.update.continue"))
+            Button(action: continueReporting) {
+                Text(continueTitle)
                     .frame(minWidth: 72)
             }
             .buttonStyle(.bordered)
@@ -132,8 +134,7 @@ public struct FeedbackAppUpdateSheet: View {
             .accessibilityIdentifier("developerCommunity.update.continue")
 
             Button(action: openUpdate) {
-                Text(localization.text(dynamicTypeSize.isAccessibilitySize
-                    ? "feedbackkit.update.open.short" : "feedbackkit.update.open"))
+                Text(updateTitle)
                     .fontWeight(.semibold)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
@@ -149,6 +150,22 @@ public struct FeedbackAppUpdateSheet: View {
 
     private var localization: FeedbackLocalization {
         FeedbackLocalization(locale: languagePolicy.resolve(hostLocale: hostLocale))
+    }
+
+    private var continueTitle: String {
+        localization.text(dynamicTypeSize.isAccessibilitySize
+            ? "feedbackkit.update.continue.short" : "feedbackkit.update.continue")
+    }
+
+    private var updateTitle: String {
+        localization.text(dynamicTypeSize.isAccessibilitySize
+            ? "feedbackkit.update.open.short" : "feedbackkit.update.open")
+    }
+
+    private func continueReporting() {
+        guard !isOpeningUpdate else { return }
+        haptics.trigger(.action)
+        continueFeedback()
     }
 
     private func openUpdate() {
