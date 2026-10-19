@@ -77,7 +77,7 @@ public struct FeedbackCenterView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .background(FeedbackSystemBackground())
+            .feedbackPageBackground()
             .navigationDestination(for: FeedbackCenterPage.self) { page in
                 destination(page)
             }

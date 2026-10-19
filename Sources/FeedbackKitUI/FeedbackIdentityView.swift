@@ -49,6 +49,9 @@ struct FeedbackIdentityView: View {
                     .foregroundStyle(.red)
             }
         }
+        #if os(iOS)
+        .scrollContentBackground(.hidden)
+        #endif
         .navigationTitle(localization.text("feedbackkit.identity.title"))
         .feedbackInlineNavigationTitle()
         .alert(localization.text("feedbackkit.identity.delete"), isPresented: $confirm) {

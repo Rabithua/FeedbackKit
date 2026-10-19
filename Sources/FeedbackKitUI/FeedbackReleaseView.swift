@@ -47,7 +47,7 @@ struct FeedbackReleaseView: View {
                 .refreshable { await model.load(locale: locale) }
             }
         }
-        .background(FeedbackSystemBackground())
+        .feedbackPageBackground()
         .navigationTitle(localization.text("feedbackkit.releases.title"))
         .feedbackInlineNavigationTitle()
         .task(id: locale.identifier) { await model.load(locale: locale) }

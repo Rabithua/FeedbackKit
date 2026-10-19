@@ -29,7 +29,7 @@ struct FeedbackRoadmapView: View {
                 }
             }
         }
-        .background(FeedbackSystemBackground())
+        .feedbackPageBackground()
         .navigationTitle(localization.text("feedbackkit.roadmap.title"))
         .feedbackInlineNavigationTitle()
     }
