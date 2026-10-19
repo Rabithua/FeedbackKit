@@ -35,7 +35,7 @@ struct FeedbackDiagnosticsView: View {
                 }.refreshable { await model.load() }
             }
         }
-        .background(FeedbackSystemBackground())
+        .feedbackPageBackground()
         .navigationTitle(localization.text("feedbackkit.diagnostics.title"))
         .feedbackInlineNavigationTitle()
         .toolbar {

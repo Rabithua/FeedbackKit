@@ -128,7 +128,7 @@ private struct FeedbackCampaignSheetContent: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .background(FeedbackSystemBackground())
+        .feedbackPageBackground()
         .presentationDetents([.large])
         .presentationDragIndicator(.hidden)
         .interactiveDismissDisabled(model.isSubmitting || model.hasInput)

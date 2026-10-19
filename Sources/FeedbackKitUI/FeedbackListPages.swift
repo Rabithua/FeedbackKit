@@ -50,7 +50,7 @@ struct FeedbackActivityListView: View {
                 }.refreshable { await model.load(locale: locale, refresh: true) }
             }
         }
-        .background(FeedbackSystemBackground())
+        .feedbackPageBackground()
         .navigationTitle(localization.text("feedbackkit.activity.title"))
         .feedbackInlineNavigationTitle()
         .task(id: locale.identifier) {
@@ -125,7 +125,7 @@ struct MyFeedbackView: View {
                 }.refreshable { await model.load(refresh: true) }
             }
         }
-        .background(FeedbackSystemBackground())
+        .feedbackPageBackground()
         .navigationTitle(localization.text("feedbackkit.mine.title"))
         .feedbackInlineNavigationTitle()
         .task { if model.items.isEmpty { await model.load() } }
@@ -138,6 +138,19 @@ struct FeedbackSystemBackground: View {
         Color(uiColor: .systemBackground).ignoresSafeArea()
         #else
         Color(nsColor: .windowBackgroundColor).ignoresSafeArea()
+        #endif
+    }
+}
+
+// iOS pages inherit their sheet or navigation container's adaptive background.
+// Keep the existing window surface for macOS hosts, including embedded pages.
+extension View {
+    @ViewBuilder
+    func feedbackPageBackground() -> some View {
+        #if os(macOS)
+        background(FeedbackSystemBackground())
+        #else
+        self
         #endif
     }
 }
