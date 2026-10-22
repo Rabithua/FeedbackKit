@@ -79,6 +79,8 @@
 "feedbackkit.roadmap.title" = "Roadmap";
 "feedbackkit.send" = "Send";
 "feedbackkit.send.public" = "Send Publicly";
+"feedbackkit.submission.sending" = "Sending…";
+"feedbackkit.submission.sent" = "Sent";
 "feedbackkit.speak" = "Say Something";
 "feedbackkit.submission.cancel" = "Cancel Submission";
 "feedbackkit.submission.cancel.message" = "Your feedback will remain as a draft.";

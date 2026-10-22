@@ -79,6 +79,8 @@
 "feedbackkit.roadmap.title" = "로드맵";
 "feedbackkit.send" = "보내기";
 "feedbackkit.send.public" = "공개로 보내기";
+"feedbackkit.submission.sending" = "보내는 중…";
+"feedbackkit.submission.sent" = "전송 완료";
 "feedbackkit.speak" = "할 말이 있어요";
 "feedbackkit.submission.cancel" = "제출 취소";
 "feedbackkit.submission.cancel.message" = "피드백은 임시 저장됩니다.";
