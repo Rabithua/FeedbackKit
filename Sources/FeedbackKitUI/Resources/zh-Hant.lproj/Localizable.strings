@@ -79,6 +79,8 @@
 "feedbackkit.roadmap.title" = "路線圖";
 "feedbackkit.send" = "傳送";
 "feedbackkit.send.public" = "傳送並公開";
+"feedbackkit.submission.sending" = "傳送中…";
+"feedbackkit.submission.sent" = "已傳送";
 "feedbackkit.speak" = "有話要說";
 "feedbackkit.submission.cancel" = "取消提交";
 "feedbackkit.submission.cancel.message" = "回饋內容會保留為草稿。";

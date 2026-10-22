@@ -146,7 +146,8 @@ final class FeedbackComposerModel {
     func submit(
         locale: Locale,
         localization: FeedbackLocalization,
-        diagnosticsOverride: Bool? = nil
+        diagnosticsOverride: Bool? = nil,
+        onSubmitted: @MainActor () async -> Void = {}
     ) async -> Bool {
         guard isSubmitting == false else { return false }
         var snapshot = submissionSnapshot
@@ -218,6 +219,7 @@ final class FeedbackComposerModel {
                 includeDiagnostics: includeDiagnostics,
                 idempotencyKey: attempt.idempotencyKey
             )
+            await onSubmitted()
             await completeSubmission(snapshot)
             return true
         } catch let error as FeedbackClientError where error.kind == .diagnosticUploadFailed {

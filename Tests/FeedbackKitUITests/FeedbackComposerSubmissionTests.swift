@@ -146,6 +146,60 @@ private actor ControlledSubmissionTransport: FeedbackTransport {
 
 @MainActor
 struct FeedbackComposerSubmissionTests {
+    @Test("Submission acknowledgement retains content until cleanup", .tags(.submissionNetworking))
+    func acknowledgementPrecedesCleanup() async throws {
+        let context = makeContext(feedbackStatusCodes: [201])
+        defer { context.cleanup() }
+        context.model.title = "A title"
+        context.model.body = "Original body"
+        await context.model.saveDraft()
+        let locale = Locale(identifier: "en")
+
+        await confirmation { acknowledged in
+            let didSubmit = await context.model.submit(
+                locale: locale,
+                localization: FeedbackLocalization(locale: locale),
+                onSubmitted: {
+                    #expect(context.model.title == "A title")
+                    #expect(context.model.body == "Original body")
+                    #expect(context.model.isSubmitting)
+                    #expect(context.model.canSubmit == false)
+                    #expect(await context.transport.feedbackRecords.count == 1)
+                    acknowledged()
+                }
+            )
+            #expect(didSubmit)
+        }
+
+        #expect(context.model.body.isEmpty)
+        #expect(context.model.isSubmitting == false)
+        #expect(await context.store.load(productSlug: "app") == nil)
+    }
+
+    @Test("Cancelling acknowledgement still clears a delivered draft", .tags(.submissionNetworking))
+    func cancelledAcknowledgementStillCleansUp() async throws {
+        let context = makeContext(feedbackStatusCodes: [201])
+        defer { context.cleanup() }
+        context.model.body = "Delivered body"
+        await context.model.saveDraft()
+        let locale = Locale(identifier: "en")
+
+        let submission = Task {
+            await context.model.submit(
+                locale: locale,
+                localization: FeedbackLocalization(locale: locale),
+                onSubmitted: {
+                    withUnsafeCurrentTask { $0?.cancel() }
+                }
+            )
+        }
+
+        #expect(await submission.value)
+        #expect(context.model.body.isEmpty)
+        #expect(context.model.isSubmitting == false)
+        #expect(await context.store.load(productSlug: "app") == nil)
+    }
+
     @Test("Unchanged retry reuses its idempotency key", .tags(.submissionNetworking))
     func unchangedRetryReusesIdempotencyKey() async throws {
         let context = makeContext(feedbackStatusCodes: [503, 201])

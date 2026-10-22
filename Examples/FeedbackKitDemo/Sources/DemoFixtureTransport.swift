@@ -15,6 +15,12 @@ actor DemoFixtureTransport: FeedbackTransport {
             throw URLError(.notConnectedToInternet)
         }
 
+        if request.httpMethod == "POST",
+           request.url?.path == "/v1/api/client/feedback",
+           ProcessInfo.processInfo.arguments.contains("-DemoSlowFeedbackSubmission") {
+            try await Task.sleep(for: .seconds(1))
+        }
+
         let result = try route(request)
         return (
             result.data,
