@@ -1,6 +1,11 @@
 import SwiftUI
 
 /// Uses the host app's existing sheet template while retaining the SDK's update actions.
+///
+/// The host owns presentation sizing for this layout, including Dynamic Type adaptations.
+/// Apply `presentationDetents(_:)` inside the layout closure; the SDK adds detents only
+/// to its default layout. Continuing to the feedback composer replaces this layout and
+/// uses the composer's own presentation sizing.
 @MainActor
 public struct FeedbackAppUpdateSheetLayout {
     public struct Content {

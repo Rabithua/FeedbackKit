@@ -168,6 +168,99 @@ final class DemoHitTargetUITests: XCTestCase {
         attachScreenshot("Composer — restored form and retry", in: app)
     }
 
+    func testDefaultUpdateReminderKeepsSDKHeightAndContinuesAtComposerHeight() {
+        let app = openUpdateReminder()
+        defer { app.terminate() }
+        let title = app.staticTexts["Try updating first"]
+        waitForTopEdge(of: title, within: (app.frame.height * 0.45)...(app.frame.height * 0.7))
+        attachScreenshot("Update — default detents", in: app)
+        continueFromUpdateReminder(in: app)
+    }
+
+    func testDefaultAccessibilityUpdateReminderUsesLargeHeight() {
+        let app = openUpdateReminder(accessibilitySize: true)
+        defer { app.terminate() }
+        let title = app.staticTexts["Try updating first"]
+        waitForTopEdge(of: title, within: 0...(app.frame.height * 0.2))
+        attachScreenshot("Update — default accessibility detent", in: app)
+        continueFromUpdateReminder(in: app)
+    }
+
+    func testCustomUpdateReminderUsesContentHeightAndContinuesAtComposerHeight() {
+        assertCustomUpdateReminder(accessibilitySize: false)
+    }
+
+    func testCustomAccessibilityUpdateReminderRetainsHostHeight() {
+        assertCustomUpdateReminder(accessibilitySize: true)
+    }
+
+    private func assertCustomUpdateReminder(accessibilitySize: Bool) {
+        let app = openUpdateReminder(compact: true, accessibilitySize: accessibilitySize)
+        defer { app.terminate() }
+        let layout = app.otherElements["developerCommunity.update.sheet"]
+        XCTAssertTrue(layout.waitForExistence(timeout: 3))
+        let contentSized = NSPredicate { object, _ in
+            guard let layout = object as? XCUIElement,
+                  let value = layout.value as? String,
+                  let measuredHeight = Double(value), measuredHeight > 1 else {
+                return false
+            }
+            // SwiftUI may include the bottom safe area in the presented frame.
+            return abs(layout.frame.height - measuredHeight) <= 40
+        }
+        expectation(for: contentSized, evaluatedWith: layout)
+        waitForExpectations(timeout: 3)
+        XCTAssertLessThan(layout.frame.height, app.frame.height * 0.8)
+        attachScreenshot(
+            accessibilitySize ? "Update — custom accessibility height" : "Update — custom content height",
+            in: app
+        )
+        continueFromUpdateReminder(in: app)
+    }
+
+    private func openUpdateReminder(
+        compact: Bool = false,
+        accessibilitySize: Bool = false
+    ) -> XCUIApplication {
+        let app = XCUIApplication()
+        app.launchArguments += [
+            "-AppleLanguages", "(en)", "-AppleLocale", "en_US", "-DemoUpdateReminder",
+            "-UIPreferredContentSizeCategoryName",
+            accessibilitySize ? "UICTContentSizeCategoryAccessibilityM" : "UICTContentSizeCategoryL",
+        ]
+        if compact { app.launchArguments.append("-DemoCompactUpdateLayout") }
+        app.launch()
+        app.buttons["Fixture mode"].tap()
+        let openButton = app.buttons["demo.fixture.open"]
+        XCTAssertTrue(openButton.waitForExistence(timeout: 3))
+        openButton.tap()
+        let newFeedback = app.buttons["Say Something"]
+        XCTAssertTrue(newFeedback.waitForExistence(timeout: 3))
+        newFeedback.tap()
+        app.buttons["Report a Bug"].tap()
+        XCTAssertTrue(app.staticTexts["Try updating first"].waitForExistence(timeout: 3))
+        return app
+    }
+
+    private func continueFromUpdateReminder(in app: XCUIApplication) {
+        app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Continue")).firstMatch.tap()
+        let composer = app.scrollViews["developerCommunity.composer.form"]
+        XCTAssertTrue(composer.waitForExistence(timeout: 3))
+        XCTAssertFalse(app.staticTexts["Try updating first"].exists)
+        let header = app.staticTexts["Report a Bug"].firstMatch
+        waitForTopEdge(of: header, within: (app.frame.height * 0.3)...(app.frame.height * 0.65))
+        attachScreenshot("Update — continued in medium composer", in: app)
+    }
+
+    private func waitForTopEdge(of element: XCUIElement, within range: ClosedRange<CGFloat>) {
+        let positioned = NSPredicate { object, _ in
+            guard let element = object as? XCUIElement, element.exists else { return false }
+            return range.contains(element.frame.minY)
+        }
+        expectation(for: positioned, evaluatedWith: element)
+        waitForExpectations(timeout: 3)
+    }
+
     private func openComposer(scenario: String? = nil) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += [
