@@ -49,9 +49,9 @@ public struct FeedbackAppUpdateSheet: View {
                 ))
             } else {
                 defaultLayout
+                    .presentationDetents(dynamicTypeSize.isAccessibilitySize ? [.large] : [.fraction(0.42), .medium, .large])
             }
         }
-        .presentationDetents(dynamicTypeSize.isAccessibilitySize ? [.large] : [.fraction(0.42), .medium, .large])
         .presentationDragIndicator(.visible)
         .interactiveDismissDisabled(isOpeningUpdate)
         .environment(\.feedbackHaptics, haptics)

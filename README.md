@@ -71,6 +71,17 @@ To use an existing host sheet template, pass a `FeedbackAppUpdateSheetLayout` to
 provides localized header text, version/error details, and the SDK-owned action buttons.
 The host supplies its template layout; the reminder does not add an opaque background.
 
+Starting in 2.3.9, custom layouts also own their presentation height, including accessibility
+sizes. Apply native SwiftUI `presentationDetents(_:)` inside the layout closure, for example
+with a single `.height(...)` detent measured from the template's content. The SDK does not
+add detents to custom layouts. When continuing to feedback, the custom layout leaves the
+same sheet and the composer uses its own `.medium` detent. The default reminder retains
+`[.fraction(0.42), .medium, .large]`, or `[.large]` at accessibility sizes.
+
+Existing initializers are unchanged. Hosts such as Rote can remove temporary UIKit sizing
+adapters (for example, `FeedbackUpdateSheetSizing`) after updating to 2.3.9 and control the
+custom reminder entirely with SwiftUI detents inside their `FeedbackAppUpdateSheetLayout`.
+
 Use `content.actions` to keep the SDK's native buttons, or build buttons with your existing
 styles using `content.continueTitle` / `content.updateTitle` and
 `content.continueFeedback` / `content.openUpdate`. The display titles adapt to Dynamic Type;
