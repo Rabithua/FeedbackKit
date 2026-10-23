@@ -199,17 +199,7 @@ final class DemoHitTargetUITests: XCTestCase {
         defer { app.terminate() }
         let layout = app.otherElements["developerCommunity.update.sheet"]
         XCTAssertTrue(layout.waitForExistence(timeout: 3))
-        let contentSized = NSPredicate { object, _ in
-            guard let layout = object as? XCUIElement,
-                  let value = layout.value as? String,
-                  let measuredHeight = Double(value), measuredHeight > 1 else {
-                return false
-            }
-            // SwiftUI may include the bottom safe area in the presented frame.
-            return abs(layout.frame.height - measuredHeight) <= 40
-        }
-        expectation(for: contentSized, evaluatedWith: layout)
-        waitForExpectations(timeout: 3)
+        assertUpdatePresentationMatchesContent(in: app)
         XCTAssertLessThan(layout.frame.height, app.frame.height * 0.8)
         // A custom layout has one host-owned detent. An upward sheet drag must
         // return to that height rather than reveal additional SDK detents.
@@ -218,13 +208,49 @@ final class DemoHitTargetUITests: XCTestCase {
                 forDuration: 0.1,
                 thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.15))
             )
-        expectation(for: contentSized, evaluatedWith: layout)
-        waitForExpectations(timeout: 3)
+        assertUpdatePresentationMatchesContent(in: app)
         attachScreenshot(
             accessibilitySize ? "Update — custom accessibility height after drag" : "Update — custom content height after drag",
             in: app
         )
         continueFromUpdateReminder(in: app)
+    }
+
+    private func assertUpdatePresentationMatchesContent(in app: XCUIApplication) {
+        let presentationFrame: (XCUIApplication) -> CGRect? = { app in
+            let appFrame = app.frame
+            return app.otherElements
+                .containing(.other, identifier: "developerCommunity.update.sheet")
+                .allElementsBoundByIndex
+                .map(\.frame)
+                .filter { frame in
+                    frame.minY > appFrame.minY + 10 && frame.height < appFrame.height - 10
+                }
+                .min { $0.height < $1.height }
+        }
+        let contentSized = NSPredicate { object, _ in
+            guard let app = object as? XCUIApplication,
+                  let value = app.otherElements["developerCommunity.update.sheet"].value as? String,
+                  let measuredHeight = Double(value), measuredHeight > 1,
+                  let frame = presentationFrame(app) else {
+                return false
+            }
+            // The native sheet frame includes safe area; its accessibility
+            // content group can exclude padding and inherit presentation scaling.
+            return abs(frame.height - measuredHeight) <= 40
+        }
+        let result = XCTWaiter.wait(
+            for: [XCTNSPredicateExpectation(predicate: contentSized, object: app)],
+            timeout: 3
+        )
+        let layout = app.otherElements["developerCommunity.update.sheet"]
+        XCTAssertEqual(
+            result,
+            .completed,
+            "Host content height: \(String(describing: layout.value)); "
+                + "accessibility content frame: \(layout.frame); "
+                + "native presentation frame: \(String(describing: presentationFrame(app)))"
+        )
     }
 
     private func openUpdateReminder(
