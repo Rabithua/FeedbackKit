@@ -222,6 +222,7 @@ final class DemoHitTargetUITests: XCTestCase {
             return app.otherElements
                 .containing(.other, identifier: "developerCommunity.update.sheet")
                 .allElementsBoundByIndex
+                .filter { $0.identifier != "developerCommunity.update.sheet" }
                 .map(\.frame)
                 .filter { frame in
                     frame.minY > appFrame.minY + 10 && frame.height < appFrame.height - 10
