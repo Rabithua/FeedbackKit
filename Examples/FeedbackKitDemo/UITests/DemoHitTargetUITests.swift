@@ -211,8 +211,17 @@ final class DemoHitTargetUITests: XCTestCase {
         expectation(for: contentSized, evaluatedWith: layout)
         waitForExpectations(timeout: 3)
         XCTAssertLessThan(layout.frame.height, app.frame.height * 0.8)
+        // A custom layout has one host-owned detent. An upward sheet drag must
+        // return to that height rather than reveal additional SDK detents.
+        layout.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.02))
+            .press(
+                forDuration: 0.1,
+                thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.15))
+            )
+        expectation(for: contentSized, evaluatedWith: layout)
+        waitForExpectations(timeout: 3)
         attachScreenshot(
-            accessibilitySize ? "Update — custom accessibility height" : "Update — custom content height",
+            accessibilitySize ? "Update — custom accessibility height after drag" : "Update — custom content height after drag",
             in: app
         )
         continueFromUpdateReminder(in: app)
